@@ -213,6 +213,15 @@ def main():
     # 5. 打印信号
     print_signals(passed, rejected, settings.TOTAL_CAPITAL)
 
+    # 6. 推送钉钉
+    if passed or rejected:
+        from notifier.dingtalk import format_signals, send
+        tier_label = "超小资金" if settings.TOTAL_CAPITAL <= 20000 else \
+                     "小资金" if settings.TOTAL_CAPITAL <= 50000 else \
+                     "中等资金" if settings.TOTAL_CAPITAL <= 100000 else "标准资金"
+        markdown = format_signals(passed, rejected, settings.TOTAL_CAPITAL, tier_label)
+        send(markdown)
+
 
 if __name__ == "__main__":
     main()

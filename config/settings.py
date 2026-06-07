@@ -44,8 +44,8 @@ MIN_DAILY_AMOUNT = 20_000_000   # 2000万
 # ============================================================
 # Bark 推送 key（iOS），暂时留空
 BARK_KEY = ""
-# 钉钉机器人 webhook，暂时留空
-DINGTALK_WEBHOOK = ""
+# 钉钉机器人 webhook
+DINGTALK_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=5d728838f2cc7954f3d379afab290b54dc0e2e69d46555db15ad053653fef1ca"
 
 # ============================================================
 # 运行模式
