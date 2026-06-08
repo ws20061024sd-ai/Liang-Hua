@@ -258,8 +258,14 @@ def download_all(force_update: bool = False):
         else:
             start_date = start_default
 
-        # 下载数据
-        df = download_stock_history(code, start_date, today)
+        # 下载数据（最多重试3次）
+        df = None
+        for retry in range(3):
+            df = download_stock_history(code, start_date, today)
+            if df is not None and not df.empty:
+                break
+            if retry < 2:
+                time.sleep(0.5 * (retry + 1))  # 退避：0.5s, 1.0s
 
         if df is not None and not df.empty:
             save_kline(conn, df)
@@ -267,11 +273,16 @@ def download_all(force_update: bool = False):
             rows = len(df)
             date_range = f"{df['date'].iloc[0]} ~ {df['date'].iloc[-1]}"
             print(f"   [{i+1}/{total}] {code} {name} +{rows}条 ({date_range})")
+        elif pd.Timestamp(start_date) <= pd.Timestamp(today):
+            # 日期范围内可能只有非交易日（周末/假期），不算失败
+            skip_count += 1
         else:
             fail_count += 1
+            if fail_count <= 3:
+                print(f"   ⚠️ {code} {name} 下载失败")
 
-        # 控制请求频率，避免被封
-        time.sleep(0.1)
+        # 控制请求频率
+        time.sleep(0.15)
 
     conn.close()
 
