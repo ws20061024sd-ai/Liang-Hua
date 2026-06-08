@@ -45,38 +45,16 @@ def print_header():
     print()
 
 
-def print_market_status():
-    """打印当前大盘状态（简化版，后续会加入大盘择时）"""
-    from data_fetcher.cleaner import get_stock_data
-    from config import settings
-
-    # 获取沪深300指数数据
-    index_code = "000300"
-    df = get_stock_data(index_code, days=120)
-
-    if df is not None and len(df) >= 60:
-        close = df['close']
-        ma20 = close.rolling(20).mean().iloc[-1]
-        ma60 = close.rolling(60).mean().iloc[-1]
-        latest = close.iloc[-1]
-        latest_date = df['date'].iloc[-1]
-
-        above_ma20 = latest > ma20
-        ma20_above_ma60 = ma20 > ma60
-
-        if above_ma20 and ma20_above_ma60:
-            status = "🟢 强势"
-        elif above_ma20 and not ma20_above_ma60:
-            status = "🟡 震荡"
-        elif not above_ma20 and not ma20_above_ma60:
-            status = "🟠 弱势"
-        else:
-            status = "🟡 震荡"
-
-        print(f"🌤  大盘状态（{latest_date.strftime('%Y-%m-%d')}）：")
-        print(f"   沪深300: {latest:.2f} | MA20: {ma20:.2f} | MA60: {ma60:.2f}")
-        print(f"   状态: {status}")
-        print()
+def print_market_status(regime: dict):
+    """打印当前大盘择时状态"""
+    print(f"🌤  大盘择时")
+    if regime['index_close']:
+        print(f"   沪深300: {regime['index_close']} | MA20: {regime['ma20']} | MA60: {regime['ma60']}")
+    print(f"   状态: {regime['label']} | 仓位系数: {regime['position_ratio']}")
+    print(f"   {regime['detail']}")
+    if regime['consecutive_down'] >= 3:
+        print(f"   ⚠️ 已连续下跌 {regime['consecutive_down']} 天")
+    print()
 
 
 def print_signals(passed: list[dict], rejected: list[dict], capital: float):
@@ -184,8 +162,10 @@ def main():
     else:
         print("⏩ 跳过数据更新\n")
 
-    # 2. 大盘状态
-    print_market_status()
+    # 2. 大盘择时（防线一）
+    from engine.market_timing import get_market_regime, filter_by_regime
+    regime = get_market_regime()
+    print_market_status(regime)
 
     # 3. 运行策略
     from engine.runner import run_strategies
@@ -197,7 +177,7 @@ def main():
         print(f"\n   如果是首次运行，请先执行: python run.py --init")
         return
 
-    # 4. 风控过滤
+    # 4. 防线二：基础风控过滤
     from engine.risk_filter import filter_signals
     from data_fetcher.cleaner import get_latest_kline_for_all
     from config import settings
@@ -205,22 +185,38 @@ def main():
     snapshot = get_latest_kline_for_all()
     passed, rejected = filter_signals(raw_signals, snapshot)
 
+    # 5. 防线一：大盘择时过滤（在基础过滤之后）
+    passed, regime_blocked = filter_by_regime(passed, regime)
+    for sig in regime_blocked:
+        sig['reject_reason'] = sig.get('block_reason', '大盘择时拦截')
+    rejected.extend(regime_blocked)
+
     if args.verbose:
         print(f"\n📋 原始信号: {len(raw_signals)} 条")
         print(f"✅ 通过过滤: {len(passed)} 条")
-        print(f"❌ 被拒绝:   {len(rejected)} 条\n")
+        print(f"❌ 被拒绝:   {len(rejected)} 条")
+        if regime_blocked:
+            print(f"  其中大盘择时拦截: {len(regime_blocked)} 条\n")
 
-    # 5. 打印信号
+    # 6. 打印信号
     print_signals(passed, rejected, settings.TOTAL_CAPITAL)
 
-    # 6. 推送钉钉
+    # 7. 推送钉钉
     if passed or rejected:
         from notifier.dingtalk import format_signals, send
-        tier_label = "超小资金" if settings.TOTAL_CAPITAL <= 20000 else \
-                     "小资金" if settings.TOTAL_CAPITAL <= 50000 else \
-                     "中等资金" if settings.TOTAL_CAPITAL <= 100000 else "标准资金"
-        markdown = format_signals(passed, rejected, settings.TOTAL_CAPITAL, tier_label)
+        tier_label = get_tier_label(settings.TOTAL_CAPITAL)
+        markdown = format_signals(passed, rejected, settings.TOTAL_CAPITAL, tier_label, regime)
         send(markdown)
+
+
+def get_tier_label(capital: float) -> str:
+    if capital <= 20000:
+        return "超小资金"
+    elif capital <= 50000:
+        return "小资金"
+    elif capital <= 100000:
+        return "中等资金"
+    return "标准资金"
 
 
 if __name__ == "__main__":

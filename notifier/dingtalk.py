@@ -9,7 +9,7 @@ from config import settings
 
 
 def format_signals(passed: list[dict], rejected: list[dict],
-                   capital: float, tier_label: str) -> str:
+                   capital: float, tier_label: str, regime: dict = None) -> str:
     """
     将信号格式化为钉钉 Markdown 消息
 
@@ -27,9 +27,20 @@ def format_signals(passed: list[dict], rejected: list[dict],
         "",
         "---",
         "",
-        f"💰 本金：¥{capital:,} | 档位：{tier_label}",
-        "",
     ]
+
+    # 大盘择时状态
+    if regime:
+        lines.append(f"### {regime['label']}")
+        lines.append(f"沪深300: {regime['index_close']} | MA20: {regime['ma20']} | MA60: {regime['ma60']}")
+        lines.append(f"仓位系数: {regime['position_ratio']} | {regime['detail']}")
+        if not regime['can_buy']:
+            lines.append("")
+            lines.append("> ⚠️ 当前市场禁止开新仓，以下买入信号已自动屏蔽")
+        lines.append("")
+
+    lines.append(f"💰 本金：¥{capital:,} | 档位：{tier_label}")
+    lines.append("")
 
     # 买入信号
     if buy_signals:
