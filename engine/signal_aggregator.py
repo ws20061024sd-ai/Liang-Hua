@@ -64,6 +64,7 @@ def aggregate(signals: list[dict]) -> list[dict]:
                 'action': s['action'],
                 'reason': s['reason'],
                 'strength': s['strength'],
+                'regime_note': s.get('regime_note', ''),
             } for s in sigs],
         })
 

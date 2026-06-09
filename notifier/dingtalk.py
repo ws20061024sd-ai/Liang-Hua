@@ -57,9 +57,22 @@ def format_signals(aggregated: list[dict], rejected: list[dict],
             stars = "⭐⭐" if sig['confirm'] >= 2 else "⭐"
             conflict = " ⚠️冲突" if sig.get('conflict') else ""
 
-            lines.append(f"- {stars} **{sig['stock_name']}**({sig['stock_code']}){conflict}")
+            # 权重标记
+            weight_note = ""
             for s in sig['strategies']:
-                lines.append(f"  - [{s['name']}] {s['reason']}")
+                note = s.get('regime_note', '')
+                if '增强' in note:
+                    weight_note = " 🔼增强"
+                    break
+                elif '降权' in note:
+                    weight_note = " 🔽降权"
+                    break
+
+            lines.append(f"- {stars} **{sig['stock_name']}**({sig['stock_code']}){conflict}{weight_note}")
+            for s in sig['strategies']:
+                note = s.get('regime_note', '')
+                note_text = f" *({note})*" if note else ""
+                lines.append(f"  - [{s['name']}] {s['reason']}{note_text}")
             if pos['actionable']:
                 lines.append(f"  - 建议：{pos['shares']}股 ¥{pos['amount']:,.0f}（{pos['pct']:.1%}）")
                 lines.append(f"  - 🛑 止损 ¥{pos['stop_loss']:.2f}（-{pos['stop_loss_pct']:.0%}）")

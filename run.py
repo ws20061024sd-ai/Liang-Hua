@@ -84,9 +84,21 @@ def print_signals(aggregated: list[dict], rejected: list[dict], capital: float):
             stars = "⭐⭐" if sig['confirm'] >= 2 else "⭐"
             conflict_note = " ⚠️策略冲突" if sig.get('conflict') else ""
 
-            print(f"  {i}. {sig['stock_name']}({sig['stock_code']}) {stars}{conflict_note}")
+            weight_note = ""
             for s in sig['strategies']:
-                print(f"     [{s['name']}] {s['reason']}")
+                note = s.get('regime_note', '')
+                if '增强' in note:
+                    weight_note = " 🔼增强"
+                    break
+                elif '降权' in note:
+                    weight_note = " 🔽降权"
+                    break
+
+            print(f"  {i}. {sig['stock_name']}({sig['stock_code']}) {stars}{conflict_note}{weight_note}")
+            for s in sig['strategies']:
+                note = s.get('regime_note', '')
+                note_text = f" ({note})" if note else ""
+                print(f"     [{s['name']}] {s['reason']}{note_text}")
 
             if pos['actionable']:
                 print(f"     建议：{pos['shares']}股 = ¥{pos['amount']:,.0f}（占{pos['pct']:.1%}）")
