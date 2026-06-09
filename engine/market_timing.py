@@ -22,8 +22,6 @@ def _fetch_index_data(days: int = 90) -> pd.DataFrame | None:
     """从 AKShare 实时拉取沪深300指数日线数据"""
     try:
         import akshare as ak
-        end = pd.Timestamp.now().strftime('%Y%m%d')
-        start = (pd.Timestamp.now() - pd.DateOffset(days=days + 30)).strftime('%Y%m%d')
         df = ak.stock_zh_index_daily(symbol='sh000300')
         if df is not None and not df.empty:
             df['close'] = df['close'].astype(float)

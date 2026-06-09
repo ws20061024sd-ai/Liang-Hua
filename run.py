@@ -154,11 +154,26 @@ def main():
         print("\n✅ 数据初始化完成！现在可以运行 python run.py 生成信号")
         return
 
-    # 1. 更新数据
+    data_fresh = True  # 数据是否新鲜（今日的）
+    max_date = None
+
     if not args.no_update:
         from data_fetcher.downloader import init_database, download_all
         init_database()
         download_all()
+        import sqlite3
+        conn = sqlite3.connect("data/stocks.db")
+        max_date = conn.execute("SELECT MAX(date) FROM daily_kline").fetchone()[0]
+        conn.close()
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        if max_date != today_str:
+            weekday = datetime.now().weekday()
+            if weekday >= 5:
+                print(f"📅 今日非交易日（周末），数据截止 {max_date}，跳过\n")
+                return
+            else:
+                print(f"⚠️ 数据未更新到今日（最新: {max_date}），可能是节假日\n")
+                data_fresh = False
     else:
         print("⏩ 跳过数据更新\n")
 
@@ -171,10 +186,21 @@ def main():
     from engine.runner import run_strategies
     raw_signals = run_strategies(verbose=args.verbose)
 
+    # 无信号时也推送
     if not raw_signals:
-        print("📭 今日无交易信号")
-        print("   （可能原因：所有股票均无均线交叉，或数据尚未下载）")
-        print(f"\n   如果是首次运行，请先执行: python run.py --init")
+        print("📭 今日无交易信号\n")
+        from notifier.dingtalk import send
+        today_s = datetime.now().strftime("%Y-%m-%d")
+        status_note = f"数据日期: {max_date}" if not data_fresh else ""
+        msg = (
+            f"## 📊 量化信号 {today_s}\n\n---\n\n"
+            f"### {regime['label']}\n\n"
+            f"今日无交易信号（300只股票均无均线交叉）\n\n"
+        )
+        if not data_fresh:
+            msg += f"> ⚠️ {status_note}\n\n"
+        msg += "---\n> 量化自动推送"
+        send(msg)
         return
 
     # 4. 防线二：基础风控过滤

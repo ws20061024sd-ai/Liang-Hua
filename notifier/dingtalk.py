@@ -3,7 +3,6 @@
 
 发送格式化的交易信号到钉钉群，支持 Markdown 排版
 """
-import json
 import requests
 from config import settings
 

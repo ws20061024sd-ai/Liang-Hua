@@ -2,7 +2,6 @@
 数据下载器 —— 从 AKShare 获取行情数据，存入 SQLite
 """
 import os
-import ssl
 import sqlite3
 import time
 import pandas as pd
@@ -190,9 +189,10 @@ def download_stock_history(code: str, start_date: str, end_date: str) -> pd.Data
         if col not in df.columns:
             df[col] = None
 
-    # 计算涨跌幅（如果数据源没有提供）
-    if df['pct_change'].isna().all():
-        df['pct_change'] = df.groupby('code')['close'].pct_change() * 100
+    # 补全涨跌幅（NaN 的全部自动计算）
+    df['pct_change'] = df['pct_change'].fillna(
+        df.groupby('code')['close'].pct_change() * 100
+    )
 
     # 保留需要的列
     columns = ['code', 'date', 'open', 'high', 'low', 'close',

@@ -105,8 +105,6 @@ def calculate_position(sig: dict, capital: float) -> dict:
             'warning': 警告信息（或None）
         }
     """
-    from data_fetcher.cleaner import get_latest_kline_for_all
-
     # 获取当前股价
     price = sig['price']
 
