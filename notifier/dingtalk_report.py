@@ -6,7 +6,7 @@ from config import settings
 from datetime import datetime
 
 
-def format_report(macro: dict, sector: dict, stock: dict, data_date: str = None) -> str:
+def format_report(macro: dict, sector: dict, stock: dict, data_date: str = None, quality: dict = None) -> str:
     """将三层分析结果格式化为钉钉 Markdown"""
     now = datetime.now().strftime("%Y-%m-%d")
     display_date = data_date or now
@@ -21,6 +21,12 @@ def format_report(macro: dict, sector: dict, stock: dict, data_date: str = None)
     ]
     if stale_note:
         lines.append(stale_note)
+        lines.append("")
+    # 数据质量告警
+    if quality and not quality.get('ok'):
+        lines.append("> 🚨 数据质量检查未通过！")
+        for issue in quality.get('issues', []):
+            lines.append(f"> - {issue}")
         lines.append("")
     lines.append("---")
     lines.append("")

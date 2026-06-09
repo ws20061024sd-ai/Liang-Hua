@@ -29,15 +29,20 @@ def get_data_date():
 def main():
     print("📈 正在生成市场日报...\n")
 
-    # 检查数据新鲜度
+    # 0. 数据质量保障（日报独立检查，不依赖 run.py）
+    from data_fetcher.downloader import fix_pct_change, verify_data_quality
+    fix_pct_change()
+    quality = verify_data_quality()
+
+    # 确定数据日期
     data_date = get_data_date()
     today = __import__('datetime').datetime.now().strftime('%Y-%m-%d')
     if data_date and data_date != today:
-        print(f"⚠️ 数据库最新数据日期: {data_date}（非今日 {today}），日报将基于 {data_date} 生成\n")
+        print(f"⚠️ 数据库最新: {data_date}（非今日 {today}）\n")
 
     # 1. 宏观
     print("🌤  宏观分析...")
-    macro_data = macro.analyze()
+    macro_data = macro.analyze(data_date)
 
     # 2. 中观
     print("🏭 板块分析...")
@@ -47,8 +52,8 @@ def main():
     print("🎯 个股分析...")
     stock_data = stock.analyze()
 
-    # 4. 格式化
-    markdown = format_report(macro_data, sector_data, stock_data, data_date)
+    # 4. 格式化（传入质量检查结果）
+    markdown = format_report(macro_data, sector_data, stock_data, data_date, quality)
 
     # 5. 终端输出
     print()
