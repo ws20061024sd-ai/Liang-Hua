@@ -6,20 +6,23 @@ import numpy as np
 from engine.market_timing import get_market_regime
 
 
-def analyze() -> dict:
+def analyze(data_date: str = None) -> dict:
     """
-    宏观分析，返回:
-    {
-        'regime': { ... },           # 大盘择时结果
-        'indices': [ ... ],          # 四大指数
-        'breadth': { ... },          # 市场广度
-        'volume_trend': '放量下跌',   # 成交量趋势
-    }
+    宏观分析
+    参数 data_date: 统一使用此日期查数据（和广度一致）
     """
     regime = get_market_regime()
 
-    indices = _fetch_indices()
+    # 如果没有指定日期，从 DB 获取最新数据日期
+    if data_date is None:
+        import sqlite3
+        from config import settings
+        conn = sqlite3.connect(settings.DB_PATH)
+        data_date = conn.execute("SELECT MAX(date) FROM daily_kline").fetchone()[0]
+        conn.close()
+
     breadth = _analyze_breadth()
+    indices = _fetch_indices(data_date)
 
     return {
         'regime': regime,
@@ -28,39 +31,50 @@ def analyze() -> dict:
     }
 
 
-def _fetch_indices() -> list[dict]:
-    """获取四大指数最新数据"""
+def _fetch_indices(data_date: str = None) -> list[dict]:
+    """获取指定日期的四大指数数据。未指定日期则用最新。"""
     try:
         import akshare as ak
 
         index_map = {
-            '沪深300': ('sh000300', 'ak.stock_zh_index_daily'),
-            '上证指数': ('sh000001', 'ak.stock_zh_index_daily'),
-            '深证成指': ('sz399001', 'ak.stock_zh_index_daily'),
-            '创业板指': ('sz399006', 'ak.stock_zh_index_daily'),
+            '沪深300': 'sh000300',
+            '上证指数': 'sh000001',
+            '深证成指': 'sz399001',
+            '创业板指': 'sz399006',
         }
 
         results = []
-        for name, (symbol, _) in index_map.items():
+        for name, symbol in index_map.items():
             try:
                 df = ak.stock_zh_index_daily(symbol=symbol)
-                if df is not None and len(df) >= 5:
-                    latest = df.iloc[-1]
-                    prev = df.iloc[-2]
-                    pct = (latest['close'] - prev['close']) / prev['close'] * 100
-                    # 5日涨跌
-                    if len(df) >= 5:
-                        close5 = df.iloc[-5]['close']
-                        pct5 = (latest['close'] - close5) / close5 * 100
+                if df is not None and len(df) >= 2:
+                    # 按指定日期查找
+                    if data_date:
+                        target = pd.Timestamp(data_date)
+                        row = df[df['date'] == target]
+                        if row.empty:
+                            continue
+                        idx_current = row.index[0]
                     else:
-                        pct5 = None
+                        idx_current = len(df) - 1
+
+                    latest = df.iloc[idx_current]
+                    # 确保 idx_current > 0
+                    prev = df.iloc[idx_current - 1] if idx_current > 0 else latest
+
+                    pct = (latest['close'] - prev['close']) / prev['close'] * 100
+
+                    # 5日前
+                    pct5 = None
+                    if idx_current >= 5:
+                        close5 = df.iloc[idx_current - 5]['close']
+                        pct5 = (latest['close'] - close5) / close5 * 100
 
                     results.append({
                         'name': name,
                         'close': round(float(latest['close']), 2),
                         'pct_change': round(pct, 2),
                         'pct_5d': round(pct5, 2) if pct5 else None,
-                        'volume': int(latest.get('volume', 0)),
                     })
             except Exception:
                 pass
