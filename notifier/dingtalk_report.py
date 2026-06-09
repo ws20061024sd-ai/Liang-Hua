@@ -91,12 +91,12 @@ def format_report(macro: dict, sector: dict, stock: dict, data_date: str = None,
             top5 = industries.get('top5', [])
             bottom5 = industries.get('bottom5', [])
             if top5:
-            lines.append("### 🏭 行业板块（同花顺）")
-            lines.append("")
-            lines.append("**涨幅前5**：")
-            for ind in top5:
-                lines.append(f"- {ind['name']}: **{ind['pct']}%**")
-            lines.append("")
+                lines.append("### 🏭 行业板块（同花顺）")
+                lines.append("")
+                lines.append("**涨幅前5**：")
+                for ind in top5:
+                    lines.append(f"- {ind['name']}: **{ind['pct']}%**")
+                lines.append("")
             if bottom5:
                 lines.append("**跌幅前5**：")
                 for ind in bottom5:
