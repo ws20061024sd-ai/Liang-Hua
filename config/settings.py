@@ -20,8 +20,9 @@ YEARS_OF_DATA = 3                         # 下载多少年的历史数据
 # ============================================================
 # 启用的策略列表（类名，必须在 strategies/ 下有对应文件）
 ENABLED_STRATEGIES = [
-    "MaCrossStrategy",              # 双均线趋势跟踪
-    "MomentumBreakoutStrategy",     # 动量突破
+    "MaCrossStrategy",              # 双均线趋势跟踪（🟢趋势）
+    "MomentumBreakoutStrategy",     # 动量突破（🟢趋势）
+    "MeanReversionStrategy",        # 均值回归（🟡震荡）
 ]
 
 # 动量突破策略参数

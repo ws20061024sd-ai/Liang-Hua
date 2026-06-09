@@ -6,6 +6,7 @@ from typing import Type
 from strategies.base_strategy import BaseStrategy
 from strategies.ma_cross import MaCrossStrategy
 from strategies.momentum_breakout import MomentumBreakoutStrategy
+from strategies.mean_reversion import MeanReversionStrategy
 from data_fetcher.cleaner import get_batch_stock_data, get_all_stocks
 from config import settings
 
@@ -14,6 +15,7 @@ from config import settings
 STRATEGY_REGISTRY = {
     "MaCrossStrategy": MaCrossStrategy,
     "MomentumBreakoutStrategy": MomentumBreakoutStrategy,
+    "MeanReversionStrategy": MeanReversionStrategy,
 }
 
 
