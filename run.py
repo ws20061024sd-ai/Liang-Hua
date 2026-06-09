@@ -198,10 +198,21 @@ def main():
         if regime_blocked:
             print(f"  其中大盘择时拦截: {len(regime_blocked)} 条\n")
 
-    # 6. 打印信号
+    # 6. 信号持久化
+    from engine.signal_store import init_signal_table, save_signals
+    init_signal_table()
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    for sig in passed:
+        sig['date'] = today_str
+    for sig in rejected:
+        sig['date'] = today_str
+    save_signals(passed, status='passed')
+    save_signals(rejected, status='blocked')
+
+    # 7. 打印信号
     print_signals(passed, rejected, settings.TOTAL_CAPITAL)
 
-    # 7. 推送钉钉
+    # 8. 推送钉钉
     if passed or rejected:
         from notifier.dingtalk import format_signals, send
         tier_label = get_tier_label(settings.TOTAL_CAPITAL)

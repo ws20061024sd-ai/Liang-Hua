@@ -52,7 +52,7 @@ def _top_movers(df: pd.DataFrame, n: int = 5, ascending: bool = True) -> list[di
 def _review_signals(conn) -> list[dict]:
     """复盘前一日信号表现"""
     try:
-        # 获取最近两天的日期
+        # 最近两个有数据的交易日
         dates = pd.read_sql_query("""
             SELECT DISTINCT date FROM daily_kline
             ORDER BY date DESC LIMIT 2
@@ -60,48 +60,57 @@ def _review_signals(conn) -> list[dict]:
         if len(dates) < 2:
             return []
 
-        latest = dates['date'].iloc[0]
-        prev = dates['date'].iloc[1]
+        latest = str(dates['date'].iloc[0])
+        prev = str(dates['date'].iloc[1])
 
-        # 获取前一日所有数据
-        prev_df = pd.read_sql_query(
-            "SELECT code, close, pct_change FROM daily_kline WHERE date = ?",
+        # 前一日信号
+        sig_df = pd.read_sql_query("""
+            SELECT s.code, s.name, s.action, s.reason, s.price as signal_price,
+                   s.status, s.filter_reason
+            FROM signal_history s
+            WHERE s.date = ? AND s.status = 'passed'
+        """, conn, params=(prev,))
+
+        if sig_df.empty:
+            # 还没积累到信号数据，返回空（正常情况）
+            return []
+
+        # 前一日和最新日的收盘价
+        prev_kline = pd.read_sql_query(
+            "SELECT code, close FROM daily_kline WHERE date = ?",
             conn, params=(prev,)
         )
-        # 获取最新日所有数据
-        latest_df = pd.read_sql_query(
-            "SELECT code, close, pct_change FROM daily_kline WHERE date = ?",
+        latest_kline = pd.read_sql_query(
+            "SELECT code, close FROM daily_kline WHERE date = ?",
             conn, params=(latest,)
         )
-
-        # 信号记录：取前一日策略发出的信号
-        sig_df = pd.read_sql_query("""
-            SELECT code, action, date FROM signal_history
-            WHERE date = ?
-        """, conn, params=(prev,))
-        # 如果没有 signal_history 数据，尝试从策略逻辑中找
-        if sig_df.empty:
-            return []
 
         results = []
         for _, sig in sig_df.iterrows():
             code = sig['code']
-            prev_row = prev_df[prev_df['code'] == code]
-            latest_row = latest_df[latest_df['code'] == code]
+            prev_row = prev_kline[prev_kline['code'] == code]
+            latest_row = latest_kline[latest_kline['code'] == code]
+
             if prev_row.empty or latest_row.empty:
                 continue
+
             prev_close = float(prev_row.iloc[0]['close'])
             latest_close = float(latest_row.iloc[0]['close'])
             change = (latest_close - prev_close) / prev_close * 100
+
+            # BUY 信号 → 涨了算命中 / SELL 信号 → 跌了算命中
+            is_hit = (sig['action'] == 'BUY' and change > 0) or \
+                     (sig['action'] == 'SELL' and change < 0)
+
             results.append({
                 'code': code,
-                'name': '',  # can join with stock_info
+                'name': sig['name'],
                 'action': sig['action'],
+                'reason': sig['reason'],
                 'prev_close': round(prev_close, 2),
                 'latest_close': round(latest_close, 2),
                 'change': round(change, 2),
-                'hit': (sig['action'] == 'BUY' and change > 0) or
-                       (sig['action'] == 'SELL' and change < 0),
+                'hit': is_hit,
             })
 
         return results

@@ -115,9 +115,14 @@ def format_report(macro: dict, sector: dict, stock: dict) -> str:
     if signal_review:
         lines.append("### 🎯 昨日信号复盘")
         lines.append("")
+        hit_count = sum(1 for s in signal_review if s['hit'])
+        total = len(signal_review)
+        lines.append(f"命中率: {hit_count}/{total}")
+        lines.append("")
         for s in signal_review[:5]:
             icon = "✅" if s['hit'] else "❌"
-            lines.append(f"- {icon} {s['code']} {s['action']} → {s['change']:+.2f}%")
+            lines.append(f"- {icon} **{s['name']}**({s['code']}) {s['action']}")
+            lines.append(f"  信号价 {s['prev_close']} → 今日 {s['latest_close']}（{s['change']:+.2f}%）")
         lines.append("")
 
     lines.append("---")
