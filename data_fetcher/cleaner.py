@@ -13,14 +13,17 @@ def get_db_connection():
 
 def get_stock_data(code: str, days: int = 100) -> pd.DataFrame | None:
     """
-    获取单只股票最近 N 天的数据，返回清洗后的 DataFrame
-
-    返回的 DataFrame 已做好：
-    - 日期排序
-    - 停牌日标记（volume=0 且价格不变 → 标记）
-    - 异常涨跌标记
+    获取单只股票最近 N 天的数据（每次独立打开/关闭连接）
+    单次调用可用此函数。批量调用请用 get_stock_data_batch()。
     """
     conn = get_db_connection()
+    result = _get_stock_data_from_conn(conn, code, days)
+    conn.close()
+    return result
+
+
+def _get_stock_data_from_conn(conn, code: str, days: int = 100) -> pd.DataFrame | None:
+    """使用已有连接获取数据，供批量调用复用连接"""
     query = """
         SELECT date, open, high, low, close, volume, amount, pct_change, turnover
         FROM daily_kline
@@ -29,24 +32,36 @@ def get_stock_data(code: str, days: int = 100) -> pd.DataFrame | None:
         LIMIT ?
     """
     df = pd.read_sql_query(query, conn, params=(code, days))
-    conn.close()
 
     if df.empty:
         return None
 
-    # 按日期升序排列
     df = df.sort_values('date').reset_index(drop=True)
     df['date'] = pd.to_datetime(df['date'])
 
-    # 标记停牌日（成交量接近0 且 当天价格不变）
     df['is_suspended'] = False
     mask = (df['volume'] < 100) & (df['pct_change'].abs() < 0.001)
     df.loc[mask, 'is_suspended'] = True
 
-    # 标记异常涨跌（可能是数据错误，不是策略重点讨论的内容）
     df['is_abnormal'] = df['pct_change'].abs() > 15
 
     return df
+
+
+def get_batch_stock_data(codes: list[str], days: int = 100) -> dict[str, pd.DataFrame]:
+    """
+    批量获取多只股票的数据（复用同一个数据库连接）
+
+    返回: {code: DataFrame, ...}
+    """
+    conn = get_db_connection()
+    result = {}
+    for code in codes:
+        df = _get_stock_data_from_conn(conn, code, days)
+        if df is not None:
+            result[code] = df
+    conn.close()
+    return result
 
 
 def get_stock_info(code: str) -> dict | None:

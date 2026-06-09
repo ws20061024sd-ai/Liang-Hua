@@ -5,7 +5,7 @@ import pandas as pd
 from typing import Type
 from strategies.base_strategy import BaseStrategy
 from strategies.ma_cross import MaCrossStrategy
-from data_fetcher.cleaner import get_stock_data, get_all_stocks
+from data_fetcher.cleaner import get_batch_stock_data, get_all_stocks
 from config import settings
 
 
@@ -54,13 +54,15 @@ def run_strategies(verbose: bool = False) -> list[dict]:
 
     print(f"\n🚀 开始运行策略（{len(strategies)}个策略 × {total_stocks}只股票）...\n")
 
+    # 批量加载所有股票数据（复用连接，避免300次打开/关闭）
+    codes = stocks['code'].tolist()
+    batch_data = get_batch_stock_data(codes, days=200)
+
     for i, (_, stock) in enumerate(stocks.iterrows()):
         code = stock['code']
         name = stock['name']
 
-        # 获取该股票的日线数据（需要足够长以计算均线）
-        df = get_stock_data(code, days=200)
-
+        df = batch_data.get(code)
         if df is None or df.empty:
             continue
 
@@ -80,7 +82,6 @@ def run_strategies(verbose: bool = False) -> list[dict]:
                 if verbose:
                     print(f"   ⚠️ {code} {name} [{st.name}] 计算异常: {e}")
 
-        # 进度显示
         if (i + 1) % 50 == 0:
             print(f"   进度: [{i+1}/{total_stocks}]  买入{buy_count}  卖出{sell_count}")
 
