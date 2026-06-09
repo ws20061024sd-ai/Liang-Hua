@@ -20,8 +20,14 @@ YEARS_OF_DATA = 3                         # 下载多少年的历史数据
 # ============================================================
 # 启用的策略列表（类名，必须在 strategies/ 下有对应文件）
 ENABLED_STRATEGIES = [
-    "MaCrossStrategy",    # 双均线趋势跟踪
+    "MaCrossStrategy",              # 双均线趋势跟踪
+    "MomentumBreakoutStrategy",     # 动量突破
 ]
+
+# 动量突破策略参数
+MOMENTUM_LOOKBACK = 20       # 突破回顾天数
+MOMENTUM_BUFFER = 0.02       # 突破缓冲区（2%）
+MOMENTUM_EXIT_PERIOD = 20    # 卖出信号回顾天数（和买入对称）
 
 # 双均线策略参数
 MA_FAST = 10   # 快线周期

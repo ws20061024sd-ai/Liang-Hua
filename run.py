@@ -100,8 +100,11 @@ def print_signals(passed: list[dict], rejected: list[dict], capital: float):
 
     # 卖出信号
     if sell_signals:
-        print(f"🔴 卖出建议（共{len(sell_signals)}条）：")
-        for i, sig in enumerate(sell_signals[:10], 1):
+        if len(sell_signals) > 5:
+            print(f"🔴 卖出建议（前5/{len(sell_signals)}条）：")
+        else:
+            print(f"🔴 卖出建议（共{len(sell_signals)}条）：")
+        for i, sig in enumerate(sell_signals[:5], 1):
             print(f"  {i}. {sig['stock_name']}({sig['stock_code']})")
             print(f"     信号：{sig['reason']}")
             print(f"     强度：{sig['strength']:.3f} | 策略：{sig.get('strategy', '-')}")

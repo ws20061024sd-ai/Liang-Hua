@@ -5,6 +5,7 @@ import pandas as pd
 from typing import Type
 from strategies.base_strategy import BaseStrategy
 from strategies.ma_cross import MaCrossStrategy
+from strategies.momentum_breakout import MomentumBreakoutStrategy
 from data_fetcher.cleaner import get_batch_stock_data, get_all_stocks
 from config import settings
 
@@ -12,8 +13,7 @@ from config import settings
 # 策略注册表（类名 → 类对象）
 STRATEGY_REGISTRY = {
     "MaCrossStrategy": MaCrossStrategy,
-    # 后续添加新策略只需在这里注册：
-    # "MomentumBreakoutStrategy": MomentumBreakoutStrategy,
+    "MomentumBreakoutStrategy": MomentumBreakoutStrategy,
 }
 
 
@@ -87,10 +87,13 @@ def run_strategies(verbose: bool = False) -> list[dict]:
 
     print(f"\n   完成: [{total_stocks}/{total_stocks}]  买入{buy_count}  卖出{sell_count}")
 
-    # 按信号强度排序（买入信号排前面，同方向按强度降序）
+    # 按信号强度排序（买入排前面，卖出只保留最强的）
     buy_signals = [s for s in all_signals if s['action'] == 'BUY']
     sell_signals = [s for s in all_signals if s['action'] == 'SELL']
     buy_signals.sort(key=lambda s: s['strength'], reverse=True)
     sell_signals.sort(key=lambda s: s['strength'], reverse=True)
+
+    # 限制卖出信号数量（多策略时卖出信号会很多）
+    sell_signals = sell_signals[:15]
 
     return buy_signals + sell_signals
