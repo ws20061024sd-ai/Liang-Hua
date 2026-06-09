@@ -178,9 +178,10 @@ def main():
     max_date = None
 
     if not args.no_update:
-        from data_fetcher.downloader import init_database, download_all
+        from data_fetcher.downloader import init_database, download_all, fix_pct_change
         init_database()
         download_all()
+        fix_pct_change()  # 修复增量下载时的 NULL pct_change
         import sqlite3
         conn = sqlite3.connect("data/stocks.db")
         max_date = conn.execute("SELECT MAX(date) FROM daily_kline").fetchone()[0]

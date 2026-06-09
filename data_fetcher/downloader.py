@@ -189,7 +189,7 @@ def download_stock_history(code: str, start_date: str, end_date: str) -> pd.Data
         if col not in df.columns:
             df[col] = None
 
-    # 补全涨跌幅（NaN 的全部自动计算）
+    # 补全涨跌幅——优先用groupby计算，缺失的后续从DB补
     df['pct_change'] = df['pct_change'].fillna(
         df.groupby('code')['close'].pct_change() * 100
     )
@@ -198,6 +198,35 @@ def download_stock_history(code: str, start_date: str, end_date: str) -> pd.Data
     columns = ['code', 'date', 'open', 'high', 'low', 'close',
                'volume', 'amount', 'pct_change', 'turnover']
     return df[columns]
+
+
+def fix_pct_change():
+    """
+    修复数据库中 NULL 的 pct_change（增量下载时单日数据算不出涨跌幅）
+    用前一天收盘价补算
+    """
+    conn = get_db_connection()
+    # 找到所有 pct_change 为 NULL 的行，用前一天收盘价计算
+    conn.execute("""
+        UPDATE daily_kline SET pct_change = (
+            SELECT (d1.close - d2.close) / d2.close * 100
+            FROM daily_kline AS d1
+            JOIN daily_kline AS d2 ON d1.code = d2.code
+            WHERE d1.code = daily_kline.code
+              AND d1.date = daily_kline.date
+              AND d2.date = (
+                  SELECT MAX(date) FROM daily_kline AS d3
+                  WHERE d3.code = d1.code AND d3.date < d1.date
+              )
+            LIMIT 1
+        )
+        WHERE pct_change IS NULL
+    """)
+    fixed = conn.total_changes
+    conn.commit()
+    conn.close()
+    if fixed > 0:
+        print(f"   🔧 修复了 {fixed} 条 pct_change 空值")
 
 
 def save_kline(conn, df: pd.DataFrame):
