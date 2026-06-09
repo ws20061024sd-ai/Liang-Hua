@@ -47,6 +47,8 @@ def format_report(macro: dict, sector: dict, stock: dict) -> str:
     if breadth:
         lines.append("### 📈 市场广度")
         lines.append("")
+        if breadth.get('data_date'):
+            lines.append(f"数据日期：{breadth['data_date']}")
         lines.append(f"- 上涨: **{breadth.get('up', '?')}** | "
                      f"下跌: **{breadth.get('down', '?')}** | "
                      f"涨跌比: {breadth.get('up_ratio', '?')}%")

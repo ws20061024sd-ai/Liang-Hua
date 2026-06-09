@@ -71,17 +71,23 @@ def _fetch_indices() -> list[dict]:
 
 
 def _analyze_breadth() -> dict:
-    """市场广度分析（从本地数据库）"""
+    """市场广度分析（从本地数据库，只取最新日期）"""
     import sqlite3
     from config import settings
 
     try:
         conn = sqlite3.connect(settings.DB_PATH)
+
+        # 获取最新数据日期
+        max_date = pd.read_sql_query(
+            "SELECT MAX(date) as d FROM daily_kline", conn
+        )['d'].iloc[0]
+
         df = pd.read_sql_query("""
-            SELECT d.code, d.pct_change, d.amount, d.close
+            SELECT d.code, d.pct_change, d.amount, d.close, d.date
             FROM daily_kline d
-            WHERE d.date = (SELECT MAX(date) FROM daily_kline)
-        """, conn)
+            WHERE d.date = ?
+        """, conn, params=(max_date,))
         conn.close()
 
         if df.empty:
@@ -91,26 +97,21 @@ def _analyze_breadth() -> dict:
         up = int((df['pct_change'] > 0).sum())
         down = int((df['pct_change'] < 0).sum())
         flat = total - up - down
-        avg_pct = round(float(df['pct_change'].mean()), 2)
-        med_pct = round(float(df['pct_change'].median()), 2)
+        avg_pct = round(float(df['pct_change'].mean()), 2) if total > 0 else 0
+        med_pct = round(float(df['pct_change'].median()), 2) if total > 0 else 0
         total_amount = df['amount'].sum()
-
-        # 成交量趋势（与昨日对比）
-        latest_date = pd.read_sql_query(
-            "SELECT MAX(date) as d FROM daily_kline",
-            sqlite3.connect(settings.DB_PATH)
-        )['d'].iloc[0]
 
         return {
             'total': total,
             'up': up,
             'down': down,
             'flat': flat,
-            'up_ratio': round(up / total * 100, 1),
+            'up_ratio': round(up / total * 100, 1) if total > 0 else 0,
             'avg_pct': avg_pct,
             'med_pct': med_pct,
             'total_amount': total_amount,
-            'total_amount_yi': round(total_amount / 1e8, 0),
+            'total_amount_yi': round(total_amount / 1e8, 0) if total_amount else 0,
+            'data_date': str(max_date),
         }
     except Exception:
         return {}
