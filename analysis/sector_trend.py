@@ -169,13 +169,16 @@ def get_sector_stocks() -> dict:
         mask = df['name'].apply(lambda n: any(kw in n for kw in keywords))
         sub = df[mask]
         if len(sub) >= 2:
-            top = sub.nlargest(2, 'pct_change')
-            bottom = sub.nsmallest(2, 'pct_change')
+            top2 = sub.nlargest(2, 'pct_change')
+            bot2 = sub.nsmallest(2, 'pct_change')
+            # 去重：如果 best 和 worst 有重叠，worst 取不同的
+            top_codes = set(top2['code'])
+            worst_unique = bot2[~bot2['code'].isin(top_codes)]
             result[sector_name] = {
                 'count': len(sub),
                 'avg_pct': round(sub['pct_change'].mean(), 2),
-                'best': [{'name': r['name'], 'code': r['code'], 'pct': round(r['pct_change'], 2)} for _, r in top.iterrows()],
-                'worst': [{'name': r['name'], 'code': r['code'], 'pct': round(r['pct_change'], 2)} for _, r in bottom.iterrows()],
+                'best': [{'name': r['name'], 'code': r['code'], 'pct': round(r['pct_change'], 2)} for _, r in top2.iterrows()],
+                'worst': [{'name': r['name'], 'code': r['code'], 'pct': round(r['pct_change'], 2)} for _, r in worst_unique.iterrows()],
             }
 
     return result

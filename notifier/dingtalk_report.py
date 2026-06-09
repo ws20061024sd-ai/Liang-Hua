@@ -6,7 +6,7 @@ from config import settings
 from datetime import datetime
 
 
-def format_report(macro: dict, sector: dict, stock: dict, data_date: str = None, quality: dict = None) -> str:
+def format_report(macro: dict, sector: dict, stock: dict, data_date: str = None, quality: dict = None, sector_stocks: dict = None) -> str:
     """将三层分析结果格式化为钉钉 Markdown"""
     now = datetime.now().strftime("%Y-%m-%d")
     display_date = data_date or now
@@ -136,6 +136,19 @@ def format_report(macro: dict, sector: dict, stock: dict, data_date: str = None,
 
     if style:
         lines.append(f"**风格判断**：{style}")
+        lines.append("")
+
+    # ---- 板块内个股 ----
+    if sector_stocks:
+        lines.append("### 🔍 重点行业内个股")
+        lines.append("")
+        for sname, sdata in list(sector_stocks.items())[:5]:
+            if sdata['count'] >= 2:
+                best_names = ', '.join(f"{b['name']} {b['pct']:+.1f}%" for b in sdata['best'])
+                worst_names = ', '.join(f"{w['name']} {w['pct']:+.1f}%" for w in sdata['worst'])
+                lines.append(f"**{sname}** ({sdata['count']}只 平均{sdata['avg_pct']:+.1f}%)")
+                lines.append(f"  🟢 {best_names}")
+                lines.append(f"  🔴 {worst_names}")
         lines.append("")
 
     # ---- 微观 ----

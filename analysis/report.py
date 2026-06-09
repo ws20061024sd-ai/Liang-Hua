@@ -29,7 +29,7 @@ def get_data_date():
 def main():
     print("📈 正在生成市场日报...\n")
 
-    # 0. 数据质量保障（日报独立检查，不依赖 run.py）
+    # 0. 数据质量保障
     from data_fetcher.downloader import fix_pct_change, verify_data_quality
     fix_pct_change()
     quality = verify_data_quality()
@@ -39,6 +39,11 @@ def main():
     today = __import__('datetime').datetime.now().strftime('%Y-%m-%d')
     if data_date and data_date != today:
         print(f"⚠️ 数据库最新: {data_date}（非今日 {today}）\n")
+
+    # 缓存今日板块数据（为趋势/轮动积累历史）
+    from analysis.sector_trend import init_sector_table, save_today_sectors, get_sector_stocks
+    init_sector_table()
+    save_today_sectors()
 
     # 1. 宏观
     print("🌤  宏观分析...")
@@ -52,15 +57,18 @@ def main():
     print("🎯 个股分析...")
     stock_data = stock.analyze()
 
-    # 4. 格式化（传入质量检查结果）
-    markdown = format_report(macro_data, sector_data, stock_data, data_date, quality)
+    # 4. 板块内个股
+    sector_stocks = get_sector_stocks()
 
-    # 5. 终端输出
+    # 5. 格式化
+    markdown = format_report(macro_data, sector_data, stock_data, data_date, quality, sector_stocks)
+
+    # 6. 终端输出
     print()
     print(markdown)
     print()
 
-    # 6. 推送钉钉
+    # 7. 推送钉钉
     send_report(markdown)
 
 
