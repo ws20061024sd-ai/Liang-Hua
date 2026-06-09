@@ -22,6 +22,10 @@ def analyze() -> dict:
         if df.empty:
             return {}
 
+        # 防御：pct_change 全 NULL 时跳过分析
+        if df['pct_change'].isna().all():
+            return {'error': '涨跌幅数据全部缺失，无法进行板块分析'}
+
         board = _board_analysis(df)
         price_tier = _price_tier_analysis(df)
         amount_tier = _amount_tier_analysis(df)

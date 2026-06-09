@@ -94,18 +94,31 @@ def _analyze_breadth() -> dict:
             return {}
 
         total = len(df)
-        up = int((df['pct_change'] > 0).sum())
-        down = int((df['pct_change'] < 0).sum())
-        flat = total - up - down
-        avg_pct = round(float(df['pct_change'].mean()), 2) if total > 0 else 0
-        med_pct = round(float(df['pct_change'].median()), 2) if total > 0 else 0
+        # 防御：如果 pct_change 全 NULL，返回数据异常标记
+        null_count = int(df['pct_change'].isna().sum())
+        if null_count == total:
+            return {
+                'total': total,
+                'up': 0, 'down': 0, 'flat': 0,
+                'up_ratio': 0, 'avg_pct': 0, 'med_pct': 0,
+                'total_amount': df['amount'].sum(),
+                'total_amount_yi': round(df['amount'].sum() / 1e8, 0) if df['amount'].sum() else 0,
+                'data_date': str(max_date),
+                'data_error': '涨跌幅数据全部缺失，无法统计广度',
+            }
+
+        valid = df[df['pct_change'].notna()]
+        up = int((valid['pct_change'] > 0).sum())
+        down = int((valid['pct_change'] < 0).sum())
+        flat = total - up - down - null_count
+        avg_pct = round(float(valid['pct_change'].mean()), 2)
+        med_pct = round(float(valid['pct_change'].median()), 2)
         total_amount = df['amount'].sum()
 
         return {
             'total': total,
-            'up': up,
-            'down': down,
-            'flat': flat,
+            'up': up, 'down': down, 'flat': flat,
+            'null_count': null_count,
             'up_ratio': round(up / total * 100, 1) if total > 0 else 0,
             'avg_pct': avg_pct,
             'med_pct': med_pct,

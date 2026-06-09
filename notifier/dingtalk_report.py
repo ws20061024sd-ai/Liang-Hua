@@ -56,11 +56,16 @@ def format_report(macro: dict, sector: dict, stock: dict, data_date: str = None)
         lines.append("")
         if breadth.get('data_date'):
             lines.append(f"数据日期：{breadth['data_date']}")
-        lines.append(f"- 上涨: **{breadth.get('up', '?')}** | "
-                     f"下跌: **{breadth.get('down', '?')}** | "
-                     f"涨跌比: {breadth.get('up_ratio', '?')}%")
-        lines.append(f"- 平均涨跌: {breadth.get('avg_pct', '?')}% | "
-                     f"中位数: {breadth.get('med_pct', '?')}%")
+        if breadth.get('data_error'):
+            lines.append(f"> ⚠️ {breadth['data_error']}")
+        else:
+            n_null = breadth.get('null_count', 0)
+            null_note = f"（{n_null}只无涨跌幅）" if n_null > 0 else ""
+            lines.append(f"- 上涨: **{breadth.get('up', '?')}** | "
+                         f"下跌: **{breadth.get('down', '?')}** | "
+                         f"涨跌比: {breadth.get('up_ratio', '?')}% {null_note}")
+            lines.append(f"- 平均涨跌: {breadth.get('avg_pct', '?')}% | "
+                         f"中位数: {breadth.get('med_pct', '?')}%")
         lines.append(f"- 总成交额: {breadth.get('total_amount_yi', '?')}亿")
         lines.append("")
 
