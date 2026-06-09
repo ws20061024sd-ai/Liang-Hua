@@ -50,14 +50,13 @@ def _fetch_indices(data_date: str = None) -> list[dict]:
                 df = ak.stock_zh_index_daily(symbol=symbol)
                 if df is not None and len(df) >= 2:
                     # 按指定日期查找
+                    idx_current = len(df) - 1  # 默认最新
                     if data_date:
                         target = pd.Timestamp(data_date)
                         row = df[df['date'] == target]
-                        if row.empty:
-                            continue
-                        idx_current = row.index[0]
-                    else:
-                        idx_current = len(df) - 1
+                        if not row.empty:
+                            idx_current = row.index[0]
+                        # 找不到指定日期 → 用最新（AKShare可能还没更新）
 
                     latest = df.iloc[idx_current]
                     # 确保 idx_current > 0
@@ -71,11 +70,13 @@ def _fetch_indices(data_date: str = None) -> list[dict]:
                         close5 = df.iloc[idx_current - 5]['close']
                         pct5 = (latest['close'] - close5) / close5 * 100
 
+                    idx_date = pd.Timestamp(df.iloc[idx_current]['date']).strftime('%Y-%m-%d')
                     results.append({
                         'name': name,
                         'close': round(float(latest['close']), 2),
                         'pct_change': round(pct, 2),
                         'pct_5d': round(pct5, 2) if pct5 else None,
+                        'data_date': idx_date,
                     })
             except Exception:
                 pass

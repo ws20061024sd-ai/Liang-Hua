@@ -40,6 +40,10 @@ def format_report(macro: dict, sector: dict, stock: dict, data_date: str = None)
     indices = macro.get('indices', [])
     if indices:
         lines.append("### 📊 主要指数")
+        # 检查指数数据日期是否和广度一致
+        idx_date = indices[0].get('data_date', '')
+        if idx_date and display_date and idx_date != display_date:
+            lines.append(f"> 指数数据日期: {idx_date}（广度数据: {data_date}）")
         lines.append("")
         lines.append("| 指数 | 收盘 | 日涨跌 | 5日涨跌 |")
         lines.append("|------|------|--------|---------|")
