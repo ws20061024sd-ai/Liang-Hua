@@ -13,7 +13,7 @@ def analyze(data_date: str = None) -> dict:
     """
     regime = get_market_regime()
 
-    # 如果没有指定日期，从 DB 获取最新数据日期
+    # 确定统一的数据日期（只在第一次调用时查DB）
     if data_date is None:
         import sqlite3
         from config import settings
@@ -21,7 +21,8 @@ def analyze(data_date: str = None) -> dict:
         data_date = conn.execute("SELECT MAX(date) FROM daily_kline").fetchone()[0]
         conn.close()
 
-    breadth = _analyze_breadth()
+    # 所有组件传入相同日期，保证一致性
+    breadth = _analyze_breadth(data_date)
     indices = _fetch_indices(data_date)
 
     return {
@@ -84,24 +85,25 @@ def _fetch_indices(data_date: str = None) -> list[dict]:
         return []
 
 
-def _analyze_breadth() -> dict:
-    """市场广度分析（从本地数据库，只取最新日期）"""
+def _analyze_breadth(data_date: str = None) -> dict:
+    """市场广度分析（从本地数据库，使用指定日期）"""
     import sqlite3
     from config import settings
 
     try:
         conn = sqlite3.connect(settings.DB_PATH)
 
-        # 获取最新数据日期
-        max_date = pd.read_sql_query(
-            "SELECT MAX(date) as d FROM daily_kline", conn
-        )['d'].iloc[0]
+        # 未指定日期时，使用 DB 最新日期
+        if data_date is None:
+            data_date = pd.read_sql_query(
+                "SELECT MAX(date) as d FROM daily_kline", conn
+            )['d'].iloc[0]
 
         df = pd.read_sql_query("""
             SELECT d.code, d.pct_change, d.amount, d.close, d.date
             FROM daily_kline d
             WHERE d.date = ?
-        """, conn, params=(max_date,))
+        """, conn, params=(data_date,))
         conn.close()
 
         if df.empty:
