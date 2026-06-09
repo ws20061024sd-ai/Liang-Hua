@@ -31,6 +31,11 @@ def main():
 
     # 0. 数据质量保障
     from data_fetcher.downloader import fix_pct_change, verify_data_quality
+    from analysis.sector_trend import init_sector_table, save_today_sectors, get_sector_stocks
+
+    # 先建表（确保 quality check 不报错）
+    init_sector_table()
+
     fix_pct_change()
     quality = verify_data_quality()
 
@@ -40,9 +45,7 @@ def main():
     if data_date and data_date != today:
         print(f"⚠️ 数据库最新: {data_date}（非今日 {today}）\n")
 
-    # 缓存今日板块数据（为趋势/轮动积累历史）
-    from analysis.sector_trend import init_sector_table, save_today_sectors, get_sector_stocks
-    init_sector_table()
+    # 缓存今日板块数据
     save_today_sectors()
 
     # 1. 宏观

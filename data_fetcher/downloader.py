@@ -394,11 +394,14 @@ def verify_data_quality() -> dict:
     if nulls > 0:
         issues.append(f"涨跌幅缺失 {nulls} 条")
 
-    # 4. 检查行业数据
-    sector_count = conn.execute(
-        "SELECT COUNT(DISTINCT name) FROM sector_history WHERE date=?", (max_date,)
-    ).fetchone()[0]
-    if sector_count < 80:
+    # 4. 检查行业数据（表可能还不存在）
+    try:
+        sector_count = conn.execute(
+            "SELECT COUNT(DISTINCT name) FROM sector_history WHERE date=?", (max_date,)
+        ).fetchone()[0]
+    except:
+        sector_count = 0
+    if sector_count < 80 and sector_count > 0:
         issues.append(f"行业数据不足（{sector_count}/90个行业）")
 
     # 5. 检查涨跌幅极值
