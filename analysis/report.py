@@ -13,8 +13,27 @@ from notifier.dingtalk_report import format_report, send_report
 from datetime import datetime
 
 
+def get_data_date():
+    """获取数据库实际的最新数据日期"""
+    import sqlite3
+    from config import settings
+    try:
+        conn = sqlite3.connect(settings.DB_PATH)
+        r = conn.execute("SELECT MAX(date) FROM daily_kline").fetchone()[0]
+        conn.close()
+        return r
+    except:
+        return None
+
+
 def main():
     print("📈 正在生成市场日报...\n")
+
+    # 检查数据新鲜度
+    data_date = get_data_date()
+    today = __import__('datetime').datetime.now().strftime('%Y-%m-%d')
+    if data_date and data_date != today:
+        print(f"⚠️ 数据库最新数据日期: {data_date}（非今日 {today}），日报将基于 {data_date} 生成\n")
 
     # 1. 宏观
     print("🌤  宏观分析...")
@@ -29,7 +48,7 @@ def main():
     stock_data = stock.analyze()
 
     # 4. 格式化
-    markdown = format_report(macro_data, sector_data, stock_data)
+    markdown = format_report(macro_data, sector_data, stock_data, data_date)
 
     # 5. 终端输出
     print()

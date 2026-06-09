@@ -6,17 +6,24 @@ from config import settings
 from datetime import datetime
 
 
-def format_report(macro: dict, sector: dict, stock: dict) -> str:
+def format_report(macro: dict, sector: dict, stock: dict, data_date: str = None) -> str:
     """将三层分析结果格式化为钉钉 Markdown"""
-    today = datetime.now().strftime("%Y-%m-%d")
+    now = datetime.now().strftime("%Y-%m-%d")
+    display_date = data_date or now
+    stale_note = ""
+    if data_date and data_date != now:
+        stale_note = f"> ⚠️ 数据日期: {data_date}（非今日 {now}）"
     regime = macro.get('regime', {})
 
     lines = [
-        f"## 📈 量化市场日报 {today}",
-        "",
-        "---",
+        f"## 📈 量化市场日报 {now}",
         "",
     ]
+    if stale_note:
+        lines.append(stale_note)
+        lines.append("")
+    lines.append("---")
+    lines.append("")
 
     # ---- 宏观 ----
     lines.append("### 🌤 大盘状态")
@@ -126,7 +133,7 @@ def format_report(macro: dict, sector: dict, stock: dict) -> str:
         lines.append("")
 
     lines.append("---")
-    lines.append(f"> 数据截止 {today} 收盘 | 自动生成")
+    lines.append(f"> 数据截止 {display_date} | 自动生成")
 
     return "\n".join(lines)
 
