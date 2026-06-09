@@ -1,5 +1,5 @@
 """
-中观分析 —— 板块风格 + 股价分层 + 流动性分层
+中观分析 —— 行业板块 + 交易所板块 + 股价分层 + 流动性分层 + 风格诊断
 """
 import sqlite3
 import pandas as pd
@@ -22,16 +22,21 @@ def analyze() -> dict:
         if df.empty:
             return {}
 
-        # 防御：pct_change 全 NULL 时跳过分析
         if df['pct_change'].isna().all():
-            return {'error': '涨跌幅数据全部缺失，无法进行板块分析'}
+            return {'error': '涨跌幅数据全部缺失'}
 
+        # 行业分析（同花顺API）
+        industries = _ths_industry_analysis()
+        # 交易所板块
         board = _board_analysis(df)
+        # 股价/流动性分层
         price_tier = _price_tier_analysis(df)
         amount_tier = _amount_tier_analysis(df)
+        # 风格诊断
         style = _style_diagnosis(board, price_tier, amount_tier)
 
         return {
+            'industries': industries,
             'board': board,
             'price_tier': price_tier,
             'amount_tier': amount_tier,
@@ -39,6 +44,46 @@ def analyze() -> dict:
         }
     except Exception:
         return {}
+
+
+def _ths_industry_analysis() -> dict:
+    """同花顺行业分析——前5/后5行业"""
+    try:
+        import akshare as ak
+        df = ak.stock_board_industry_summary_ths()
+        if df is None or df.empty:
+            return None
+
+        # 重点行业（用户关注的）
+        focus = ['半导体', '光伏设备', '电池', '白酒', '电力', '银行',
+                 '证券', '汽车整车', '医药商业', '煤炭开采加工', '通信设备']
+        focus_data = []
+        for _, row in df.iterrows():
+            if row['板块'] in focus:
+                focus_data.append({
+                    'name': row['板块'],
+                    'pct': float(str(row['涨跌幅']).replace('%', '')),
+                    'up': int(row['上涨家数']),
+                    'down': int(row['下跌家数']),
+                    'flow_yi': round(float(row['净流入']) / 1e8, 1) if row['净流入'] else 0,
+                })
+
+        # Top 5 / Bottom 5（传统行业，排除太细分的）
+        traditional = ['半导体', '银行', '证券', '白酒', '汽车整车', '电力',
+                       '光伏设备', '电池', '医药商业', '通信设备', '军工电子',
+                       '煤炭开采加工', '房地产开发', '保险', '钢铁', '工业金属',
+                       '化学制药', '消费电子']
+        industry_subset = df[df['板块'].isin(traditional)]
+        top5 = industry_subset.nlargest(5, '涨跌幅')[['板块', '涨跌幅']].to_dict('records')
+        bottom5 = industry_subset.nsmallest(5, '涨跌幅')[['板块', '涨跌幅']].to_dict('records')
+
+        return {
+            'top5': [{'name': r['板块'], 'pct': r['涨跌幅']} for r in top5],
+            'bottom5': [{'name': r['板块'], 'pct': r['涨跌幅']} for r in bottom5],
+            'focus': sorted(focus_data, key=lambda x: x['pct'], reverse=True),
+        }
+    except Exception:
+        return None
 
 
 def _board_analysis(df: pd.DataFrame) -> list[dict]:
