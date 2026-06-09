@@ -33,7 +33,15 @@ def analyze(data_date: str = None) -> dict:
 
 
 def _fetch_indices(data_date: str = None) -> list[dict]:
-    """获取指定日期的四大指数数据。未指定日期则用最新。"""
+    """
+    获取四大指数数据，强制所有指数使用同一个最新共有日期。
+
+    策略：
+      1. 先拉所有指数数据，找到各自的最新日期
+      2. 取「最新日期中的最小值」作为统一日期
+      3. 所有指数都使用这个统一日期
+      → 保证同一天的数据，不会出现深证用6/8、创业板用6/9的错配
+    """
     try:
         import akshare as ak
 
@@ -44,40 +52,52 @@ def _fetch_indices(data_date: str = None) -> list[dict]:
             '创业板指': 'sz399006',
         }
 
-        results = []
+        # 先收集每个指数的最新日期
+        index_data = {}
         for name, symbol in index_map.items():
             try:
                 df = ak.stock_zh_index_daily(symbol=symbol)
                 if df is not None and len(df) >= 2:
-                    # 按指定日期查找
-                    idx_current = len(df) - 1  # 默认最新
-                    if data_date:
-                        target = pd.Timestamp(data_date)
-                        row = df[df['date'] == target]
-                        if not row.empty:
-                            idx_current = row.index[0]
-                        # 找不到指定日期 → 用最新（AKShare可能还没更新）
+                    df['date'] = pd.to_datetime(df['date'])
+                    index_data[name] = df
+            except Exception:
+                pass
 
-                    latest = df.iloc[idx_current]
-                    # 确保 idx_current > 0
-                    prev = df.iloc[idx_current - 1] if idx_current > 0 else latest
+        if not index_data:
+            return []
 
-                    pct = (latest['close'] - prev['close']) / prev['close'] * 100
+        # 统一日期：所有指数最新日期的交集（取最小值）
+        latest_dates = [df['date'].max() for df in index_data.values()]
+        unified_date = min(latest_dates)  # 最保守的那个
 
-                    # 5日前
-                    pct5 = None
-                    if idx_current >= 5:
-                        close5 = df.iloc[idx_current - 5]['close']
-                        pct5 = (latest['close'] - close5) / close5 * 100
+        results = []
+        for name, df in index_data.items():
+            try:
+                # 用统一日期查找
+                row = df[df['date'] == unified_date]
+                if row.empty:
+                    idx_current = len(df) - 1
+                else:
+                    idx_current = row.index[0]
 
-                    idx_date = pd.Timestamp(df.iloc[idx_current]['date']).strftime('%Y-%m-%d')
-                    results.append({
-                        'name': name,
-                        'close': round(float(latest['close']), 2),
-                        'pct_change': round(pct, 2),
-                        'pct_5d': round(pct5, 2) if pct5 else None,
-                        'data_date': idx_date,
-                    })
+                latest = df.iloc[idx_current]
+                prev = df.iloc[idx_current - 1] if idx_current > 0 else latest
+
+                pct = (latest['close'] - prev['close']) / prev['close'] * 100
+
+                pct5 = None
+                if idx_current >= 5:
+                    close5 = df.iloc[idx_current - 5]['close']
+                    pct5 = (latest['close'] - close5) / close5 * 100
+
+                idx_date = pd.Timestamp(df.iloc[idx_current]['date']).strftime('%Y-%m-%d')
+                results.append({
+                    'name': name,
+                    'close': round(float(latest['close']), 2),
+                    'pct_change': round(pct, 2),
+                    'pct_5d': round(pct5, 2) if pct5 else None,
+                    'data_date': idx_date,
+                })
             except Exception:
                 pass
 

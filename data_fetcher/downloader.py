@@ -37,7 +37,7 @@ def init_database():
         )
     """)
 
-    # 日线行情表
+    # 日线行情表（股票成分）
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS daily_kline (
             code        TEXT,
