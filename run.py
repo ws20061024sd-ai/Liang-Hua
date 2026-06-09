@@ -57,34 +57,36 @@ def print_market_status(regime: dict):
     print()
 
 
-def print_signals(passed: list[dict], rejected: list[dict], capital: float):
-    """美化打印交易信号"""
+def print_signals(aggregated: list[dict], rejected: list[dict], capital: float):
+    """美化打印交易信号（支持多策略交叉确认）"""
     from engine.risk_filter import calculate_position
 
     today_str = datetime.now().strftime("%Y-%m-%d")
-    tier_label = "超小资金" if capital <= 20000 else \
-                 "小资金" if capital <= 50000 else \
-                 "中等资金" if capital <= 100000 else "标准资金"
+    tier_label = get_tier_label(capital)
 
     print(f"{'='*60}")
     print(f"📊 量化信号 {today_str}")
     print(f"{'='*60}")
     print(f"💰 本金：¥{capital:,} | 档位：{tier_label}")
+    strategy_count = len(set(s['name'] for sig in aggregated for s in sig.get('strategies', [])))
+    if strategy_count > 1:
+        print(f"🔧 策略：{strategy_count}个并行 | ⭐⭐=多策略确认")
     print()
 
-    # 分类信号
-    buy_signals = [s for s in passed if s['action'] == 'BUY']
-    sell_signals = [s for s in passed if s['action'] == 'SELL']
+    buy_agg = [s for s in aggregated if s['action'] == 'BUY']
+    sell_agg = [s for s in aggregated if s['action'] == 'SELL']
 
     # 买入信号
-    if buy_signals:
-        print(f"🟢 买入建议（共{len(buy_signals)}条，已过滤ST/涨停/停牌/高价）：")
-        for i, sig in enumerate(buy_signals[:10], 1):
+    if buy_agg:
+        print(f"🟢 买入建议（共{len(buy_agg)}条，已过滤ST/涨停/停牌/高价）：")
+        for i, sig in enumerate(buy_agg[:10], 1):
             pos = calculate_position(sig, capital)
+            stars = "⭐⭐" if sig['confirm'] >= 2 else "⭐"
+            conflict_note = " ⚠️策略冲突" if sig.get('conflict') else ""
 
-            print(f"  {i}. {sig['stock_name']}({sig['stock_code']})")
-            print(f"     信号：{sig['reason']}")
-            print(f"     强度：{sig['strength']:.3f} | 策略：{sig.get('strategy', '-')}")
+            print(f"  {i}. {sig['stock_name']}({sig['stock_code']}) {stars}{conflict_note}")
+            for s in sig['strategies']:
+                print(f"     [{s['name']}] {s['reason']}")
 
             if pos['actionable']:
                 print(f"     建议：{pos['shares']}股 = ¥{pos['amount']:,.0f}（占{pos['pct']:.1%}）")
@@ -99,15 +101,18 @@ def print_signals(passed: list[dict], rejected: list[dict], capital: float):
         print()
 
     # 卖出信号
-    if sell_signals:
-        if len(sell_signals) > 5:
-            print(f"🔴 卖出建议（前5/{len(sell_signals)}条）：")
+    if sell_agg:
+        total = len(sell_agg)
+        show = min(total, 5)
+        if total > 5:
+            print(f"🔴 卖出建议（前{show}/{total}条）：")
         else:
-            print(f"🔴 卖出建议（共{len(sell_signals)}条）：")
-        for i, sig in enumerate(sell_signals[:5], 1):
-            print(f"  {i}. {sig['stock_name']}({sig['stock_code']})")
-            print(f"     信号：{sig['reason']}")
-            print(f"     强度：{sig['strength']:.3f} | 策略：{sig.get('strategy', '-')}")
+            print(f"🔴 卖出建议（共{total}条）：")
+        for i, sig in enumerate(sell_agg[:show], 1):
+            stars = "⭐⭐" if sig['confirm'] >= 2 else "⭐"
+            print(f"  {i}. {sig['stock_name']}({sig['stock_code']}) {stars}")
+            for s in sig['strategies']:
+                print(f"     [{s['name']}] {s['reason']}")
             print()
     else:
         print("🔴 卖出建议：今日无卖出信号")
@@ -117,11 +122,11 @@ def print_signals(passed: list[dict], rejected: list[dict], capital: float):
     if rejected:
         print(f"{'─'*60}")
         print(f"📋 今日过滤（{len(rejected)}条信号被排除）：")
-        for i, sig in enumerate(rejected[:20], 1):
+        for i, sig in enumerate(rejected[:10], 1):
             print(f"  {i}. {sig['stock_name']}({sig['stock_code']})")
             print(f"     {sig.get('action', '?')} → {sig.get('reject_reason', '未知原因')}")
-        if len(rejected) > 20:
-            print(f"  ... 共{len(rejected)}条，以上仅显示前20条")
+        if len(rejected) > 10:
+            print(f"  ... 共{len(rejected)}条，以上仅显示前10条")
         print()
 
     print(f"{'─'*60}")
@@ -129,8 +134,8 @@ def print_signals(passed: list[dict], rejected: list[dict], capital: float):
     if capital <= 20000:
         print(f"  - 小资金阶段优先考虑ETF（单价低、天然分散）")
         print(f"  - 单票占比偏高是正常的，用严格止损保护")
+    print(f"  - ⭐⭐ 双策略确认信号优先关注")
     print(f"  - 以上仅为参考信号，请结合自身判断做决策")
-    print(f"  - 下单后记得记录成交信息")
     print(f"{'='*60}")
     print(f"下次运行: python run.py")
     print()
@@ -227,7 +232,11 @@ def main():
         if regime_blocked:
             print(f"  其中大盘择时拦截: {len(regime_blocked)} 条\n")
 
-    # 6. 信号持久化
+    # 6. 多策略信号汇总（交叉确认/冲突检测）
+    from engine.signal_aggregator import aggregate
+    aggregated = aggregate(passed)
+
+    # 8. 信号持久化
     from engine.signal_store import init_signal_table, save_signals
     init_signal_table()
     today_str = datetime.now().strftime("%Y-%m-%d")
@@ -238,14 +247,14 @@ def main():
     save_signals(passed, status='passed')
     save_signals(rejected, status='blocked')
 
-    # 7. 打印信号
-    print_signals(passed, rejected, settings.TOTAL_CAPITAL)
+    # 9. 打印信号（用汇总后的格式）
+    print_signals(aggregated, rejected, settings.TOTAL_CAPITAL)
 
-    # 8. 推送钉钉
-    if passed or rejected:
+    # 10. 推送钉钉
+    if aggregated or rejected:
         from notifier.dingtalk import format_signals, send
         tier_label = get_tier_label(settings.TOTAL_CAPITAL)
-        markdown = format_signals(passed, rejected, settings.TOTAL_CAPITAL, tier_label, regime)
+        markdown = format_signals(aggregated, rejected, settings.TOTAL_CAPITAL, tier_label, regime)
         send(markdown)
 
 

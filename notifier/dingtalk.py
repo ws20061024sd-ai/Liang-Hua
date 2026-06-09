@@ -7,19 +7,21 @@ import requests
 from config import settings
 
 
-def format_signals(passed: list[dict], rejected: list[dict],
+def format_signals(aggregated: list[dict], rejected: list[dict],
                    capital: float, tier_label: str, regime: dict = None) -> str:
     """
-    将信号格式化为钉钉 Markdown 消息
+    将汇总后的信号格式化为钉钉 Markdown 消息
 
-    返回: Markdown 格式字符串
+    参数:
+        aggregated: signal_aggregator.aggregate() 的输出
+        rejected: 被风控过滤的信号
     """
     from engine.risk_filter import calculate_position
     from datetime import datetime
 
     today = datetime.now().strftime("%Y-%m-%d")
-    buy_signals = [s for s in passed if s['action'] == 'BUY']
-    sell_signals = [s for s in passed if s['action'] == 'SELL']
+    buy_agg = [s for s in aggregated if s['action'] == 'BUY']
+    sell_agg = [s for s in aggregated if s['action'] == 'SELL']
 
     lines = [
         f"## 📊 量化信号 {today}",
@@ -38,21 +40,29 @@ def format_signals(passed: list[dict], rejected: list[dict],
             lines.append("> ⚠️ 当前市场禁止开新仓，以下买入信号已自动屏蔽")
         lines.append("")
 
-    lines.append(f"💰 本金：¥{capital:,} | 档位：{tier_label}")
+    # 策略状态
+    strat_count = len(set(s['name'] for s in aggregated for s in s.get('strategies', [])))
+    if strat_count > 1:
+        lines.append(f"💰 本金 ¥{capital:,} | {strat_count}策略并行 | ⭐⭐=多策略确认")
+    else:
+        lines.append(f"💰 本金 ¥{capital:,} | 档位 {tier_label}")
     lines.append("")
 
     # 买入信号
-    if buy_signals:
+    if buy_agg:
         lines.append("### 🟢 买入建议")
         lines.append("")
-        for sig in buy_signals[:10]:
+        for sig in buy_agg[:10]:
             pos = calculate_position(sig, capital)
-            lines.append(f"- **{sig['stock_name']}**({sig['stock_code']})")
-            lines.append(f"  - 信号：{sig['reason']}")
-            lines.append(f"  - 强度：{sig['strength']:.3f} | 策略：{sig.get('strategy', '-')}")
+            stars = "⭐⭐" if sig['confirm'] >= 2 else "⭐"
+            conflict = " ⚠️冲突" if sig.get('conflict') else ""
+
+            lines.append(f"- {stars} **{sig['stock_name']}**({sig['stock_code']}){conflict}")
+            for s in sig['strategies']:
+                lines.append(f"  - [{s['name']}] {s['reason']}")
             if pos['actionable']:
                 lines.append(f"  - 建议：{pos['shares']}股 ¥{pos['amount']:,.0f}（{pos['pct']:.1%}）")
-                lines.append(f"  - 🛑 止损：¥{pos['stop_loss']:.2f}（-{pos['stop_loss_pct']:.0%}）")
+                lines.append(f"  - 🛑 止损 ¥{pos['stop_loss']:.2f}（-{pos['stop_loss_pct']:.0%}）")
                 if pos.get('warning'):
                     lines.append(f"  - ⚠️ {pos['warning']}")
             else:
@@ -65,13 +75,18 @@ def format_signals(passed: list[dict], rejected: list[dict],
         lines.append("")
 
     # 卖出信号
-    if sell_signals:
+    if sell_agg:
         lines.append("### 🔴 卖出建议")
         lines.append("")
-        for sig in sell_signals[:10]:
-            lines.append(f"- **{sig['stock_name']}**({sig['stock_code']})")
-            lines.append(f"  - 信号：{sig['reason']}")
-            lines.append(f"  - 强度：{sig['strength']:.3f}")
+        total_sell = len(sell_agg)
+        for sig in sell_agg[:5]:
+            stars = "⭐⭐" if sig['confirm'] >= 2 else "⭐"
+            lines.append(f"- {stars} **{sig['stock_name']}**({sig['stock_code']})")
+            for s in sig['strategies']:
+                lines.append(f"  - [{s['name']}] {s['reason']}")
+            lines.append("")
+        if total_sell > 5:
+            lines.append(f"...共{total_sell}条，仅显示前5")
             lines.append("")
     else:
         lines.append("### 🔴 卖出建议")
@@ -79,7 +94,7 @@ def format_signals(passed: list[dict], rejected: list[dict],
         lines.append("今日无卖出信号")
         lines.append("")
 
-    # 被过滤的信号（简要）
+    # 过滤
     if rejected:
         lines.append("---")
         lines.append("")
@@ -88,13 +103,15 @@ def format_signals(passed: list[dict], rejected: list[dict],
         for sig in rejected[:10]:
             lines.append(f"- {sig['stock_name']}({sig['stock_code']})：{sig.get('reject_reason', '-')}")
         if len(rejected) > 10:
-            lines.append(f"- ...共{len(rejected)}条，仅显示前10")
+            lines.append(f"- ...共{len(rejected)}条")
         lines.append("")
 
     lines.append("---")
     if capital <= 20000:
-        lines.append("💡 小资金提示：优先ETF | 严格止损-3% | 验证策略而非赚钱")
-    lines.append(f"[查看详情](http://localhost) | 下次：`python run.py`")
+        lines.append("💡 小资金提示：优先ETF | 严格止损-3%")
+    if strat_count > 1:
+        lines.append("💡 ⭐⭐双策略确认信号优先关注")
+    lines.append(f"下次：`python run.py`")
 
     return "\n".join(lines)
 
