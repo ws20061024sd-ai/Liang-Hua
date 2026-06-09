@@ -178,10 +178,13 @@ def main():
     max_date = None
 
     if not args.no_update:
-        from data_fetcher.downloader import init_database, download_all, fix_pct_change
+        from data_fetcher.downloader import init_database, download_all, fix_pct_change, verify_data_quality
         init_database()
         download_all()
-        fix_pct_change()  # 修复增量下载时的 NULL pct_change
+        fix_pct_change()
+        q = verify_data_quality()
+        if not q['ok'] and not args.no_update:
+            print("⚠️ 数据质量检查未通过，信号可能基于旧数据生成")
         import sqlite3
         conn = sqlite3.connect("data/stocks.db")
         max_date = conn.execute("SELECT MAX(date) FROM daily_kline").fetchone()[0]

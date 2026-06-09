@@ -263,6 +263,7 @@ def download_all(force_update: bool = False):
     new_data_count = 0
     skip_count = 0
     fail_count = 0
+    failed_codes = []
 
     print(f"\n📥 开始下载/更新 {total} 只股票的日线数据...")
     print(f"   数据范围: {start_default} ~ {today}\n")
@@ -303,28 +304,39 @@ def download_all(force_update: bool = False):
             date_range = f"{df['date'].iloc[0]} ~ {df['date'].iloc[-1]}"
             print(f"   [{i+1}/{total}] {code} {name} +{rows}条 ({date_range})")
         elif pd.Timestamp(start_date) <= pd.Timestamp(today):
-            # 日期范围内可能只有非交易日（周末/假期），不算失败
             skip_count += 1
         else:
             fail_count += 1
+            failed_codes.append(code)
             if fail_count <= 3:
                 print(f"   ⚠️ {code} {name} 下载失败")
 
-        # 控制请求频率
         time.sleep(0.15)
+
+    # 第二轮：重试失败的股票（更长退避）
+    if failed_codes:
+        print(f"\n🔄 第二轮重试 {len(failed_codes)} 只失败股票...")
+        for code in failed_codes.copy():
+            time.sleep(1.0)
+            df = download_stock_history(code, start_default, today)
+            if df is not None and not df.empty:
+                save_kline(conn, df)
+                failed_codes.remove(code)
+                new_data_count += 1
+                print(f"   {code} ✅ 第二轮成功 ({len(df)}条)")
+        if failed_codes:
+            print(f"   ⚠️ {len(failed_codes)} 只仍失败: {failed_codes[:5]}")
 
     conn.close()
 
-    # 统计
     print(f"\n{'='*50}")
     print(f"📊 下载完成统计:")
     print(f"   成分股总数: {total}")
     print(f"   本次更新:   {new_data_count} 只")
     print(f"   已是最新:   {skip_count} 只")
-    print(f"   下载失败:   {fail_count} 只")
+    print(f"   下载失败:   {fail_count} 只 → 第二轮后剩余 {len(failed_codes)} 只")
     print(f"{'='*50}")
 
-    # 检查数据库状态
     show_db_stats()
 
 
@@ -348,6 +360,50 @@ def show_db_stats():
     print(f"   股票数量: {stock_count} 只")
     print(f"   日线记录: {row_count:,} 条")
     print(f"   日期范围: {date_min} ~ {date_max}")
+
+
+def verify_data_quality() -> dict:
+    """
+    每日数据质量检查——保证数据新鲜完整
+
+    返回: {'ok': bool, 'issues': [str]}
+    """
+    from datetime import datetime
+    conn = get_db_connection()
+    issues = []
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    # 1. 检查最新数据日期
+    max_date = conn.execute("SELECT MAX(date) FROM daily_kline").fetchone()[0]
+    if max_date != today:
+        weekday = datetime.now().weekday()
+        if weekday >= 5:
+            print(f"📅 今日周末，最新数据 {max_date}，正常")
+        else:
+            issues.append(f"数据未更新到今日（最新:{max_date}，今日:{today}）")
+
+    # 2. 检查当日股票数量
+    cnt = conn.execute("SELECT COUNT(*) FROM daily_kline WHERE date=?", (max_date,)).fetchone()[0]
+    if cnt < 280:
+        issues.append(f"数据覆盖率不足（{cnt}/300只）")
+
+    # 3. 检查 pct_change 是否全部非空
+    nulls = conn.execute(
+        "SELECT COUNT(*) FROM daily_kline WHERE date=? AND pct_change IS NULL", (max_date,)
+    ).fetchone()[0]
+    if nulls > 0:
+        issues.append(f"涨跌幅缺失 {nulls} 条")
+
+    conn.close()
+
+    if issues:
+        print(f"\n⚠️ 数据质量检查发现问题:")
+        for i in issues:
+            print(f"  - {i}")
+        return {'ok': False, 'issues': issues}
+    else:
+        print(f"✅ 数据质量检查通过（{max_date}，{cnt}只，涨跌幅正常）")
+        return {'ok': True, 'issues': []}
 
 
 if __name__ == "__main__":
