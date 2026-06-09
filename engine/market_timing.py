@@ -145,14 +145,13 @@ def get_market_regime() -> dict:
 
 def filter_by_regime(signals: list[dict], regime: dict) -> tuple[list[dict], list[dict]]:
     """
-    根据大盘状态过滤买入信号
+    根据大盘状态过滤信号 + 策略权重调节
 
-    参数:
-        signals: 原始信号列表
-        regime: get_market_regime() 的返回结果
-
-    返回:
-        (passed, blocked): 通过的信号, 被拦截的买入信号
+    策略-市场匹配：
+      🟢 强势 → 趋势策略 100%权重，适合用量化突破+双均线
+      🟡 震荡 → 趋势策略 30%权重（假信号多），适合均值回归（待上线）
+      🟠 弱势 → 所有买入信号拦截
+      🔴 极弱 → 所有买入拦截 + 卖出建议增强
     """
     passed = []
     blocked = []
@@ -162,10 +161,29 @@ def filter_by_regime(signals: list[dict], regime: dict) -> tuple[list[dict], lis
             sig['block_reason'] = f'大盘择时拦截: {regime["label"]}'
             blocked.append(sig)
         else:
-            # 买入信号在震荡市中降低强度
-            if sig['action'] == 'BUY' and regime['regime'] == 'shaky':
-                sig['strength'] = round(sig['strength'] * regime['position_ratio'], 3)
-                sig['regime_note'] = '震荡市降权'
+            # 根据市场状态调节信号强度
+            if sig['action'] == 'BUY':
+                strategy = sig.get('strategy', '')
+                if regime['regime'] == 'shaky':
+                    # 震荡市：趋势策略降权，均值回归策略（待上线）反而应该加权的
+                    if '趋势' in strategy or '突破' in strategy or '双均线' in strategy:
+                        sig['strength'] = round(sig['strength'] * 0.3, 3)
+                        sig['regime_note'] = '震荡市趋势策略降权'
+                elif regime['regime'] == 'strong':
+                    if '突破' in strategy or '趋势' in strategy:
+                        sig['strength'] = round(min(sig['strength'] * 1.2, 1.0), 3)
+                        sig['regime_note'] = '强势市趋势策略增强'
             passed.append(sig)
 
     return passed, blocked
+
+
+def get_strategy_advice(regime: dict, enabled_strategies: list) -> str:
+    """根据大盘状态给出策略使用建议"""
+    advice = {
+        'strong':  '🟢 强势市：趋势策略（双均线/动量突破）优先，⭐⭐双确认信号可重点关注',
+        'shaky':   '🟡 震荡市：趋势策略假信号多，⭐⭐确认信号也需谨慎；均值回归策略更适合（待上线）',
+        'weak':    '🟠 弱势市：所有买入信号已屏蔽，耐心等待趋势好转',
+        'crash':   '🔴 极弱市：建议观望，不建议任何做多操作',
+    }
+    return advice.get(regime['regime'], '')

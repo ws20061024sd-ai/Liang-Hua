@@ -107,6 +107,13 @@ def format_signals(aggregated: list[dict], rejected: list[dict],
         lines.append("")
 
     lines.append("---")
+    # 大盘-策略匹配建议
+    if regime:
+        from engine.market_timing import get_strategy_advice
+        advice = get_strategy_advice(regime, [])
+        if advice:
+            lines.append(advice)
+            lines.append("")
     if capital <= 20000:
         lines.append("💡 小资金提示：优先ETF | 严格止损-3%")
     if strat_count > 1:
