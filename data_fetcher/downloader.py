@@ -394,6 +394,20 @@ def verify_data_quality() -> dict:
     if nulls > 0:
         issues.append(f"涨跌幅缺失 {nulls} 条")
 
+    # 4. 检查行业数据
+    sector_count = conn.execute(
+        "SELECT COUNT(DISTINCT name) FROM sector_history WHERE date=?", (max_date,)
+    ).fetchone()[0]
+    if sector_count < 80:
+        issues.append(f"行业数据不足（{sector_count}/90个行业）")
+
+    # 5. 检查涨跌幅极值
+    extreme = conn.execute(
+        "SELECT COUNT(*) FROM daily_kline WHERE date=? AND abs(pct_change) > 15", (max_date,)
+    ).fetchone()[0]
+    if extreme > 5:
+        issues.append(f"涨跌幅异常值 {extreme} 条（|pct|>15%）")
+
     conn.close()
 
     if issues:

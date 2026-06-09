@@ -83,31 +83,35 @@ def format_report(macro: dict, sector: dict, stock: dict, data_date: str = None,
     # 行业板块
     industries = sector.get('industries', {})
     if industries:
-        top5 = industries.get('top5', [])
-        bottom5 = industries.get('bottom5', [])
-        if top5:
+        if industries.get('error'):
+            lines.append("### 🏭 行业板块")
+            lines.append(f"> ⚠️ 行业数据异常：{industries['error']}")
+            lines.append("")
+        else:
+            top5 = industries.get('top5', [])
+            bottom5 = industries.get('bottom5', [])
+            if top5:
             lines.append("### 🏭 行业板块（同花顺）")
             lines.append("")
             lines.append("**涨幅前5**：")
             for ind in top5:
                 lines.append(f"- {ind['name']}: **{ind['pct']}%**")
             lines.append("")
-        if bottom5:
-            lines.append("**跌幅前5**：")
-            for ind in bottom5:
-                lines.append(f"- {ind['name']}: {ind['pct']}%")
+            if bottom5:
+                lines.append("**跌幅前5**：")
+                for ind in bottom5:
+                    lines.append(f"- {ind['name']}: {ind['pct']}%")
+                lines.append("")
+            focus = industries.get('focus', [])
+            if focus:
+                lines.append("**重点关注**：")
+                focus_items = []
+                for f in focus[:8]:
+                    dir_symbol = "🔺" if f['pct'] > 0 else "🔻"
+                    focus_items.append(f"{dir_symbol}{f['name']} {f['pct']:+.1f}%")
+                lines.append(" | ".join(focus_items))
+                lines.append("")
             lines.append("")
-        # 重点关注行业
-        focus = industries.get('focus', [])
-        if focus:
-            lines.append("**重点关注**：")
-            focus_items = []
-            for f in focus[:8]:
-                dir_symbol = "🔺" if f['pct'] > 0 else "🔻"
-                focus_items.append(f"{dir_symbol}{f['name']} {f['pct']:+.1f}%")
-            lines.append(" | ".join(focus_items))
-            lines.append("")
-        lines.append("")
 
     # 交易所板块
     board = sector.get('board', [])
