@@ -127,11 +127,13 @@ def format_signals(aggregated: list[dict], rejected: list[dict],
         if advice:
             lines.append(advice)
             lines.append("")
+    # 来源标识（防多机器重复推送）
+    import socket
+    lines.append(f"📍 {socket.gethostname()} | {today}")
     if capital <= 20000:
         lines.append("💡 小资金提示：优先ETF | 严格止损-3%")
     if strat_count > 1:
         lines.append("💡 ⭐⭐双策略确认信号优先关注")
-    lines.append(f"下次：`python run.py`")
 
     return "\n".join(lines)
 
