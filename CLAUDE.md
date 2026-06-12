@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+**Primary reference**: `docs/项目完整方案.md` — read this first for complete project understanding.
+
 ## Project Overview
 
 Semi-automated quantitative trading system for A-shares (沪深300). The system generates daily buy/sell signals and market analysis reports, pushed to DingTalk. **Trading is manual** — the user reviews signals on their phone and executes orders on their brokerage app (中信建投).
@@ -102,7 +104,8 @@ print(f'Date:{maxd} | Stocks:{cnt}/300 | NULL:{nulls}')
 
 | File | Purpose |
 |------|------|
-| `docs/项目状态与待办.md` | **Single source of truth** — current status, TODO, run log |
+| `docs/项目完整方案.md` | **Authoritative reference** — architecture, strategies, defense, deployment |
+| `docs/项目状态与待办.md` | Current status, TODO, run log |
 | `docs/项目梳理与优化方案.md` | Audit checklist (7-layer), strategy iteration protocol |
 | `docs/数据审查报告_2026-06-09.md` | Data quality risks and 5-layer defense system |
 | `docs/项目复盘与经验整理.md` | Problems encountered, solutions, deployment checklist |
