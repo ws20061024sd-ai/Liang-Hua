@@ -105,13 +105,14 @@ print(f'Date:{maxd} | Stocks:{cnt}/300 | NULL:{nulls}')
 | File | Purpose |
 |------|------|
 | `docs/项目完整方案.md` | **Authoritative reference** — architecture, strategies, defense, deployment |
-| `docs/项目状态与待办.md` | Current status, TODO, run log |
-| `docs/项目梳理与优化方案.md` | Audit checklist (7-layer), strategy iteration protocol |
-| `docs/数据审查报告_2026-06-09.md` | Data quality risks and 5-layer defense system |
-| `docs/项目复盘与经验整理.md` | Problems encountered, solutions, deployment checklist |
-| `docs/策略回测报告.md` | Backtest methodology and 3-strategy comparison |
-| `docs/半自动化交易方案.md` | Original design blueprint (historical reference, some timings outdated) |
-| `docs/量化交易完整指南.md` | Beginner educational guide (not project-specific) |
+| `docs/核心/项目状态与待办.md` | Current status, TODO, run log |
+| `docs/核心/项目梳理与优化方案.md` | Audit checklist (7-layer), strategy iteration protocol |
+| `docs/架构/项目复盘与经验整理.md` | Problems encountered, solutions, deployment checklist |
+| `docs/架构/半自动化交易方案.md` | Original design blueprint (historical reference) |
+| `docs/策略/策略回测报告.md` | Backtest results — 3 strategies × 3 timing modes |
+| `docs/策略/回测指标完全解释.md` | Beginner's guide to backtest metrics |
+| `docs/数据/数据审查报告_2026-06-09.md` | Data quality risks and 5-layer defense system |
+| `docs/参考/量化交易完整指南.md` | Beginner educational guide (not project-specific) |
 
 ## Known Deployments
 
