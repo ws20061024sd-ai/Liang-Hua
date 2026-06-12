@@ -58,7 +58,7 @@ def run_strategies(verbose: bool = False) -> list[dict]:
 
     # 批量加载所有股票数据（复用连接，避免300次打开/关闭）
     codes = stocks['code'].tolist()
-    batch_data = get_batch_stock_data(codes, days=200)
+    batch_data = get_batch_stock_data(codes, days=settings.STRATEGY_DATA_DAYS)
 
     for i, (_, stock) in enumerate(stocks.iterrows()):
         code = stock['code']
@@ -96,6 +96,6 @@ def run_strategies(verbose: bool = False) -> list[dict]:
     sell_signals.sort(key=lambda s: s['strength'], reverse=True)
 
     # 限制卖出信号数量（多策略时卖出信号会很多）
-    sell_signals = sell_signals[:15]
+    sell_signals = sell_signals[:settings.SELL_SIGNAL_LIMIT]
 
     return buy_signals + sell_signals

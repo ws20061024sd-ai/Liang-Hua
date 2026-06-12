@@ -28,11 +28,12 @@ class MeanReversionStrategy(BaseStrategy):
     name = "均值回归"
     description = "布林带下轨超卖买入，上轨超买卖出"
     version = "1.0"
+    style = "reversion"
 
-    def __init__(self, period: int = 20, std_dev: float = 2.0):
+    def __init__(self, period: int = None, std_dev: float = None):
         super().__init__()
-        self.period = period
-        self.std_dev = std_dev
+        self.period = period or settings.BB_PERIOD
+        self.std_dev = std_dev or settings.BB_STD_DEV
 
     def calculate(self, df: pd.DataFrame) -> pd.DataFrame:
         """

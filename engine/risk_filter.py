@@ -108,15 +108,16 @@ def calculate_position(sig: dict, capital: float) -> dict:
     # 获取当前股价
     price = sig['price']
 
-    # 根据资金档位确定单票上限
-    if capital <= 20000:
-        max_single_pct = 0.50
-    elif capital <= 50000:
-        max_single_pct = 0.30
-    elif capital <= 100000:
-        max_single_pct = 0.20
+    # 根据资金档位确定参数
+    position_tier = None
+    for cap, max_pct, sl_pct, max_n in settings.POSITION_TIERS:
+        if capital <= cap:
+            position_tier = (max_pct, sl_pct)
+            break
+    if position_tier is None:
+        max_single_pct, stop_loss_pct = 0.15, 0.05
     else:
-        max_single_pct = 0.15
+        max_single_pct, stop_loss_pct = position_tier
 
     lots = int(capital * max_single_pct / (price * 100))
 
@@ -142,8 +143,7 @@ def calculate_position(sig: dict, capital: float) -> dict:
     if pct > 0.5 and capital <= 20000:
         warning = f'单票占比{pct:.0%}偏高（小资金正常）'
 
-    # 止损价（小资金-3%，标准-5%）
-    stop_loss_pct = 0.03 if capital <= 20000 else 0.05
+    # 止损价（stop_loss_pct 从上方的 POSITION_TIERS 中读取）
     stop_loss = round(price * (1 - stop_loss_pct), 2)
 
     return {

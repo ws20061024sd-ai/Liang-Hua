@@ -25,6 +25,7 @@ class MomentumBreakoutStrategy(BaseStrategy):
     name = "动量突破"
     description = "价格突破N日最高价买入，跌破M日最低价卖出"
     version = "1.0"
+    style = "trend"
 
     def __init__(self, lookback: int = None, buffer: float = None, exit_period: int = None):
         super().__init__()

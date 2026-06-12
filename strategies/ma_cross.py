@@ -23,6 +23,7 @@ class MaCrossStrategy(BaseStrategy):
     name = "双均线趋势跟踪"
     description = "MA快线上穿慢线买入，下穿慢线卖出"
     version = "1.0"
+    style = "trend"
 
     def __init__(self, fast_period: int = None, slow_period: int = None):
         super().__init__()

@@ -143,16 +143,26 @@ def get_market_regime() -> dict:
     }
 
 
+def _get_strategy_style_map() -> dict[str, str]:
+    """构建策略名→风格映射（从策略注册表读取 class.style）"""
+    try:
+        from engine.runner import STRATEGY_REGISTRY
+        return {cls.name: cls.style for cls in STRATEGY_REGISTRY.values()}
+    except Exception:
+        return {}
+
+
 def filter_by_regime(signals: list[dict], regime: dict) -> tuple[list[dict], list[dict]]:
     """
     根据大盘状态过滤信号 + 策略权重调节
 
-    策略-市场匹配：
-      🟢 强势 → 趋势策略 100%权重，适合用量化突破+双均线
-      🟡 震荡 → 趋势策略 30%权重（假信号多），适合均值回归（待上线）
+    策略-市场匹配（基于策略 style 属性）：
+      🟢 强势 → trend 策略增强 +20%，reversion 降权至 50%
+      🟡 震荡 → reversion 策略增强 +20%，trend 降权至 30%
       🟠 弱势 → 所有买入信号拦截
       🔴 极弱 → 所有买入拦截 + 卖出建议增强
     """
+    style_map = _get_strategy_style_map()
     passed = []
     blocked = []
 
@@ -163,19 +173,20 @@ def filter_by_regime(signals: list[dict], regime: dict) -> tuple[list[dict], lis
         else:
             # 根据市场状态 + 策略类型 调节信号强度
             if sig['action'] == 'BUY':
-                strategy = sig.get('strategy', '')
+                strategy_name = sig.get('strategy', '')
+                style = style_map.get(strategy_name, '')
                 if regime['regime'] == 'shaky':
-                    if '趋势' in strategy or '突破' in strategy or '双均线' in strategy:
+                    if style == 'trend':
                         sig['strength'] = round(sig['strength'] * 0.3, 3)
                         sig['regime_note'] = '震荡市趋势策略降权'
-                    elif '回归' in strategy:
+                    elif style == 'reversion':
                         sig['strength'] = round(min(sig['strength'] * 1.2, 1.0), 3)
                         sig['regime_note'] = '震荡市均值回归增强'
                 elif regime['regime'] == 'strong':
-                    if '突破' in strategy or '趋势' in strategy or '双均线' in strategy:
+                    if style == 'trend':
                         sig['strength'] = round(min(sig['strength'] * 1.2, 1.0), 3)
                         sig['regime_note'] = '强势市趋势策略增强'
-                    elif '回归' in strategy:
+                    elif style == 'reversion':
                         sig['strength'] = round(sig['strength'] * 0.5, 3)
                         sig['regime_note'] = '强势市回归策略降权'
             passed.append(sig)

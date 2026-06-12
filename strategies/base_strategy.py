@@ -18,6 +18,7 @@ class BaseStrategy(ABC):
     name: str = "BaseStrategy"
     description: str = "策略基类"
     version: str = "1.0"
+    style: str = ""  # 'trend'（趋势）| 'reversion'（回归），供 market_timing 策略匹配
 
     def __init__(self):
         pass

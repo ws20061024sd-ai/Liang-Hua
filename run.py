@@ -254,14 +254,20 @@ def main():
     from engine.signal_aggregator import aggregate
     aggregated = aggregate(passed)
 
-    # 8. 信号持久化
+    # 8. 信号持久化（使用 DB 实际数据日期，而非 datetime.now()）
     from engine.signal_store import init_signal_table, save_signals
     init_signal_table()
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    # 从 DB 获取数据日期（优先用已查询的 max_date，否则重新查询）
+    if max_date is None:
+        import sqlite3
+        conn = sqlite3.connect("data/stocks.db")
+        max_date = conn.execute("SELECT MAX(date) FROM daily_kline").fetchone()[0]
+        conn.close()
+    signal_date = max_date if max_date else datetime.now().strftime("%Y-%m-%d")
     for sig in passed:
-        sig['date'] = today_str
+        sig['date'] = signal_date
     for sig in rejected:
-        sig['date'] = today_str
+        sig['date'] = signal_date
     save_signals(passed, status='passed')
     save_signals(rejected, status='blocked')
 

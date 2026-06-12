@@ -40,10 +40,11 @@ def _get_stock_data_from_conn(conn, code: str, days: int = 100) -> pd.DataFrame 
     df['date'] = pd.to_datetime(df['date'])
 
     df['is_suspended'] = False
-    mask = (df['volume'] < 100) & (df['pct_change'].abs() < 0.001)
+    pct = df['pct_change'].fillna(0)
+    mask = (df['volume'] < 100) & (pct.abs() < 0.001)
     df.loc[mask, 'is_suspended'] = True
 
-    df['is_abnormal'] = df['pct_change'].abs() > 15
+    df['is_abnormal'] = pct.abs() > 15
 
     return df
 

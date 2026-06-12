@@ -384,7 +384,7 @@ def verify_data_quality() -> dict:
 
     # 2. 检查当日股票数量
     cnt = conn.execute("SELECT COUNT(*) FROM daily_kline WHERE date=?", (max_date,)).fetchone()[0]
-    if cnt < 280:
+    if cnt < settings.MIN_STOCK_COUNT:
         issues.append(f"数据覆盖率不足（{cnt}/300只）")
 
     # 3. 检查 pct_change 是否全部非空
@@ -401,15 +401,16 @@ def verify_data_quality() -> dict:
         ).fetchone()[0]
     except:
         sector_count = 0
-    if sector_count < 80 and sector_count > 0:
+    if sector_count < settings.MIN_SECTOR_COUNT and sector_count > 0:
         issues.append(f"行业数据不足（{sector_count}/90个行业）")
 
     # 5. 检查涨跌幅极值
     extreme = conn.execute(
-        "SELECT COUNT(*) FROM daily_kline WHERE date=? AND abs(pct_change) > 15", (max_date,)
+        "SELECT COUNT(*) FROM daily_kline WHERE date=? AND abs(pct_change) > ?",
+        (max_date, settings.MAX_EXTREME_PCT)
     ).fetchone()[0]
-    if extreme > 5:
-        issues.append(f"涨跌幅异常值 {extreme} 条（|pct|>15%）")
+    if extreme > settings.MAX_EXTREME_COUNT:
+        issues.append(f"涨跌幅异常值 {extreme} 条（|pct|>{settings.MAX_EXTREME_PCT}%）")
 
     conn.close()
 

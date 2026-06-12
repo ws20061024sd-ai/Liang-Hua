@@ -16,14 +16,15 @@ def analyze() -> dict:
             JOIN stock_info s ON d.code = s.code
             WHERE d.date = (SELECT MAX(date) FROM daily_kline)
         """, conn)
-        conn.close()
 
         if df.empty:
+            conn.close()
             return {}
 
         top_gainers = _top_movers(df, n=5, ascending=False)
         top_losers = _top_movers(df, n=5, ascending=True)
         signal_review = _review_signals(conn)
+        conn.close()
 
         return {
             'top_gainers': top_gainers,

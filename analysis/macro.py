@@ -140,7 +140,7 @@ def _analyze_breadth(data_date: str = None) -> dict:
                 'up_ratio': 0, 'avg_pct': 0, 'med_pct': 0,
                 'total_amount': df['amount'].sum(),
                 'total_amount_yi': round(df['amount'].sum() / 1e8, 0) if df['amount'].sum() else 0,
-                'data_date': str(max_date),
+                'data_date': str(data_date),
                 'data_error': '涨跌幅数据全部缺失，无法统计广度',
             }
 
