@@ -81,6 +81,9 @@ BARK_KEY = ""
 # 钉钉机器人 webhook
 DINGTALK_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=5d728838f2cc7954f3d379afab290b54dc0e2e69d46555db15ad053653fef1ca"
 
+# Tushare 数据源 token
+TUSHARE_TOKEN = "f4273b569effee2274406ba3651f0506e34890334c73e20e1a296dad"
+
 # ============================================================
 # 运行模式
 # ============================================================
