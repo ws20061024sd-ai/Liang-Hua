@@ -201,7 +201,7 @@ def trade(context):
         if position.total_amount == 0:
             continue
         cost_basis = position.avg_cost
-        current_price = cur_data[stock].close
+        current_price = cur_data[stock].last_price
         pnl_pct = (current_price - cost_basis) / cost_basis
         if pnl_pct <= g.stop_loss:
             order_target_value(stock, 0)
