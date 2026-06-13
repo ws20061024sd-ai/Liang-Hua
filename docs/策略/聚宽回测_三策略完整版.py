@@ -193,6 +193,7 @@ def mean_reversion_signal(stock, hist):
 def trade(context):
     """每天收盘前执行"""
     regime = get_market_regime(context)
+    cur_data = get_current_data()
 
     # ---- 止损检查 ----
     for stock in list(context.portfolio.positions.keys()):
@@ -200,11 +201,11 @@ def trade(context):
         if position.total_amount == 0:
             continue
         cost_basis = position.avg_cost
-        current_price = current_data[stock].close
+        current_price = cur_data[stock].close
         pnl_pct = (current_price - cost_basis) / cost_basis
         if pnl_pct <= g.stop_loss:
             order_target_value(stock, 0)
-            log.info(f'止损 {stock}: {pnl_pct*100:.1f}%')
+            log.info('止损 %s: %.1f%%' % (stock, pnl_pct * 100))
 
     # ---- 生成信号 ----
     buy_candidates = []
@@ -212,7 +213,7 @@ def trade(context):
 
     for stock in g.stock_pool:
         # 跳过停牌
-        if current_data[stock].paused:
+        if cur_data[stock].paused:
             continue
 
         hist = attribute_history(stock, 80, '1d', ['close'])
