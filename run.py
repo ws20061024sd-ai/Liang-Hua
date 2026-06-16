@@ -184,6 +184,15 @@ def main():
         init_database()
         download_all()
         fix_pct_change()
+
+        # 财务数据（估值因子：PE/PB/ROE）
+        try:
+            from data_fetcher.financial_downloader import download_all_financial, fix_financial_data
+            download_all_financial()
+            fix_financial_data()
+        except Exception as e:
+            print(f"⚠️ 财务数据下载跳过: {e}")
+
         q = verify_data_quality()
         if not q['ok'] and not args.no_update:
             print("⚠️ 数据质量检查未通过，信号可能基于旧数据生成")

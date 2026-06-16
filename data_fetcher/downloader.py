@@ -412,6 +412,28 @@ def verify_data_quality() -> dict:
     if extreme > settings.MAX_EXTREME_COUNT:
         issues.append(f"涨跌幅异常值 {extreme} 条（|pct|>{settings.MAX_EXTREME_PCT}%）")
 
+    # 6. 检查估值数据覆盖度（financial_data 表可能还不存在）
+    try:
+        fin_stocks = conn.execute(
+            "SELECT COUNT(DISTINCT code) FROM financial_data WHERE date=?",
+            (max_date,)
+        ).fetchone()[0]
+        if fin_stocks > 0 and fin_stocks < settings.FINANCIAL_MIN_STOCKS:
+            issues.append(f"估值数据覆盖不足（{fin_stocks}/{settings.FINANCIAL_MIN_STOCKS}只）")
+    except:
+        pass  # 表不存在时跳过
+
+    # 7. 检查 PE 异常值残留
+    try:
+        pe_bad = conn.execute(
+            f"SELECT COUNT(*) FROM financial_data WHERE date=? AND pe IS NOT NULL AND (pe < {settings.PE_MIN_VALID} OR pe > {settings.PE_MAX_VALID})",
+            (max_date,)
+        ).fetchone()[0]
+        if pe_bad > 0:
+            issues.append(f"PE 异常值残留 {pe_bad} 条（需运行 fix_financial_data）")
+    except:
+        pass
+
     conn.close()
 
     if issues:

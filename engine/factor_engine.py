@@ -1,14 +1,22 @@
 """
-因子引擎 —— 从已有日线数据计算多因子得分（纯价格因子，零额外下载）
+因子引擎 —— 多因子选股评分系统
 
-三个因子：
-  1. 动量因子：12个月涨幅（剔除最近1个月）—— A股最强因子之一
-  2. 低波动因子：60日波动率（越低越好）—— 防御型因子
-  3. 短期反转因子：5日涨幅（跌多了反弹）—— A股短期反转效应强
+六个因子：
+  价格因子（从 daily_kline）：
+    1. 动量因子：12个月涨幅（剔除最近1个月）
+    2. 低波动因子：60日波动率（越低越好）
+    3. 短期反转因子：5日涨幅取负（跌多反弹）
+    4. 换手率因子：20日平均换手率（越低越好）
 
-使用方法：
-  scores = compute_factor_scores(date='2026-06-12')  # 某一天的因子得分
-  top30 = scores.nlargest(30, 'score')                # 买得分最高的30只
+  估值因子（从 financial_data）：
+    5. 价值因子：PE + PB（越低越好）
+    6. 质量因子：ROE（越高越好）
+
+权重：动量 25% + 低波 15% + 反转 15% + 换手 10% + 价值 20% + 质量 15%
+
+用法：
+  scores = compute_factor_scores(date='2026-06-12')
+  top30 = scores.nlargest(30, 'score')
 """
 import sqlite3
 import pandas as pd
@@ -86,6 +94,25 @@ def _compute_reversal(df: pd.DataFrame, date: str) -> float | None:
     return round(-ret_5d, 4)  # 负号：跌得多→分数高
 
 
+def _fetch_financial_factors(conn, date: str) -> pd.DataFrame:
+    """
+    从 financial_data 表获取最新可用的 PE/PB/ROE
+
+    策略：取 ≤ date 的最新一条记录（季度数据有滞后）
+    返回 DataFrame: [code, pe, pb, roe]
+    """
+    df = pd.read_sql_query("""
+        SELECT f.code, f.pe, f.pb, f.roe, f.date as fin_date
+        FROM financial_data f
+        WHERE f.date <= ?
+          AND f.date = (
+              SELECT MAX(f2.date) FROM financial_data f2
+              WHERE f2.code = f.code AND f2.date <= ?
+          )
+    """, conn, params=(date, date))
+    return df
+
+
 def _compute_turnover(df: pd.DataFrame, date: str) -> float | None:
     """
     换手率因子：20日平均换手率
@@ -121,6 +148,18 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
         ).iloc[0, 0]
 
     codes = pd.read_sql_query("SELECT code, name FROM stock_info", conn)
+
+    # 获取财务因子数据
+    fin_df = _fetch_financial_factors(conn, date)
+    fin_map = {}
+    if not fin_df.empty:
+        for _, r in fin_df.iterrows():
+            fin_map[r['code']] = {
+                'pe': r['pe'] if pd.notna(r['pe']) else None,
+                'pb': r['pb'] if pd.notna(r['pb']) else None,
+                'roe': r['roe'] if pd.notna(r['roe']) else None,
+            }
+
     results = []
 
     for _, row in codes.iterrows():
@@ -137,12 +176,17 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
         rev = _compute_reversal(df, date)
         tur = _compute_turnover(df, date)
 
-        # 至少需要两个因子才计算得分
-        valid = sum(1 for v in [mom, vol, rev, tur] if v is not None)
-        if valid < 2:
+        # 财务因子
+        fin = fin_map.get(code, {})
+        pe = fin.get('pe')
+        pb = fin.get('pb')
+        roe = fin.get('roe')
+
+        # 至少需要 3 个因子才计算得分
+        valid = sum(1 for v in [mom, vol, rev, tur, pe, pb, roe] if v is not None)
+        if valid < 3:
             continue
 
-        # 标准化（Z-score）后加权
         results.append({
             'code': code,
             'name': row['name'],
@@ -150,6 +194,9 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
             'volatility': vol,
             'reversal': rev,
             'turnover': tur,
+            'pe': pe,
+            'pb': pb,
+            'roe': roe,
             'valid_factors': valid,
         })
 
@@ -160,9 +207,14 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
 
     df_score = pd.DataFrame(results)
 
-    # 对每个因子做 cross-sectional z-score 标准化
-    for col, weight in [('momentum', 0.4), ('volatility', 0.3),
-                          ('reversal', 0.2), ('turnover', 0.1)]:
+    # 价格因子 z-score 标准化
+    price_factors = [
+        ('momentum', 0.25),    # 动量（正向）
+        ('volatility', 0.15),  # 低波动（负向）
+        ('reversal', 0.15),    # 反转（正向）
+        ('turnover', 0.10),    # 低换手（负向）
+    ]
+    for col, weight in price_factors:
         vals = df_score[col].dropna()
         if len(vals) < 10:
             df_score[f'{col}_z'] = 0
@@ -175,12 +227,57 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
                 lambda x: (x - mean) / std if pd.notna(x) else 0
             )
 
-    # 合成总分（注意低波动和低换手是负相关，用 -z）
+    # 估值因子 z-score（如果数据可用）
+    value_weight = 0.20
+    quality_weight = 0.15
+    has_financial = df_score['pe'].notna().sum() > 10
+
+    if has_financial:
+        # PE: 越低越好（负向）
+        for col in ['pe', 'pb']:
+            vals = df_score[col].dropna()
+            if len(vals) >= 10:
+                mean, std = vals.mean(), vals.std()
+                if std > 0:
+                    df_score[f'{col}_z'] = df_score[col].apply(
+                        lambda x: (x - mean) / std if pd.notna(x) else 0
+                    )
+                else:
+                    df_score[f'{col}_z'] = 0
+            else:
+                df_score[f'{col}_z'] = 0
+
+        # ROE: 越高越好（正向）
+        roe_vals = df_score['roe'].dropna()
+        if len(roe_vals) >= 10:
+            mean, std = roe_vals.mean(), roe_vals.std()
+            if std > 0:
+                df_score['roe_z'] = df_score['roe'].apply(
+                    lambda x: (x - mean) / std if pd.notna(x) else 0
+                )
+            else:
+                df_score['roe_z'] = 0
+        else:
+            df_score['roe_z'] = 0
+    else:
+        # 无财务数据 → 权重分配给价格因子
+        df_score['pe_z'] = 0
+        df_score['pb_z'] = 0
+        df_score['roe_z'] = 0
+        # 重新分配：动量+5%, 波动+5%, 反转+5%, 换手+5%
+        # (简化处理：保持现有价格因子权重不变，缺少的零值不影响)
+        value_weight = 0
+        quality_weight = 0
+
+    # 合成总分
     df_score['score'] = (
-        df_score['momentum_z'].fillna(0) * 0.4 +
-        -df_score['volatility_z'].fillna(0) * 0.3 +   # 低波动=高分
-        df_score['reversal_z'].fillna(0) * 0.2 +
-        -df_score['turnover_z'].fillna(0) * 0.1         # 低换手=高分
+        df_score['momentum_z'].fillna(0) * 0.25 +
+        -df_score['volatility_z'].fillna(0) * 0.15 +
+        df_score['reversal_z'].fillna(0) * 0.15 +
+        -df_score['turnover_z'].fillna(0) * 0.10 +
+        -df_score['pe_z'].fillna(0) * (value_weight / 2) +     # PE 越低越好
+        -df_score['pb_z'].fillna(0) * (value_weight / 2) +     # PB 越低越好
+        df_score['roe_z'].fillna(0) * quality_weight            # ROE 越高越好
     )
 
     df_score = df_score.sort_values('score', ascending=False).reset_index(drop=True)
