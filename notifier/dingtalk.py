@@ -3,8 +3,6 @@
 
 发送格式化的交易信号到钉钉群，支持 Markdown 排版
 """
-import requests
-from config import settings
 
 
 def format_signals(aggregated: list[dict], rejected: list[dict],
@@ -139,40 +137,6 @@ def format_signals(aggregated: list[dict], rejected: list[dict],
 
 
 def send(text: str) -> bool:
-    """
-    发送 Markdown 消息到钉钉群
-
-    参数:
-        text: Markdown 格式的消息内容
-
-    返回:
-        True 发送成功，False 发送失败
-    """
-    if not settings.DINGTALK_WEBHOOK:
-        print("⚠️ 钉钉 Webhook 未配置，跳过推送")
-        return False
-
-    payload = {
-        "msgtype": "markdown",
-        "markdown": {
-            "title": "量化交易信号",
-            "text": text,
-        },
-    }
-
-    try:
-        resp = requests.post(
-            settings.DINGTALK_WEBHOOK,
-            json=payload,
-            timeout=10,
-        )
-        data = resp.json()
-        if data.get("errcode") == 0:
-            print("✅ 已推送到钉钉")
-            return True
-        else:
-            print(f"⚠️ 钉钉推送失败: {data.get('errmsg', '未知错误')}")
-            return False
-    except Exception as e:
-        print(f"⚠️ 钉钉推送异常: {e}")
-        return False
+    """发送交易信号到钉钉"""
+    from notifier._common import send_markdown
+    return send_markdown(text, title="量化交易信号", label="交易信号")

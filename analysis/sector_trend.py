@@ -83,10 +83,11 @@ def get_sector_trends() -> dict:
         conn.close()
         return {'error': '板块历史数据不足，需要至少2天'}
 
-    df = pd.read_sql_query("""
+    placeholders = ','.join('?' * len(dates))
+    df = pd.read_sql_query(f"""
         SELECT date, name, pct_change FROM sector_history
-        WHERE date IN ({})
-    """.format(','.join(f"'{d}'" for d in dates)), conn)
+        WHERE date IN ({placeholders})
+    """, conn, params=dates)
     conn.close()
 
     if df.empty:

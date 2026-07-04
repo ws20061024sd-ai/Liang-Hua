@@ -25,73 +25,12 @@ from config import settings
 
 
 # ============================================================
-# 单因子计算
+# 单因子计算 —— 统一从 engine.factors 导入
 # ============================================================
-
-def _compute_momentum(df: pd.DataFrame, date: str) -> float | None:
-    """
-    动量因子：过去12个月涨幅（剔除最近1个月）
-
-    学术标准：t-12 到 t-1 月的累计收益。
-    这避免了短期反转效应的干扰，是A股最稳定的因子之一。
-    """
-    df = df[df['date'] <= date].copy()
-    if len(df) < 252:
-        return None
-
-    # 最近1个月（~21个交易日）+ 之前11个月
-    one_month = 21
-    twelve_months = 252
-
-    if len(df) < twelve_months:
-        return None
-
-    recent = df['close'].iloc[-one_month] if len(df) >= one_month else df['close'].iloc[0]
-    past = df['close'].iloc[-twelve_months]
-
-    if past <= 0:
-        return None
-
-    # 12个月收益 - 1个月收益 = 剔除近1个月的动量
-    total_ret = (df['close'].iloc[-1] - past) / past
-    recent_ret = (df['close'].iloc[-1] - recent) / recent
-    momentum = total_ret - recent_ret
-
-    return round(momentum, 4)
-
-
-def _compute_volatility(df: pd.DataFrame, date: str) -> float | None:
-    """
-    低波动因子：60日年化波动率
-
-    越低越好（低波动股票长期跑赢高波动）。
-    """
-    df = df[df['date'] <= date].copy()
-    if len(df) < 60:
-        return None
-
-    returns = df['close'].pct_change().dropna().tail(60)
-    if len(returns) < 30:
-        return None
-
-    daily_vol = returns.std()
-    annual_vol = daily_vol * np.sqrt(252)
-    return round(annual_vol, 4)
-
-
-def _compute_reversal(df: pd.DataFrame, date: str) -> float | None:
-    """
-    短期反转因子：5日涨幅
-
-    负值 = 最近跌了 → 可能反弹（A 股短期反转效应强）
-    取负号使高分 = 跌得多（反弹潜力大）
-    """
-    df = df[df['date'] <= date].copy()
-    if len(df) < 6:
-        return None
-
-    ret_5d = (df['close'].iloc[-1] - df['close'].iloc[-6]) / df['close'].iloc[-6]
-    return round(-ret_5d, 4)  # 负号：跌得多→分数高
+from engine.factors import momentum as _compute_momentum
+from engine.factors import volatility as _compute_volatility
+from engine.factors import reversal as _compute_reversal
+from engine.factors import turnover_factor as _compute_turnover
 
 
 def _fetch_financial_factors(conn, date: str) -> pd.DataFrame:
@@ -111,20 +50,6 @@ def _fetch_financial_factors(conn, date: str) -> pd.DataFrame:
           )
     """, conn, params=(date, date))
     return df
-
-
-def _compute_turnover(df: pd.DataFrame, date: str) -> float | None:
-    """
-    换手率因子：20日平均换手率
-
-    低换手 = 筹码稳定（可选附加因子）
-    """
-    df = df[df['date'] <= date].copy()
-    if 'turnover' not in df.columns or len(df) < 20:
-        return None
-
-    avg_turnover = df['turnover'].tail(20).mean()
-    return round(-avg_turnover, 4) if pd.notna(avg_turnover) else None
 
 
 # ============================================================

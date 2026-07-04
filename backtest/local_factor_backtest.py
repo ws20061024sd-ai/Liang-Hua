@@ -32,32 +32,17 @@ def load_data():
 
 
 def compute_factors(close_wide, vol_wide, fin_map, stocks, date_str, fw):
-    """单月因子计算——与聚宽 batch_factor_scores 一致"""
+    """单月因子计算——统一使用 engine.factors 向量化函数"""
+    from engine.factors import (
+        momentum_vectorized, volatility_vectorized,
+        reversal_vectorized, turnover_vectorized,
+    )
     window = close_wide.iloc[-260:]
-    n = len(window)
 
-    if n >= 252:
-        momentum = (window.iloc[-21] - window.iloc[-252]) / window.iloc[-252]
-    else:
-        momentum = pd.Series(np.nan, index=stocks)
-
-    if n >= 60:
-        rets = window.pct_change().iloc[-60:]
-        volatility = rets.std() * np.sqrt(252)
-    else:
-        volatility = pd.Series(np.nan, index=stocks)
-
-    if n >= 6:
-        reversal = -(window.iloc[-1] - window.iloc[-6]) / window.iloc[-6]
-    else:
-        reversal = pd.Series(np.nan, index=stocks)
-
-    if len(vol_wide) >= 60:
-        v20 = vol_wide.iloc[-20:].mean()
-        v60 = vol_wide.iloc[-60:].mean()
-        turnover = -(v20 / v60.replace(0, np.nan))
-    else:
-        turnover = pd.Series(np.nan, index=stocks)
+    momentum = momentum_vectorized(window)
+    volatility = volatility_vectorized(window)
+    reversal = reversal_vectorized(window)
+    turnover = turnover_vectorized(vol_wide)
 
     # 取 date_str 之前最新的财务数据
     pe_vals, pb_vals, roe_vals = {}, {}, {}

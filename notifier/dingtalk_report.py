@@ -202,24 +202,5 @@ def format_report(macro: dict, sector: dict, stock: dict, data_date: str = None,
 
 def send_report(markdown: str) -> bool:
     """发送日报到钉钉"""
-    if not settings.DINGTALK_WEBHOOK:
-        print("⚠️ 钉钉未配置，跳过推送")
-        return False
-
-    payload = {
-        "msgtype": "markdown",
-        "markdown": {
-            "title": "量化市场日报",
-            "text": markdown,
-        },
-    }
-    try:
-        resp = requests.post(settings.DINGTALK_WEBHOOK, json=payload, timeout=10)
-        if resp.json().get("errcode") == 0:
-            print("✅ 日报已推送到钉钉")
-            return True
-        print(f"⚠️ 推送失败: {resp.json().get('errmsg')}")
-        return False
-    except Exception as e:
-        print(f"⚠️ 推送异常: {e}")
-        return False
+    from notifier._common import send_markdown
+    return send_markdown(markdown, title="量化市场日报", label="市场日报")
