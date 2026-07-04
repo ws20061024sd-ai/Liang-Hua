@@ -1,15 +1,26 @@
 """
-财务数据下载器 —— Baostock 多线程版
+财务数据下载器 —— Baostock 顺序下载版
 
-数据源: Baostock（完全免费，无需注册，K线接口直接返回 PE/PB）
-速度: 8 线程并行，300 只 × 7 年 < 2 分钟
+数据源: Baostock（完全免费，无需注册，K线接口直接返回 PE/PB/PS/PCF）
+速度: 顺序下载，300只 × 7年 ≈ 90秒（Baostock C扩展不支持多线程并发登录）
 """
 import sqlite3
 import time
 import pandas as pd
 import numpy as np
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from config import settings
+
+# --- Baostock + Pandas 3.x 兼容补丁 ---
+# Baostock 0.9.2 内部使用了 DataFrame.append()，该方法在 Pandas 2.0+ 中已被移除。
+# 必须在 import baostock 之前给 pandas 打全局补丁，因为 baostock 内部 import 后直接使用。
+def _make_append_compat():
+    """为 pandas DataFrame 恢复已移除的 append 方法"""
+    if not hasattr(pd.DataFrame, 'append'):
+        def _append(self, other, ignore_index=False, sort=False):
+            return pd.concat([self, other], ignore_index=ignore_index, sort=sort)
+        pd.DataFrame.append = _append
+
+_make_append_compat()
 
 try:
     import baostock as bs
@@ -21,9 +32,9 @@ def init_financial_table():
     conn = sqlite3.connect(settings.DB_PATH)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS financial_data (
-            code TEXT, date TEXT, pe REAL, pb REAL, roe REAL, roa REAL,
-            gross_margin REAL, net_margin REAL, revenue_yoy REAL,
-            profit_yoy REAL, market_cap REAL, circ_mv REAL, total_assets REAL,
+            code TEXT, date TEXT, close REAL, pe REAL, pb REAL, ps REAL, pcf REAL,
+            roe REAL, roa REAL, gross_margin REAL, net_margin REAL,
+            revenue_yoy REAL, profit_yoy REAL, market_cap REAL, circ_mv REAL, total_assets REAL,
             PRIMARY KEY (code, date)
         )
     """)
@@ -46,7 +57,11 @@ def _safe_float(val) -> float | None:
 
 
 def _download_one(code: str, start_date: str, end_date: str) -> pd.DataFrame | None:
-    """下载单只股票（多线程 worker）"""
+    """
+    下载单只股票 Baostock 数据（在主线程登录后调用）
+
+    自动重试3次（退避0.5s/1.0s），返回 DataFrame 或 None。
+    """
     bs_code = _bs_code(code)
     if bs_code is None:
         return None
@@ -74,14 +89,23 @@ def _download_one(code: str, start_date: str, end_date: str) -> pd.DataFrame | N
                         if col in df.columns:
                             df[col] = df[col].apply(_safe_float)
                     return df
+            else:
+                if retry < 2:
+                    time.sleep(0.5 * (retry + 1))
         except Exception:
             if retry < 2:
-                time.sleep(0.3 * (retry + 1))
+                time.sleep(0.5 * (retry + 1))
     return None
 
 
 def download_financial_data(codes: list, start_date: str = None) -> pd.DataFrame | None:
-    """8线程并行下载 Baostock PE/PB 估值数据"""
+    """
+    顺序下载 Baostock PE/PB/PS/PCF 估值数据
+
+    采用单线程顺序下载（Baostock 的 C 扩展不支持多线程并发登录）。
+    300只 × 7年 ≈ 90秒，对月频财务数据完全可接受。
+    失败股票自动重试3次（退避0.5s/1.0s）。
+    """
     if bs is None:
         print("   ❌ Baostock 未安装: pip install baostock")
         return None
@@ -89,32 +113,31 @@ def download_financial_data(codes: list, start_date: str = None) -> pd.DataFrame
         start_date = settings.FINANCIAL_START_DATE
 
     end_date = pd.Timestamp.now().strftime('%Y-%m-%d')
+
+    # 登录一次，顺序下载所有股票
     lg = bs.login()
     if lg.error_code != '0':
-        print(f"   ❌ 登录失败: {lg.error_msg}")
+        print(f"   ❌ Baostock 登录失败: {lg.error_msg}")
         return None
 
     total = len(codes)
-    print(f"   📡 Baostock 8线程下载（{total} 只，{start_date} 起）...")
+    print(f"   📡 Baostock 顺序下载（{total} 只，{start_date} 起）...")
 
-    all_rows, fail_count, completed = [], 0, 0
+    all_rows, fail_count = [], 0
 
-    with ThreadPoolExecutor(max_workers=8) as pool:
-        futures = {pool.submit(_download_one, c, start_date, end_date): c for c in codes}
-        for f in as_completed(futures):
-            completed += 1
-            try:
-                df = f.result()
-                if df is not None and not df.empty:
-                    all_rows.append(df)
-                else:
-                    fail_count += 1
-            except Exception:
+    try:
+        for i, code in enumerate(codes):
+            df = _download_one(code, start_date, end_date)
+            if df is not None and not df.empty:
+                all_rows.append(df)
+            else:
                 fail_count += 1
-            if completed % 100 == 0:
-                print(f"      [{completed}/{total}] 完成（失败 {fail_count}）")
 
-    bs.logout()
+            # 进度显示
+            if (i + 1) % 50 == 0:
+                print(f"      [{i+1}/{total}] 完成（失败 {fail_count}）")
+    finally:
+        bs.logout()
 
     if not all_rows:
         print(f"   ❌ 全部失败（{fail_count}/{total}）")
@@ -122,32 +145,37 @@ def download_financial_data(codes: list, start_date: str = None) -> pd.DataFrame
 
     result = pd.concat(all_rows, ignore_index=True)
     result['date'] = pd.to_datetime(result['date']).dt.strftime('%Y-%m-%d')
-    print(f"   ✅ {len(all_rows)} 只成功，{len(result)} 条（失败 {fail_count}）")
+    print(f"   ✅ {len(all_rows)} 只成功，{len(result):,} 条（失败 {fail_count}）")
     return result
 
 
 def save_financial_data(df: pd.DataFrame):
     conn = sqlite3.connect(settings.DB_PATH)
-    for col in ['roe', 'roa', 'gross_margin', 'net_margin',
-                'revenue_yoy', 'profit_yoy', 'market_cap', 'circ_mv', 'total_assets']:
-        if col not in df.columns:
-            df[col] = None
-    cols = ['code', 'date', 'pe', 'pb', 'roe', 'roa', 'gross_margin',
-            'net_margin', 'revenue_yoy', 'profit_yoy', 'market_cap',
-            'circ_mv', 'total_assets']
-    rows = df[cols].values.tolist()
-    conn.executemany(f"INSERT OR REPLACE INTO financial_data ({','.join(cols)}) VALUES ({','.join(['?']*len(cols))})", rows)
-    conn.commit()
-    conn.close()
-    print(f"   💾 保存 {len(rows)} 条")
+    try:
+        for col in ['close', 'ps', 'pcf', 'roe', 'roa', 'gross_margin', 'net_margin',
+                    'revenue_yoy', 'profit_yoy', 'market_cap', 'circ_mv', 'total_assets']:
+            if col not in df.columns:
+                df[col] = None
+        cols = ['code', 'date', 'close', 'pe', 'pb', 'ps', 'pcf',
+                'roe', 'roa', 'gross_margin', 'net_margin',
+                'revenue_yoy', 'profit_yoy', 'market_cap',
+                'circ_mv', 'total_assets']
+        rows = df[cols].values.tolist()
+        conn.executemany(f"INSERT OR REPLACE INTO financial_data ({','.join(cols)}) VALUES ({','.join(['?']*len(cols))})", rows)
+        conn.commit()
+        print(f"   💾 保存 {len(rows)} 条")
+    finally:
+        conn.close()
 
 
 def fix_financial_data():
     conn = sqlite3.connect(settings.DB_PATH)
-    pe = conn.execute(f"UPDATE financial_data SET pe=NULL WHERE pe IS NOT NULL AND (pe<{settings.PE_MIN_VALID} OR pe>{settings.PE_MAX_VALID})").rowcount
-    pb = conn.execute(f"UPDATE financial_data SET pb=NULL WHERE pb IS NOT NULL AND (pb<0 OR pb>{settings.PB_MAX_VALID})").rowcount
-    conn.commit()
-    conn.close()
+    try:
+        pe = conn.execute(f"UPDATE financial_data SET pe=NULL WHERE pe IS NOT NULL AND (pe<{settings.PE_MIN_VALID} OR pe>{settings.PE_MAX_VALID})").rowcount
+        pb = conn.execute(f"UPDATE financial_data SET pb=NULL WHERE pb IS NOT NULL AND (pb<0 OR pb>{settings.PB_MAX_VALID})").rowcount
+        conn.commit()
+    finally:
+        conn.close()
     if pe + pb > 0:
         print(f"   🔧 清洗异常值：PE {pe} 条，PB {pb} 条")
 

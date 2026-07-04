@@ -601,11 +601,11 @@ GitHub: github.com/udit01/stock-top-papers
 
 ### 🥈 按你的三个目标对应的项目
 
-| 你的目标 | 对应的 GitHub 项目 |
-|---------|-------------------|
-| **学习研究** | 阿布量化(教程) + Awesome-Quant-CN(目录) + stock-top-papers(学术) |
-| **数据分析/因子** | QuantLessMoneyMore + zvt + Qlib |
-| **实盘交易** | vnpy(终极) + syf_quant-trading(轻量) + pythonstock(数据管线) |
+| 你的目标                | 对应的 GitHub 项目                                               |
+| ----------------------- | ---------------------------------------------------------------- |
+| **学习研究**      | 阿布量化(教程) + Awesome-Quant-CN(目录) + stock-top-papers(学术) |
+| **数据分析/因子** | QuantLessMoneyMore + zvt + Qlib                                  |
+| **实盘交易**      | vnpy(终极) + syf_quant-trading(轻量) + pythonstock(数据管线)     |
 
 ### 🥉 最短路径：用最少时间获得最大收获
 
@@ -631,24 +631,24 @@ GitHub: github.com/udit01/stock-top-papers
 
 ## 9. 附录：项目健康度速查
 
-| 项目 | Stars | 2025年活跃 | 适合阶段 | 一句话评价 |
-|------|:-----:|:---------:|:--------:|-----------|
-| **Backtrader** | ~10k | 🟡 社区维护 | 入门 | 回测入门第一选择 |
-| **Hikyuu** | ~2k | 🟢 活跃 | 进阶 | 高性能回测，关注 |
-| **VectorBT** | ~4k | 🟢 活跃 | 进阶 | 参数优化神器 |
-| **Zipline** | ~16k | 🔴 停更 | — | 已过时，不要学 |
-| **阿布量化** | ~11k | 🟡 低频更新 | 入门 | 最好的中文教程 |
-| **FinHack** | ~1k | 🟢 活跃 | 进阶 | 最新全流程框架 |
-| **vnpy** | ~30k | 🟢 活跃 | 实盘 | 实盘终极方案 |
-| **Qlib(微软)** | ~11k | 🟢 活跃 | AI进阶 | AI量化第一选择 |
-| **FinRL** | ~9k | 🟢 活跃 | AI进阶 | 学术玩具 |
-| **syf_quant** | <1k | 🟡 低频 | 入门 | 轻量参考，像你的系统 |
-| **ETF-Strategies** | <1k | 🟡 低频 | 入门 | ETF轮动参考 |
-| **UniversalRotation** | <1k | 🟡 低频 | 入门 | 可转债/轮动参考 |
-| **QuantLessMoneyMore** | <1k | 🟡 低频 | 入门 | 因子投资实操 |
-| **pythonstock/stock** | ~1k | 🟡 低频 | 入门 | 数据管线参考 |
-| **Awesome-Quant-CN** | <1k | 🟡 低频 | 入门 | 资源目录，必收藏 |
-| **machine-learning-for-trading** | ~10k | 🟡 低频 | 进阶 | ML量化最佳教材 |
+| 项目                                   | Stars | 2025年活跃 | 适合阶段 | 一句话评价           |
+| -------------------------------------- | :---: | :---------: | :------: | -------------------- |
+| **Backtrader**                   | ~10k | 🟡 社区维护 |   入门   | 回测入门第一选择     |
+| **Hikyuu**                       |  ~2k  |   🟢 活跃   |   进阶   | 高性能回测，关注     |
+| **VectorBT**                     |  ~4k  |   🟢 活跃   |   进阶   | 参数优化神器         |
+| **Zipline**                      | ~16k |   🔴 停更   |    —    | 已过时，不要学       |
+| **阿布量化**                     | ~11k | 🟡 低频更新 |   入门   | 最好的中文教程       |
+| **FinHack**                      |  ~1k  |   🟢 活跃   |   进阶   | 最新全流程框架       |
+| **vnpy**                         | ~30k |   🟢 活跃   |   实盘   | 实盘终极方案         |
+| **Qlib(微软)**                   | ~11k |   🟢 活跃   |  AI进阶  | AI量化第一选择       |
+| **FinRL**                        |  ~9k  |   🟢 活跃   |  AI进阶  | 学术玩具             |
+| **syf_quant**                    |  <1k  |   🟡 低频   |   入门   | 轻量参考，像你的系统 |
+| **ETF-Strategies**               |  <1k  |   🟡 低频   |   入门   | ETF轮动参考          |
+| **UniversalRotation**            |  <1k  |   🟡 低频   |   入门   | 可转债/轮动参考      |
+| **QuantLessMoneyMore**           |  <1k  |   🟡 低频   |   入门   | 因子投资实操         |
+| **pythonstock/stock**            |  ~1k  |   🟡 低频   |   入门   | 数据管线参考         |
+| **Awesome-Quant-CN**             |  <1k  |   🟡 低频   |   入门   | 资源目录，必收藏     |
+| **machine-learning-for-trading** | ~10k |   🟡 低频   |   进阶   | ML量化最佳教材       |
 
 ---
 

@@ -148,7 +148,8 @@ def _get_strategy_style_map() -> dict[str, str]:
     try:
         from engine.runner import STRATEGY_REGISTRY
         return {cls.name: cls.style for cls in STRATEGY_REGISTRY.values()}
-    except Exception:
+    except Exception as e:
+        print(f"⚠️ [大盘择时] 策略风格映射构建失败（权重调节将失效）: {e}")
         return {}
 
 

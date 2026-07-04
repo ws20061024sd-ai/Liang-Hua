@@ -33,6 +33,7 @@ def analyze() -> dict:
             'data_date': str(df['date'].iloc[0]) if len(df) > 0 else None,
         }
     except Exception as e:
+        print(f"⚠️ [个股分析] analyze 异常: {e}")
         return {'error': str(e)}
 
 
@@ -115,5 +116,6 @@ def _review_signals(conn) -> list[dict]:
             })
 
         return results
-    except Exception:
+    except Exception as e:
+        print(f"⚠️ [个股分析] _review_signals 异常: {e}")
         return []

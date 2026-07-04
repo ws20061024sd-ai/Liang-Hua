@@ -193,6 +193,16 @@ def main():
         except Exception as e:
             print(f"⚠️ 财务数据下载跳过: {e}")
 
+        # 板块数据缓存（为行业轮动积累历史数据，兜底 report.py 未运行的情况）
+        try:
+            from analysis.sector_trend import init_sector_table, save_today_sectors
+            init_sector_table()
+            saved = save_today_sectors()
+            if saved:
+                print("   📊 板块数据已缓存")
+        except Exception as e:
+            print(f"   ⚠️ 板块数据缓存失败（不影响信号）: {e}")
+
         q = verify_data_quality()
         if not q['ok'] and not args.no_update:
             print("⚠️ 数据质量检查未通过，信号可能基于旧数据生成")

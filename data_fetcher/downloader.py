@@ -174,8 +174,8 @@ def download_stock_history(code: str, start_date: str, end_date: str) -> pd.Data
                     '涨跌幅': 'pct_change',
                     '换手率': 'turnover',
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"   ⚠️ 备用数据源（东方财富）也失败: {e}")
 
     if df is None or df.empty:
         return None
@@ -206,25 +206,27 @@ def fix_pct_change():
     用前一天收盘价补算
     """
     conn = get_db_connection()
-    # 找到所有 pct_change 为 NULL 的行，用前一天收盘价计算
-    conn.execute("""
-        UPDATE daily_kline SET pct_change = (
-            SELECT (d1.close - d2.close) / d2.close * 100
-            FROM daily_kline AS d1
-            JOIN daily_kline AS d2 ON d1.code = d2.code
-            WHERE d1.code = daily_kline.code
-              AND d1.date = daily_kline.date
-              AND d2.date = (
-                  SELECT MAX(date) FROM daily_kline AS d3
-                  WHERE d3.code = d1.code AND d3.date < d1.date
-              )
-            LIMIT 1
-        )
-        WHERE pct_change IS NULL
-    """)
-    fixed = conn.total_changes
-    conn.commit()
-    conn.close()
+    try:
+        # 找到所有 pct_change 为 NULL 的行，用前一天收盘价计算
+        conn.execute("""
+            UPDATE daily_kline SET pct_change = (
+                SELECT (d1.close - d2.close) / d2.close * 100
+                FROM daily_kline AS d1
+                JOIN daily_kline AS d2 ON d1.code = d2.code
+                WHERE d1.code = daily_kline.code
+                  AND d1.date = daily_kline.date
+                  AND d2.date = (
+                      SELECT MAX(date) FROM daily_kline AS d3
+                      WHERE d3.code = d1.code AND d3.date < d1.date
+                  )
+                LIMIT 1
+            )
+            WHERE pct_change IS NULL
+        """)
+        fixed = conn.total_changes
+        conn.commit()
+    finally:
+        conn.close()
     if fixed > 0:
         print(f"   🔧 修复了 {fixed} 条 pct_change 空值")
 

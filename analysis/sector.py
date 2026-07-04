@@ -42,7 +42,8 @@ def analyze() -> dict:
             'amount_tier': amount_tier,
             'style': style,
         }
-    except Exception:
+    except Exception as e:
+        print(f"⚠️ [板块分析] analyze 异常: {e}")
         return {}
 
 

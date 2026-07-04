@@ -57,7 +57,8 @@ def save_today_sectors():
         conn.commit()
         conn.close()
         return True
-    except Exception:
+    except Exception as e:
+        print(f"⚠️ [板块趋势] save_today_sectors 失败: {e}")
         return False
 
 

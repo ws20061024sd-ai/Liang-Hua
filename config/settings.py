@@ -88,16 +88,24 @@ MAX_EXTREME_COUNT = 5           # 极值条数超过此值告警
 # ============================================================
 # 通知设置
 # ============================================================
-# Bark 推送 key（iOS），暂时留空
-BARK_KEY = ""
-# 钉钉机器人 webhook
-DINGTALK_WEBHOOK = "https://oapi.dingtalk.com/robot/send?access_token=5d728838f2cc7954f3d379afab290b54dc0e2e69d46555db15ad053653fef1ca"
-
-# Tushare 数据源 token
-TUSHARE_TOKEN = "f4273b569effee2274406ba3651f0506e34890334c73e20e1a296dad"
+# 敏感配置从环境变量读取（服务器部署），或从 settings.local.py 读取（本地开发）
+# 默认值为空字符串，避免误提交 token 到 Git
+import os
+BARK_KEY = os.environ.get("BARK_KEY", "")
+DINGTALK_WEBHOOK = os.environ.get("DINGTALK_WEBHOOK", "")
+TUSHARE_TOKEN = os.environ.get("TUSHARE_TOKEN", "")
 
 # ============================================================
 # 运行模式
 # ============================================================
 # 是否只检查自选池（stock_list.csv），False = 全市场扫描
 USE_WATCHLIST_ONLY = False
+
+# ============================================================
+# 本地配置覆盖（不提交到 Git）
+# ============================================================
+# 开发环境：config/settings_local.py 中定义 DINGTALK_WEBHOOK / TUSHARE_TOKEN 等
+try:
+    from config.settings_local import *  # noqa: F403
+except ImportError:
+    pass

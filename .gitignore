@@ -16,5 +16,8 @@ Thumbs.db
 # IDE
 .vscode/
 
+# Sensitive config (contains API tokens)
+config/settings_local.py
+
 # Logs
 logs/*.log

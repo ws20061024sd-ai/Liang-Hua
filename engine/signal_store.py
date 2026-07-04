@@ -47,25 +47,27 @@ def save_signals(signals: list[dict], status: str = 'passed'):
         return
 
     conn = sqlite3.connect(settings.DB_PATH)
-    for sig in signals:
-        conn.execute("""
-            INSERT OR REPLACE INTO signal_history
-            (date, code, name, strategy, action, strength, reason, price, status, filter_reason)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            sig.get('date', ''),
-            sig.get('stock_code', ''),
-            sig.get('stock_name', ''),
-            sig.get('strategy', ''),
-            sig.get('action', ''),
-            sig.get('strength', 0),
-            sig.get('reason', ''),
-            sig.get('price', 0),
-            status,
-            sig.get('reject_reason') or sig.get('block_reason'),
-        ))
-    conn.commit()
-    conn.close()
+    try:
+        for sig in signals:
+            conn.execute("""
+                INSERT OR REPLACE INTO signal_history
+                (date, code, name, strategy, action, strength, reason, price, status, filter_reason)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                sig.get('date', ''),
+                sig.get('stock_code', ''),
+                sig.get('stock_name', ''),
+                sig.get('strategy', ''),
+                sig.get('action', ''),
+                sig.get('strength', 0),
+                sig.get('reason', ''),
+                sig.get('price', 0),
+                status,
+                sig.get('reject_reason') or sig.get('block_reason'),
+            ))
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def get_recent_signals(days: int = 5) -> list[dict]:

@@ -161,7 +161,8 @@ def _analyze_breadth(data_date: str = None) -> dict:
             'med_pct': med_pct,
             'total_amount': total_amount,
             'total_amount_yi': round(total_amount / 1e8, 0) if total_amount else 0,
-            'data_date': str(max_date),
+            'data_date': str(data_date),
         }
-    except Exception:
+    except Exception as e:
+        print(f"⚠️ [宏观分析] _analyze_breadth 异常: {e}")
         return {}
