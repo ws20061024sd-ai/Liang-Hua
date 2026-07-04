@@ -5,13 +5,11 @@ import os
 import sqlite3
 import time
 import pandas as pd
-import akshare as ak
-from config import settings
+from data_fetcher.proxy_cleanup import cleanup_proxy
+cleanup_proxy()  # 必须在 import akshare 之前清除代理
 
-# 清除所有代理环境变量（国内数据源直连更快更稳定）
-for key in list(os.environ.keys()):
-    if 'proxy' in key.lower():
-        del os.environ[key]
+import akshare as ak  # noqa: E402
+from config import settings
 
 
 def get_db_connection():
@@ -379,9 +377,9 @@ def verify_data_quality() -> dict:
     # 1. 检查最新数据日期
     max_date = conn.execute("SELECT MAX(date) FROM daily_kline").fetchone()[0]
     if max_date != today:
-        weekday = datetime.now().weekday()
-        if weekday >= 5:
-            print(f"📅 今日周末，最新数据 {max_date}，正常")
+        from data_fetcher.trading_calendar import is_trading_day
+        if not is_trading_day():
+            print(f"📅 今日非交易日，最新数据 {max_date}，正常")
         else:
             issues.append(f"数据未更新到今日（最新:{max_date}，今日:{today}）")
 

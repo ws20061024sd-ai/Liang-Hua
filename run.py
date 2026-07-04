@@ -21,17 +21,8 @@ import os
 import sys
 
 # --- 代理绕过（必须在 import akshare 之前设置）---
-# 国内金融数据源直连，不走系统代理（否则 Clash 等代理可能连不上）
-_NO_PROXY = (
-    "eastmoney.com,sina.com.cn,qq.com,10jqka.com.cn,"
-    "csindex.com.cn,tushare.pro,baostock.com"
-)
-os.environ["NO_PROXY"] = _NO_PROXY
-os.environ["no_proxy"] = _NO_PROXY
-# macOS 系统代理（Clash/V2Ray等）可能被 requests 自动读取，
-# 强制清除让 requests 不使用代理
-for key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy", "ALL_PROXY", "all_proxy"):
-    os.environ.pop(key, None)
+from data_fetcher.proxy_cleanup import cleanup_proxy
+cleanup_proxy()
 
 import argparse
 from datetime import datetime
@@ -221,12 +212,12 @@ def main():
         conn.close()
         today_str = datetime.now().strftime("%Y-%m-%d")
         if max_date != today_str:
-            weekday = datetime.now().weekday()
-            if weekday >= 5:
-                print(f"📅 今日非交易日（周末），数据截止 {max_date}，跳过\n")
+            from data_fetcher.trading_calendar import is_trading_day
+            if not is_trading_day():
+                print(f"📅 今日非交易日，数据截止 {max_date}，跳过\n")
                 return
             else:
-                print(f"⚠️ 数据未更新到今日（最新: {max_date}），可能是节假日\n")
+                print(f"⚠️ 数据未更新到今日（最新: {max_date}），可能是数据源延迟\n")
                 data_fresh = False
     else:
         print("⏩ 跳过数据更新\n")

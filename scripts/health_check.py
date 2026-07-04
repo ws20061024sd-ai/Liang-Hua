@@ -91,9 +91,9 @@ def send_alert(message: str):
 
 
 if __name__ == "__main__":
-    weekday = datetime.now().weekday()
-    if weekday >= 5:
-        print(f"📅 今日周末，跳过健康检查")
+    from data_fetcher.trading_calendar import is_trading_day
+    if not is_trading_day():
+        print(f"📅 今日非交易日，跳过健康检查")
         sys.exit(0)
 
     ok = check_signals_today()
