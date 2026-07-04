@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Semi-automated quantitative trading system for A-shares (沪深300). The system generates daily buy/sell signals and market analysis reports, pushed to DingTalk. **Trading is manual** — the user reviews signals on their phone and executes orders on their brokerage app (中信建投).
 
 **Server**: Tencent Cloud OpenCloudOS 8, deployed at `/root/Liang-Hua/`.  
-**Cron**: 21:00 (signals) / 21:05 (daily report) on weekdays.  
+**Cron**: 21:00 signals → 21:05 report → 21:10 health check → 21:15 backup (weekdays).  
 **Trading capital**: ~¥10,000 (small-cap tier: single-stock ≤50%, stop-loss -3%).
 
 ## Key Commands
@@ -21,32 +21,45 @@ Semi-automated quantitative trading system for A-shares (沪深300). The system 
 source venv/bin/activate
 python run.py              # Full run: download data + generate signals + push DingTalk
 python run.py --no-update  # Signals only (skip data download, for testing)
-python run.py --init       # First-time: download all 3 years of HS300 data
+python run.py --init       # First-time: download all years of HS300 data
 python analysis/report.py  # Generate + push daily market report
+python -m engine.factor_engine  # Multi-factor scoring (monthly stock ranking)
+
+# Testing
+python -m pytest tests/ -v  # Run all tests (26 cases)
 
 # Backtest
 python backtest/simple_backtest.py
+python backtest/local_factor_backtest.py
 
 # Server (SSH into Tencent Cloud)
 ssh root@<server-ip>
 cd /root/Liang-Hua && git pull    # Sync latest code
+bash setup.sh                      # One-click deploy (first time or after major changes)
 crontab -l                          # Check scheduled tasks
 cat logs/cron.log | tail -30        # View signal run logs
 cat logs/report.log | tail -30      # View report run logs
-```
+cat logs/run.log | tail -20         # View structured logs (with timestamps)
+cat logs/health.log | tail -10      # View health check logs
+
+# Server health check & backup (manual)
+python scripts/health_check.py           # Check if signals were generated today
+python scripts/health_check.py --backup  # Also backup database
 
 ## Architecture
 
 ```
 run.py  ───  Main entry: download → fix data → quality check → strategies → filter → push
   │
+  ├── config/          settings.py (params) + settings_local.py (tokens, gitignored)
   ├── data_fetcher/    AKShare downloader (Sina primary, Eastmoney backup) → SQLite
   ├── strategies/      Pluggable strategy classes (all inherit BaseStrategy)
-  ├── engine/          Strategy runner, risk filters (2-layer), market timing, signal aggregator
+  ├── engine/          Strategy runner, risk filters, market timing, signal aggregator, factor engine
   ├── notifier/        DingTalk Markdown push (signals + daily report)
   ├── analysis/        Independent daily report pipeline (macro/sector/stock/industry)
   ├── backtest/        Local backtest using same strategy code as production
-  └── config/settings.py  Single source of truth for all parameters
+  ├── scripts/         Health check + automated DB backup
+  └── tests/           26 unit tests covering core logic
 ```
 
 **Data flow**: `AKShare → downloader.py → SQLite (daily_kline + signal_history + sector_history) → strategies → risk filters → signal_aggregator → DingTalk`
@@ -77,7 +90,11 @@ Five-layer automatic protection runs on every execution:
 4. Report consistency — all components use unified `data_date` from DB
 5. Report independent verification — report.py runs its own `fix_pct_change()` + `verify_data_quality()` as fallback
 
-**Health check** (run on server after 21:05):
+**Health check** — automated via `scripts/health_check.py` (cron at 21:10):
+```bash
+cd /root/Liang-Hua && ./venv/bin/python scripts/health_check.py
+```
+Or manual quick check:
 ```bash
 cd /root/Liang-Hua && ./venv/bin/python -c "
 import sqlite3; from datetime import datetime
@@ -92,13 +109,15 @@ print(f'Date:{maxd} | Stocks:{cnt}/300 | NULL:{nulls}')
 ## Critical Rules
 
 - **Never hardcode parameters in strategy files** — all config lives in `config/settings.py`
-- **Never push DingTalk webhook tokens** — already in settings.py, don't expose elsewhere
+- **Secrets go in `config/settings_local.py`** (gitignored), never in `settings.py` — webhook tokens, API keys
 - **Data sources must have fallbacks** — Sina primary, Eastmoney backup, THS for industries
-- **Before deploying to server**: run locally first, verify output, then `git push` + server `git pull`
+- **Before deploying to server**: run locally + run tests (`python -m pytest tests/ -v`), then `git push` + server `git pull`
 - **After deploying**: check `crontab -l` on server ONLY (Mac crontab must remain empty)
+- **Server cron MUST include**: run.py (21:00) + report.py (21:05) + health_check.py (21:10) + backup (21:15)
 - **Strategy changes require backtest first** — use `backtest/simple_backtest.py`, compare before/after metrics
 - **All report components must use the same data date** — pass `data_date` explicitly, never query MAX(date) independently
 - **pct_change must never be NULL in production data** — `fix_pct_change()` runs automatically, verify with health check
+- **Tokens must be rotated** if ever committed to Git — old tokens are in Git history forever
 
 ## Key Documentation Files
 
@@ -112,11 +131,15 @@ print(f'Date:{maxd} | Stocks:{cnt}/300 | NULL:{nulls}')
 | `docs/策略/策略回测报告.md` | Backtest results — 3 strategies × 3 timing modes |
 | `docs/策略/回测指标完全解释.md` | Beginner's guide to backtest metrics |
 | `docs/数据/数据审查报告_2026-06-09.md` | Data quality risks and 5-layer defense system |
-| `docs/参考/量化交易完整指南.md` | Beginner educational guide (not project-specific) |
+| `docs/核心/项目综合审查报告_2026-07-05.md` | **Latest audit** — 28 issues found, 27 resolved |
+| `docs/核心/优化执行计划_2026-07-05.md` | Execution plan + plain-language summary of all fixes |
+| `docs/策略/策略与回测代码审查规范.md` | Code review checklist for strategies/backtests |
 
 ## Known Deployments
 
 - **Server**: Tencent Cloud `VM-0-17-opencloudos`, path `/root/Liang-Hua/`, Python 3.11
-- **Cron**: `0 21 * * 1-5` (run.py), `5 21 * * 1-5` (report.py)
+- **Cron**: `0 21 * * 1-5` (run.py), `5 21 * * 1-5` (report.py), `10 21 * * 1-5` (health check), `15 21 * * 1-5` (DB backup)
 - **Mac local**: crontab MUST be empty (`crontab -r` already done)
-- **DingTalk webhook**: configured in settings.py (keyword filter: "量化")
+- **DingTalk webhook**: configured in `config/settings_local.py` (gitignored, keyword filter: "量化")
+- **DB backups**: `data/backups/stocks_YYYYMMDD.db`, auto-retained 7 days
+- **Logs**: `logs/run.log` (structured, rotated 10MB×7), `logs/cron.log`, `logs/report.log`, `logs/health.log`
