@@ -27,6 +27,9 @@ def get_data_date():
 
 
 def main():
+    from config.logging_config import setup_logging
+    log = setup_logging("report")
+
     print("📈 正在生成市场日报...\n")
 
     # 0. 数据质量保障

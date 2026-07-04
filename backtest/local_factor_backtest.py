@@ -5,8 +5,9 @@
       改 TOP_N / FACTOR_WEIGHTS 后重跑即可对比
 """
 import sqlite3, pandas as pd, numpy as np, time
+from config import settings
 
-DB = 'data/stocks.db'
+DB = settings.DB_PATH
 
 FACTOR_WEIGHTS = {
     'momentum':   0.30,
@@ -18,7 +19,7 @@ FACTOR_WEIGHTS = {
     'roe':        0.15,
 }
 TOP_N = 15
-COMMISSION = 0.001  # 单边手续费+滑点
+COMMISSION = settings.BACKTEST_SLIPPAGE + settings.BACKTEST_COMMISSION / 2  # 单边
 
 
 def load_data():

@@ -156,6 +156,9 @@ def print_signals(aggregated: list[dict], rejected: list[dict], capital: float):
 
 
 def main():
+    from config.logging_config import setup_logging
+    log = setup_logging("run")
+
     parser = argparse.ArgumentParser(description="半自动化量化交易系统")
     parser.add_argument("--no-update", action="store_true",
                         help="跳过数据更新，直接生成信号")
@@ -166,6 +169,7 @@ def main():
     args = parser.parse_args()
 
     print_header()
+    log.info("量化交易系统启动")
 
     # 初始化模式
     if args.init:
@@ -190,6 +194,10 @@ def main():
             from data_fetcher.financial_downloader import download_all_financial, fix_financial_data
             download_all_financial()
             fix_financial_data()
+            # 下载后检查数据覆盖率
+            fin_ok = verify_financial_coverage()
+            if not fin_ok:
+                print("   ⚠️ 财务数据覆盖率不足，多因子引擎的估值/质量因子将受影响")
         except Exception as e:
             print(f"⚠️ 财务数据下载跳过: {e}")
 
@@ -205,6 +213,7 @@ def main():
 
         q = verify_data_quality()
         if not q['ok'] and not args.no_update:
+            log.warning(f"数据质量检查未通过: {q.get('issues', [])}")
             print("⚠️ 数据质量检查未通过，信号可能基于旧数据生成")
         import sqlite3
         conn = sqlite3.connect("data/stocks.db")
@@ -231,6 +240,8 @@ def main():
     from engine.runner import run_strategies
     raw_signals = run_strategies(verbose=args.verbose)
 
+    log.info(f"策略运行完成: {len(raw_signals)} 条原始信号")
+
     # 无信号时也推送
     if not raw_signals:
         print("📭 今日无交易信号\n")
@@ -246,6 +257,7 @@ def main():
             msg += f"> ⚠️ {status_note}\n\n"
         msg += "---\n> 量化自动推送"
         send(msg)
+        log.info("无信号推送完成")
         return
 
     # 4. 防线二：基础风控过滤
@@ -298,7 +310,11 @@ def main():
         from notifier.dingtalk import format_signals, send
         tier_label = get_tier_label(settings.TOTAL_CAPITAL)
         markdown = format_signals(aggregated, rejected, settings.TOTAL_CAPITAL, tier_label, regime)
-        send(markdown)
+        ok = send(markdown)
+        log.info(f"信号推送: {'成功' if ok else '失败'} | "
+                 f"通过{len(passed)}条 拦截{len(rejected)}条 汇总{len(aggregated)}条")
+        if not ok:
+            log.error("钉钉推送失败！请检查网络或 Webhook 配置")
 
 
 def get_tier_label(capital: float) -> str:
@@ -309,6 +325,29 @@ def get_tier_label(capital: float) -> str:
     elif capital <= 100000:
         return "中等资金"
     return "标准资金"
+
+
+def verify_financial_coverage() -> bool:
+    """检查 financial_data 表是否覆盖足够的股票"""
+    import sqlite3
+    from config import settings
+    try:
+        conn = sqlite3.connect(settings.DB_PATH)
+        max_date = conn.execute("SELECT MAX(date) FROM financial_data").fetchone()[0]
+        if max_date is None:
+            conn.close()
+            return False
+        stock_cnt = conn.execute(
+            "SELECT COUNT(DISTINCT code) FROM financial_data WHERE date=?",
+            (max_date,)
+        ).fetchone()[0]
+        conn.close()
+        if stock_cnt < settings.FINANCIAL_MIN_STOCKS:
+            print(f"   ⚠️ 财务数据仅覆盖 {stock_cnt}/{settings.FINANCIAL_MIN_STOCKS} 只股票")
+            return False
+        return True
+    except Exception:
+        return False
 
 
 if __name__ == "__main__":

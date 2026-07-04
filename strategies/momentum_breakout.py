@@ -65,6 +65,12 @@ class MomentumBreakoutStrategy(BaseStrategy):
             ((df['close'] - df['breakout_threshold']) / price_range).round(4),
             0
         )
+        # 卖出强度：跌破幅度 / 过去波动范围
+        df['sell_strength'] = np.where(
+            df['breakout_down'] & (price_range > 0),
+            ((df['lowest_exit'] - df['close']) / price_range).clip(0, 1).round(4),
+            np.nan
+        )
 
         return df
 
@@ -101,7 +107,7 @@ class MomentumBreakoutStrategy(BaseStrategy):
                 'stock_code': stock_code,
                 'stock_name': stock_name,
                 'action': 'SELL',
-                'strength': 0.5,
+                'strength': round(latest.get('sell_strength', 0.5) or 0.5, 3),
                 'reason': (f'跌破{self.exit_period}日最低价 '
                            f'(收盘{latest["close"]:.2f} < '
                            f'最低{latest["lowest_exit"]:.2f})'),

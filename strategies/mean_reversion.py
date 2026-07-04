@@ -67,9 +67,9 @@ class MeanReversionStrategy(BaseStrategy):
         df['below_lower'] = df['close'] < df['bb_lower']
         df['above_upper'] = df['close'] > df['bb_upper']
 
-        # 首次触及下轨（上一个交易日不在下轨下方）
+        # 仅首次触及下轨时触发（避免连续超卖期间每天重复发信号）
         df['prev_below_lower'] = df['below_lower'].shift(1).fillna(False)
-        df['signal_buy'] = df['below_lower'] & df['ma60_rising']
+        df['signal_buy'] = df['below_lower'] & ~df['prev_below_lower'] & df['ma60_rising']
 
         # 卖出：收盘 > 上轨
         df['signal_sell'] = df['above_upper']

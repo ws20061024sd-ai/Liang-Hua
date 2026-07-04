@@ -220,7 +220,7 @@ def download_all_financial(force: bool = False):
     if not codes:
         print("❌ 股票池为空")
         return
-    print(f"\n📊 Baostock 多线程下载 {len(codes)} 只股票估值数据...")
+    print(f"\n📊 Baostock 顺序下载 {len(codes)} 只股票估值数据...")
     df = download_financial_data(codes)
     if df is None or df.empty:
         print("   ❌ 完全失败")

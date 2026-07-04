@@ -27,11 +27,11 @@ def run():
 
     strategy = MaCrossStrategy()
 
-    # 回测参数
-    capital = 100000  # 初始资金 10万
-    max_positions = 10
-    per_position_pct = 0.10
-    commission = 0.0008  # 手续费+印花税往返
+    # 回测参数（从 settings 集中管理）
+    capital = settings.BACKTEST_CAPITAL
+    max_positions = settings.BACKTEST_MAX_POSITIONS
+    per_position_pct = settings.BACKTEST_PER_POSITION_PCT
+    commission = settings.BACKTEST_COMMISSION
 
     trades = []
     daily_values = []

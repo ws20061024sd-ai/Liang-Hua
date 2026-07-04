@@ -135,10 +135,10 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
     """
     计算某一天所有股票的多因子得分
 
-    因子权重（等权）：
-      动量 40% + 低波动 30% + 反转 20% + 换手率 10%
+    因子权重：
+      动量 25% + 低波动 15% + 反转 15% + 换手率 10% + 价值(PE+PB) 20% + 质量(ROE) 15%
 
-    返回 DataFrame: [code, momentum, volatility, reversal, turnover, score]
+    返回 DataFrame: [code, name, momentum, volatility, reversal, turnover, pe, pb, roe, score]
     """
     conn = sqlite3.connect(settings.DB_PATH)
 
@@ -148,6 +148,7 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
         ).iloc[0, 0]
 
     codes = pd.read_sql_query("SELECT code, name FROM stock_info", conn)
+    code_name_map = dict(zip(codes['code'], codes['name']))
 
     # 获取财务因子数据
     fin_df = _fetch_financial_factors(conn, date)
@@ -160,14 +161,20 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
                 'roe': r['roe'] if pd.notna(r['roe']) else None,
             }
 
+    # 批量加载所有股票的日线数据（1次查询替代300次）
+    all_kline = pd.read_sql_query(
+        "SELECT code, date, close, turnover FROM daily_kline WHERE date <= ? ORDER BY code, date",
+        conn, params=(date,)
+    )
+    conn.close()
+
+    if all_kline.empty:
+        return pd.DataFrame()
+
     results = []
 
-    for _, row in codes.iterrows():
-        code = row['code']
-        df = pd.read_sql_query(
-            "SELECT date, close, turnover FROM daily_kline WHERE code=? ORDER BY date",
-            conn, params=(code,)
-        )
+    for code, df in all_kline.groupby('code'):
+        name = code_name_map.get(code, code)
         if df.empty:
             continue
 
@@ -189,7 +196,7 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
 
         results.append({
             'code': code,
-            'name': row['name'],
+            'name': name,
             'momentum': mom,
             'volatility': vol,
             'reversal': rev,
@@ -199,8 +206,6 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
             'roe': roe,
             'valid_factors': valid,
         })
-
-    conn.close()
 
     if not results:
         return pd.DataFrame()
