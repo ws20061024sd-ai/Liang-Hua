@@ -92,15 +92,17 @@ def get_all_stocks() -> pd.DataFrame:
 def get_latest_kline_for_all() -> pd.DataFrame:
     """获取所有股票的最新一行日线数据（用于当日过滤）"""
     conn = get_db_connection()
-    query = """
-        SELECT d.code, d.date, d.close, d.pct_change, d.volume,
-               d.amount, d.turnover, s.name, s.is_st
-        FROM daily_kline d
-        JOIN stock_info s ON d.code = s.code
-        WHERE d.date = (SELECT MAX(date) FROM daily_kline WHERE code = d.code)
-        ORDER BY d.code
-    """
-    df = pd.read_sql_query(query, conn)
-    conn.close()
+    try:
+        query = """
+            SELECT d.code, d.date, d.close, d.pct_change, d.volume,
+                   d.amount, d.turnover, s.name, s.is_st
+            FROM daily_kline d
+            JOIN stock_info s ON d.code = s.code
+            WHERE d.date = (SELECT MAX(date) FROM daily_kline)
+            ORDER BY d.code
+        """
+        df = pd.read_sql_query(query, conn)
+    finally:
+        conn.close()
     df['date'] = pd.to_datetime(df['date'])
     return df

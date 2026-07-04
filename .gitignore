@@ -21,3 +21,4 @@ config/settings_local.py
 
 # Logs
 logs/*.log
+data/backups/

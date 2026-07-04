@@ -273,16 +273,29 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
         # (简化处理：保持现有价格因子权重不变，缺少的零值不影响)
         value_weight = 0
         quality_weight = 0
+        # 财务数据缺失 → 将估值/质量权重按比例分配给价格因子
+        slack = 0.35  # value_weight(0.20) + quality_weight(0.15)
+        price_total = 0.65  # 四个价格因子权重之和
+        if price_total > 0:
+            scale = 1.0 / price_total  # 归一化到 1.0
 
     # 合成总分
+    w_mom = 0.25 * (scale if not has_financial else 1.0)
+    w_vol = 0.15 * (scale if not has_financial else 1.0)
+    w_rev = 0.15 * (scale if not has_financial else 1.0)
+    w_tur = 0.10 * (scale if not has_financial else 1.0)
+    w_pe  = (value_weight / 2) if has_financial else 0
+    w_pb  = (value_weight / 2) if has_financial else 0
+    w_roe = quality_weight if has_financial else 0
+
     df_score['score'] = (
-        df_score['momentum_z'].fillna(0) * 0.25 +
-        -df_score['volatility_z'].fillna(0) * 0.15 +
-        df_score['reversal_z'].fillna(0) * 0.15 +
-        -df_score['turnover_z'].fillna(0) * 0.10 +
-        -df_score['pe_z'].fillna(0) * (value_weight / 2) +     # PE 越低越好
-        -df_score['pb_z'].fillna(0) * (value_weight / 2) +     # PB 越低越好
-        df_score['roe_z'].fillna(0) * quality_weight            # ROE 越高越好
+        df_score['momentum_z'].fillna(0) * w_mom +
+        -df_score['volatility_z'].fillna(0) * w_vol +
+        df_score['reversal_z'].fillna(0) * w_rev +
+        -df_score['turnover_z'].fillna(0) * w_tur +
+        -df_score['pe_z'].fillna(0) * w_pe +
+        -df_score['pb_z'].fillna(0) * w_pb +
+        df_score['roe_z'].fillna(0) * w_roe
     )
 
     df_score = df_score.sort_values('score', ascending=False).reset_index(drop=True)

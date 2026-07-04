@@ -305,7 +305,8 @@ def download_all(force_update: bool = False):
             rows = len(df)
             date_range = f"{df['date'].iloc[0]} ~ {df['date'].iloc[-1]}"
             print(f"   [{i+1}/{total}] {code} {name} +{rows}条 ({date_range})")
-        elif pd.Timestamp(start_date) <= pd.Timestamp(today):
+        elif pd.Timestamp(start_date) > pd.Timestamp(today):
+            # 新股刚上市，暂无历史数据可下载
             skip_count += 1
         else:
             fail_count += 1
