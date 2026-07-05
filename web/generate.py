@@ -361,7 +361,7 @@ def _positions(conn):
     return out
 
 def _stock_detail(conn, code):
-    df=_q(conn,"SELECT date,open,close,high,low,volume FROM daily_kline WHERE code=? AND date>=date('now','-200 days') ORDER BY date",(code,))
+    df=_q(conn,"SELECT date,open,close,high,low,volume FROM daily_kline WHERE code=? AND date>=date('now','-260 days') ORDER BY date",(code,))
     if df.empty:return None
     name=_q(conn,"SELECT name FROM stock_info WHERE code=?",(code,))
     stock_name=name.iloc[0,0] if not name.empty else code
@@ -611,7 +611,7 @@ def page_stock(conn, code):
     d=_stock_detail(conn,code)
     if not d:return _page(f'{code}','',f'<div class="empty">无数据: {code}</div>')
 
-    df=_q(conn,"SELECT date,open,close,high,low,volume FROM daily_kline WHERE code=? AND date>=date('now','-200 days') ORDER BY date",(code,))
+    df=_q(conn,"SELECT date,open,close,high,low,volume FROM daily_kline WHERE code=? AND date>=date('now','-260 days') ORDER BY date",(code,))
     closes=df['close'].values
     ma20_s=pd.Series(closes).rolling(20).mean()
     ma60_s=pd.Series(closes).rolling(60).mean()
@@ -687,7 +687,7 @@ def page_market(m,sec,sec_days,conn=None):
     kline_html = ''
     if conn:
         idx_df = _q(conn,
-            "SELECT date, open, close, high, low FROM index_daily ORDER BY date DESC LIMIT 120")
+            "SELECT date, open, close, high, low FROM index_daily ORDER BY date DESC LIMIT 180")
         if len(idx_df) >= 5:
             idx_df = idx_df.sort_values('date')  # 渲染器需要时间升序
             closes = idx_df['close'].values
