@@ -18,14 +18,50 @@
   },
   "signals": {
     "buy_total": 12,
-    "buy_passed": 0,
-    "buy_blocked": 12,
+    "buy_passed": 7,
+    "buy_blocked": 5,
     "sell_passed": 6,
     "block_breakdown": {
-      "其他": 8,
       "涨停": 3,
-      "买不起(>¥50)": 1
+      "买不起(>¥50)": 1,
+      "其他": 1
     },
-    "top_buys": []
+    "top_buys": [
+      {
+        "code": "600958",
+        "name": "东方证券",
+        "strategy": "双均线趋势跟踪",
+        "price": 9.56,
+        "strength": 0
+      },
+      {
+        "code": "600039",
+        "name": "四川路桥",
+        "strategy": "动量突破",
+        "price": 8.45,
+        "strength": 0.003
+      },
+      {
+        "code": "601881",
+        "name": "中国银河",
+        "strategy": "动量突破",
+        "price": 13.44,
+        "strength": 0.014
+      },
+      {
+        "code": "600066",
+        "name": "宇通客车",
+        "strategy": "动量突破",
+        "price": 28.9,
+        "strength": 0.027
+      },
+      {
+        "code": "000301",
+        "name": "东方盛虹",
+        "strategy": "动量突破",
+        "price": 12.55,
+        "strength": 0.06
+      }
+    ]
   }
 }
