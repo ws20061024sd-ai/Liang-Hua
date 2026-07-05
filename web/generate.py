@@ -156,36 +156,57 @@ def _market(conn):
     ld=_q(conn,"SELECT MAX(date) FROM daily_kline").iloc[0,0]
     sc=int(_q(conn,"SELECT COUNT(DISTINCT code) FROM daily_kline WHERE date=?",(ld,)).iloc[0,0])
 
-    # 市场均价走势（用于趋势判断）
-    idx=_q(conn,"SELECT date,AVG(close) as c FROM daily_kline WHERE date>=date('now','-180 days') GROUP BY date ORDER BY date")
-    last=float(idx['c'].iloc[-1]) if len(idx) else 0
-    r5=round((idx['c'].iloc[-1]/idx['c'].iloc[-5]-1)*100,2) if len(idx)>=5 else 0
-    r20=round((idx['c'].iloc[-1]/idx['c'].iloc[-20]-1)*100,2) if len(idx)>=20 else 0
-    if len(idx)>=60:
-        m20=idx['c'].rolling(20).mean();m60=idx['c'].rolling(60).mean()
-        reg='strong' if m20.iloc[-1]>m60.iloc[-1] else 'weak'
-    else: reg='unknown'
+    # ── 真实沪深300指数（从 index_daily 表）──
+    idx_row = _q(conn, "SELECT date,close FROM index_daily WHERE date<=? ORDER BY date DESC LIMIT 1", (ld,))
+    idx_close = float(idx_row['close'].iloc[0]) if len(idx_row) else 0
+    idx_date = str(idx_row['date'].iloc[0]) if len(idx_row) else ''
 
-    # === 真正的市场宽度：今日涨/跌/平家数 ===
+    # 5日/20日涨跌幅
+    idx_hist = _q(conn,
+        "SELECT date,close FROM index_daily WHERE date<=? ORDER BY date DESC LIMIT 65", (ld,))
+    r5 = round((idx_hist['close'].iloc[0]/idx_hist['close'].iloc[4]-1)*100, 1) if len(idx_hist)>=5 else 0
+    r20 = round((idx_hist['close'].iloc[0]/idx_hist['close'].iloc[19]-1)*100, 1) if len(idx_hist)>=20 else 0
+
+    # MA20/MA60 趋势判断
+    if len(idx_hist) >= 60:
+        m20 = idx_hist['close'].iloc[:20].mean()
+        m60 = idx_hist['close'].iloc[:60].mean()
+        reg = 'strong' if m20 > m60 else 'weak'
+    else:
+        reg = 'unknown'
+
+    # 当日涨跌
+    if len(idx_hist) >= 2:
+        idx_pct = round((idx_hist['close'].iloc[0]/idx_hist['close'].iloc[1]-1)*100, 2)
+    else:
+        idx_pct = 0
+
+    # ── 全市场成交额 ──
+    amt_row = _q(conn, "SELECT SUM(amount) as total FROM daily_kline WHERE date=?", (ld,))
+    turnover = float(amt_row['total'].iloc[0]) if amt_row['total'].notna().iloc[0] else 0
+
+    # ── 市场宽度：涨/跌/平家数 ──
     pct_df=_q(conn,"SELECT pct_change FROM daily_kline WHERE date=?",(ld,))
-    up_stocks=int((pct_df['pct_change']>0).sum())      # 上涨家数
-    down_stocks=int((pct_df['pct_change']<0).sum())     # 下跌家数
-    flat_stocks=int((pct_df['pct_change']==0).sum())    # 平盘家数
+    up_stocks=int((pct_df['pct_change']>0).sum())
+    down_stocks=int((pct_df['pct_change']<0).sum())
+    flat_stocks=int((pct_df['pct_change']==0).sum())
     total_stocks=up_stocks+down_stocks+flat_stocks
     up_pct=round(up_stocks/total_stocks*100,1) if total_stocks else 0
     down_pct=round(down_stocks/total_stocks*100,1) if total_stocks else 0
-    breadth=up_stocks-down_stocks                       # 净涨家数（正=偏多）
+    breadth=up_stocks-down_stocks
 
-    # 涨跌停/极端行情统计
-    limit_up=int((pct_df['pct_change']>=9.9).sum())     # 涨停≈
-    limit_down=int((pct_df['pct_change']<=-9.9).sum())  # 跌停≈
+    # 涨跌停
+    limit_up=int((pct_df['pct_change']>=9.9).sum())
+    limit_down=int((pct_df['pct_change']<=-9.9).sum())
 
     # 数据新鲜度
     from datetime import datetime
     try:data_age=(datetime.now()-datetime.strptime(str(ld),'%Y-%m-%d')).days
     except:data_age=99
 
-    return {'date':str(ld),'stocks':sc,'regime':reg,'close':last,'r5':r5,'r20':r20,
+    return {'date':str(ld),'stocks':sc,'regime':reg,
+        'idx_close':idx_close,'idx_date':idx_date,'idx_pct':idx_pct,
+        'r5':r5,'r20':r20,'turnover':turnover,
         'up':up_stocks,'down':down_stocks,'flat':flat_stocks,'total':total_stocks,
         'up_pct':up_pct,'down_pct':down_pct,'breadth':breadth,
         'limit_up':limit_up,'limit_down':limit_down,'data_age':data_age}
@@ -240,8 +261,9 @@ def _save_snapshot(m, sigs):
     snap = {
         'date': today,
         'market': {
-            'close': m['close'], 'regime': m['regime'],
-            'r5': m['r5'], 'r20': m['r20'],
+            'idx_close': m['idx_close'], 'idx_pct': m['idx_pct'],
+            'regime': m['regime'], 'r5': m['r5'], 'r20': m['r20'],
+            'turnover': m['turnover'],
             'up': m['up'], 'down': m['down'], 'flat': m['flat'],
             'up_pct': m['up_pct'], 'down_pct': m['down_pct'],
             'breadth': m['breadth'],
@@ -465,8 +487,9 @@ def page_index(conn, m, h, sigs, fs, ps):
     reg_label='强势 ↑'if m['regime']=='strong'else'弱势 ↓'
     reg_cls='up'if m['regime']=='strong'else'dn'
     b_label='偏多' if m['breadth']>50 else ('偏空' if m['breadth']<-50 else '中性')
-    avg_chg_label = f'均价{_ud(m["r5"])}%/{_ud(m["r20"])}%' if m['r5'] else '均价 —'
-    mkt_html=f'<div class="panel"><div class="panel-bd" style="display:flex;align-items:center;gap:20px;padding:10px 16px"><span style="font-size:20px;font-weight:700">{m["close"]:.0f}</span><span style="font-size:12px;color:var(--text-muted)">均价</span><span class="{reg_cls}" style="font-weight:600">{reg_label}</span><span class="dim" style="font-size:11px">5日均价{_ud(m["r5"])}% · 20日均价{_ud(m["r20"])}% · 涨{m["up"]}家/跌{m["down"]}家({m["up_pct"]}%/{m["down_pct"]}%) {b_label}</span>' + (
+    turnover_str = f' · 成交{turnover/1e8:.0f}亿' if (turnover := m.get('turnover',0)) > 0 else ''
+    idx_pct_str = _ud(m.get('idx_pct',0))
+    mkt_html=f'<div class="panel"><div class="panel-bd" style="display:flex;align-items:center;gap:20px;padding:10px 16px"><span style="font-size:20px;font-weight:700">{m["idx_close"]:.0f}</span><span style="font-size:12px;color:var(--text-muted)">沪深300</span><span class="{("up"if m.get("idx_pct",0)>=0 else"dn")}" style="font-weight:500;font-size:12px">{idx_pct_str}%</span><span class="{reg_cls}" style="font-weight:600">{reg_label}</span><span class="dim" style="font-size:11px">5日{_ud(m["r5"])}% · 20日{_ud(m["r20"])}% · 涨{m["up"]}家/跌{m["down"]}家({m["up_pct"]}%/{m["down_pct"]}%) {b_label}{turnover_str}</span>' + (
         f'<span class="dn" style="font-size:10px">跌停{m["limit_down"]}只</span>' if m['limit_down']>0 else ''
     ) + f'<span class="dim" style="font-size:10px;margin-left:auto">数据: {m["date"]}</span></div></div>'
 
@@ -665,7 +688,7 @@ def page_market(m,sec,sec_days):
       <div class="dim" style="font-size:11px;margin-top:6px">需要 report.py 每日运行积累 ≥5天数据</div></div></div>'''
 
     body=f'''
-    <div class="hero"><h2>📊 市场监控</h2><p>数据: {m["date"]} · {m["total"]}只股票 · 均价 {m["close"]:.0f}元 <span class="{reg_cls}" style="font-weight:500">{reg_label}</span> · 5日均价{_ud(m["r5"])}% · 20日均价{_ud(m["r20"])}%</p></div>
+    <div class="hero"><h2>📊 市场监控</h2><p>数据: {m["date"]} · {m["total"]}只股票 · 沪深300 {m["idx_close"]:.0f}点 <span class="{("up"if m.get("idx_pct",0)>=0 else"dn")}" style="font-weight:500">{_ud(m.get("idx_pct",0))}%</span> · <span class="{reg_cls}" style="font-weight:500">{reg_label}</span> · 成交{m.get("turnover",0)/1e8:.0f}亿</p></div>
     {width_html}
     {sec_html}'''
     return _page('市场监控','market.html',body)
@@ -741,22 +764,21 @@ def page_history(history):
         m = h['market']
         reg = '↑' if m['regime']=='strong' else '↓'
         reg_c = 'up' if m['regime']=='strong' else 'dn'
-        # 涨跌微型条
-        total = m['up']+m['down']+m['flat']
-        up_w = m['up']/total*100 if total else 0
-        dn_w = m['down']/total*100 if total else 0
+        idx_close = m.get('idx_close', m.get('close', 0))  # 兼容旧快照
+        turnover_str = f'{m.get("turnover",0)/1e8:.0f}亿' if m.get('turnover',0) > 0 else '—'
         mkt_rows += f'''<tr>
           <td style="white-space:nowrap">{h['date']}</td>
-          <td class="ta-r code">{m['close']:.0f}</td>
+          <td class="ta-r code">{idx_close:.0f}</td>
           <td class="ta-r"><span class="{reg_c} fw">{reg} {m['r5']:+.1f}%</span></td>
           <td class="ta-r"><span class="up">{m['up']}</span>/<span class="dn">{m['down']}</span></td>
           <td class="ta-r"><span class="{"up" if m["breadth"]>=0 else "dn"} fw">{m["breadth"]:+d}</span></td>
           <td class="ta-r"><span class="dim">{m['up_pct']}%</span></td>
+          <td class="ta-r"><span class="dim">{turnover_str}</span></td>
           <td class="ta-r"><span class="dim">{m.get('limit_up',0)}/</span><span class="dn">{m.get('limit_down',0)}</span></td>
         </tr>'''
 
     mkt_table = f'''<div class="panel"><div class="panel-hd">📊 市场宽度历史（{len(history)}天）</div><div class="panel-bd" style="overflow-x:auto">
-      <table><thead><tr><th>日期</th><th class="ta-r">均价</th><th class="ta-r">趋势/5日</th><th class="ta-r">涨/跌家</th><th class="ta-r">净涨</th><th class="ta-r">涨%</th><th class="ta-r">涨跌停</th></tr></thead><tbody>{mkt_rows}</tbody></table></div></div>'''
+      <table><thead><tr><th>日期</th><th class="ta-r">沪深300</th><th class="ta-r">趋势/5日</th><th class="ta-r">涨/跌家</th><th class="ta-r">净涨</th><th class="ta-r">涨%</th><th class="ta-r">成交</th><th class="ta-r">涨跌停</th></tr></thead><tbody>{mkt_rows}</tbody></table></div></div>'''
 
     # ── 信号摘要表 ──
     sig_rows = ''
@@ -776,8 +798,9 @@ def page_history(history):
     sig_table = f'''<div class="panel"><div class="panel-hd">📡 信号摘要历史（{len(history)}天）</div><div class="panel-bd" style="overflow-x:auto">
       <table><thead><tr><th>日期</th><th class="ta-r">买入(通过/拦截)</th><th class="ta-r">卖出</th><th>拦截原因</th><th>Top买入</th></tr></thead><tbody>{sig_rows}</tbody></table></div></div>'''
 
-    # ── 市场趋势微图（纯文本 sparkline）──
-    closes = [h['market']['close'] for h in history if h['market']['close']]
+    # ── 沪深300指数微走势图 ──
+    closes = [h['market'].get('idx_close', h['market'].get('close', 0)) for h in history]
+    closes = [c for c in closes if c and c > 100]  # 过滤旧快照的均价(~70)
     spark = ''
     if len(closes) >= 3:
         cmin, cmax = min(closes), max(closes)
@@ -787,7 +810,7 @@ def page_history(history):
             h_pct = int((c - cmin) / cr * 40) + 2
             color = 'var(--up)' if (i==0 or c >= closes[i-1]) else 'var(--down)'
             bars += f'<span class="mini-bar" style="width:8px;height:{h_pct}px;background:{color};display:inline-block;margin-right:2px" title="{history[i]["date"]}: {c:.0f}"></span>'
-        spark = f'<div class="panel" style="margin-top:0"><div class="panel-bd" style="text-align:center;padding:12px"><span class="dim" style="font-size:10px">均价走势 ({len(closes)}天) </span>{bars}</div></div>'
+        spark = f'<div class="panel" style="margin-top:0"><div class="panel-bd" style="text-align:center;padding:12px"><span class="dim" style="font-size:10px">沪深300走势 ({len(closes)}天) </span>{bars}</div></div>'
 
     body = f'''<div class="hero"><h2>📅 历史对比</h2><p>每日自动存档——信号与市场数据的横向对比</p></div>
     {spark}

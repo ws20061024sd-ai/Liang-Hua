@@ -3,8 +3,8 @@
   "market": {
     "close": 66.7,
     "regime": "strong",
-    "r5": -1.38,
-    "r20": 3.46,
+    "r5": 0.5,
+    "r20": 0.8,
     "up": 105,
     "down": 211,
     "flat": 3,
@@ -12,7 +12,10 @@
     "down_pct": 66.1,
     "breadth": -106,
     "limit_up": 1,
-    "limit_down": 0
+    "limit_down": 0,
+    "idx_close": 4938.809,
+    "idx_pct": 0.49,
+    "turnover": 994068252992.0
   },
   "signals": {
     "buy_total": 0,

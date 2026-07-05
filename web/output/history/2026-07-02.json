@@ -2,9 +2,9 @@
   "date": "2026-07-02",
   "market": {
     "close": 69.8,
-    "regime": "strong",
-    "r5": -5.76,
-    "r20": 4.58,
+    "regime": "weak",
+    "r5": -1.1,
+    "r20": -1.9,
     "up": 100,
     "down": 184,
     "flat": 3,
@@ -12,7 +12,10 @@
     "down_pct": 64.1,
     "breadth": -84,
     "limit_up": 1,
-    "limit_down": 13
+    "limit_down": 13,
+    "idx_close": 4812.296,
+    "idx_pct": -2.96,
+    "turnover": 991693876411.0
   },
   "signals": {
     "buy_total": 0,

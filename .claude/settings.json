@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p backtest/joinquant)",
+      "Bash(git mv *)",
+      "Bash(PYTHONPATH=. python web/generate.py)",
+      "Bash(git restore *)"
+    ],
+    "additionalDirectories": [
+      "/Users/xoln/Desktop/编程/量化/backtest"
+    ]
+  }
+}

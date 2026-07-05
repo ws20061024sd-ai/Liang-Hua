@@ -12,7 +12,10 @@
     "down_pct": 54.5,
     "breadth": -32,
     "limit_up": 2,
-    "limit_down": 0
+    "limit_down": 0,
+    "idx_close": 4914.559,
+    "idx_pct": 1.45,
+    "turnover": 873917019907.0
   },
   "signals": {
     "buy_total": 0,
