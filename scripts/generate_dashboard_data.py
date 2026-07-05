@@ -194,7 +194,14 @@ def _factors(conn):
         from engine.factor_engine import compute_factor_scores
         df=compute_factor_scores()
         if df.empty:return[]
-        return[{'r':i+1,'code':r['code'],'name':r['name'],'score':round(float(r['score']),2),'mom':round(float(r.get('momentum',0)or 0),1),'vol':round(float(r.get('volatility',0)or 0),2)}for i,(_,r)in enumerate(df.head(20).iterrows())]
+        codes=[r['code']for _,r in df.head(20).iterrows()]
+        ph=','.join('?'*len(codes))
+        ld=_q(conn,"SELECT MAX(date) FROM daily_kline").iloc[0,0]
+        prices=_q(conn,f"SELECT code,close FROM daily_kline WHERE date=? AND code IN ({ph})",[ld]+codes)
+        pm=dict(zip(prices['code'],prices['close']))
+        return[{'r':i+1,'code':r['code'],'name':r['name'],'score':round(float(r['score']),2),
+            'mom':round(float(r.get('momentum',0)or 0),1),'vol':round(float(r.get('volatility',0)or 0),2),
+            'price':round(float(pm.get(r['code'],0)),2)}for i,(_,r)in enumerate(df.head(20).iterrows())]
     except:return[]
 
 def _signals(conn):
@@ -241,7 +248,7 @@ def page_index(m,h,bd,ps,fs,sigs,sec):
     if ps:pos_html=''.join(f'<div class="pos-item"><span class="pos-code {"up" if p["pnl"]>=0 else "dn"}">{p["code"]}</span><span class="pos-meta">{p["name"]} · 买 ¥{p["buy"]}<br>现 ¥{p["now"]} · 止损 ¥{p["stop"]}</span><span class="pos-pnl {"up" if p["pnl"]>=0 else "dn"}">{"+" if p["pnl"]>=0 else ""}{p["pnl"]}%</span></div>'for p in ps)
 
     factor_html='<div class="empty">暂无数据</div>'
-    if fs:factor_html='<table><thead><tr><th>#</th><th>代码</th><th>名称</th><th class="ta-r">得分</th><th class="ta-r">动量</th></tr></thead><tbody>'+''.join(f'<tr><td>{f["r"]}</td><td class="code">{f["code"]}</td><td>{f["name"]}</td><td class="ta-r"><span class="bl fw">{f["score"]:.1f}</span></td><td class="ta-r {"up" if f["mom"]>=0 else "dn"}">{"+" if f["mom"]>=0 else ""}{f["mom"]}</td></tr>'for f in fs[:15])+'</tbody></table>'
+    if fs:factor_html='<table><thead><tr><th>#</th><th>代码</th><th>名称</th><th class="ta-r">现价</th><th class="ta-r">得分</th><th class="ta-r">动量</th></tr></thead><tbody>'+''.join(f'<tr><td>{f["r"]}</td><td class="code">{f["code"]}</td><td>{f["name"]}</td><td class="ta-r">¥{f["price"]:.2f}</td><td class="ta-r"><span class="bl fw">{f["score"]:.1f}</span></td><td class="ta-r {"up" if f["mom"]>=0 else "dn"}">{"+" if f["mom"]>=0 else ""}{f["mom"]}</td></tr>'for f in fs[:15])+'</tbody></table>'
 
     sec_html='<div class="empty">板块数据收集中<br><small>需 report.py 积累 ≥2 天数据</small></div>'
     if sec:sec_html=f'<div class="dim" style="margin-bottom:8px">{sec["date"]}</div><div class="dim" style="margin-bottom:4px">▲ 最强</div>'+''.join(f'<div class="row-item"><span>{s["n"]}</span><span class="up">+{s["pct"]}%</span></div>'for s in sec['top'])+'<div class="dim" style="margin:10px 0 4px">▼ 最弱</div>'+''.join(f'<div class="row-item"><span>{s["n"]}</span><span class="dn">{s["pct"]}%</span></div>'for s in sec['bottom'])
