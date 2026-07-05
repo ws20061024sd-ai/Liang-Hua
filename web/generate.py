@@ -766,55 +766,15 @@ def page_health(h):
 
 
 def page_history(history):
-    """历史对比页 —— 市场宽度 + 信号每日快照"""
+    """历史对比页 —— 市场脉搏 + 信号摘要"""
     if not history:
         return _page('历史对比','history.html',
             '<div class="hero"><h2>📅 历史对比</h2><p>暂无历史快照——每次生成仪表盘自动存档</p></div>'
             '<div class="panel"><div class="panel-bd"><div class="empty">数据积累中<br><small class="dim">运行 web/generate.py 后自动保存每日快照到 web/output/history/</small></div></div></div>')
 
-    # ── 市场宽度趋势表 ──
-    mkt_rows = ''
-    for h in reversed(history):
-        m = h['market']
-        reg = '↑' if m['regime']=='strong' else '↓'
-        reg_c = 'up' if m['regime']=='strong' else 'dn'
-        idx_close = m.get('idx_close', m.get('close', 0))  # 兼容旧快照
-        turnover_str = f'{m.get("turnover",0)/1e8:.0f}亿' if m.get('turnover',0) > 0 else '—'
-        mkt_rows += f'''<tr>
-          <td style="white-space:nowrap">{h['date']}</td>
-          <td class="ta-r code">{idx_close:.0f}</td>
-          <td class="ta-r"><span class="{reg_c} fw">{reg} {m['r5']:+.1f}%</span></td>
-          <td class="ta-r"><span class="up">{m['up']}</span>/<span class="dn">{m['down']}</span></td>
-          <td class="ta-r"><span class="{"up" if m["breadth"]>=0 else "dn"} fw">{m["breadth"]:+d}</span></td>
-          <td class="ta-r"><span class="dim">{m['up_pct']}%</span></td>
-          <td class="ta-r"><span class="dim">{turnover_str}</span></td>
-          <td class="ta-r"><span class="dim">{m.get('limit_up',0)}/</span><span class="dn">{m.get('limit_down',0)}</span></td>
-        </tr>'''
-
-    mkt_table = f'''<div class="panel"><div class="panel-hd">📊 市场宽度历史（{len(history)}天）</div><div class="panel-bd" style="overflow-x:auto">
-      <table><thead><tr><th>日期</th><th class="ta-r">沪深300</th><th class="ta-r">趋势/5日</th><th class="ta-r">涨/跌家</th><th class="ta-r">净涨</th><th class="ta-r">涨%</th><th class="ta-r">成交</th><th class="ta-r">涨跌停</th></tr></thead><tbody>{mkt_rows}</tbody></table></div></div>'''
-
-    # ── 信号摘要表 ──
-    sig_rows = ''
-    for h in reversed(history):
-        s = h['signals']
-        bc_items = ' · '.join(f'{k}:{v}' for k,v in sorted(s.get('block_breakdown',{}).items(), key=lambda x:-x[1])) or '—'
-        buy_str = f'<span class="up fw">{s["buy_passed"]}</span>/<span class="dn">{s["buy_blocked"]}</span>'
-        top_codes = ' '.join(f'<span class="code" style="font-size:10px">{b["code"]}</span>' for b in s.get('top_buys',[])) or '—'
-        sig_rows += f'''<tr>
-          <td style="white-space:nowrap">{h['date']}</td>
-          <td class="ta-r">{buy_str}</td>
-          <td class="ta-r"><span class="{"dn" if s["sell_passed"] else "dim"}">{s["sell_passed"]}</span></td>
-          <td class="dim" style="font-size:10px;max-width:180px">{bc_items}</td>
-          <td style="font-size:10px">{top_codes}</td>
-        </tr>'''
-
-    sig_table = f'''<div class="panel"><div class="panel-hd">📡 信号摘要历史（{len(history)}天）</div><div class="panel-bd" style="overflow-x:auto">
-      <table><thead><tr><th>日期</th><th class="ta-r">买入(通过/拦截)</th><th class="ta-r">卖出</th><th>拦截原因</th><th>Top买入</th></tr></thead><tbody>{sig_rows}</tbody></table></div></div>'''
-
     # ── 沪深300指数微走势图 ──
     closes = [h['market'].get('idx_close', h['market'].get('close', 0)) for h in history]
-    closes = [c for c in closes if c and c > 100]  # 过滤旧快照的均价(~70)
+    closes = [c for c in closes if c and c > 100]
     spark = ''
     if len(closes) >= 3:
         cmin, cmax = min(closes), max(closes)
@@ -823,14 +783,73 @@ def page_history(history):
         for i, c in enumerate(closes):
             h_pct = int((c - cmin) / cr * 40) + 2
             color = 'var(--up)' if (i==0 or c >= closes[i-1]) else 'var(--down)'
-            bars += f'<span class="mini-bar" style="width:8px;height:{h_pct}px;background:{color};display:inline-block;margin-right:2px" title="{history[i]["date"]}: {c:.0f}"></span>'
-        spark = f'<div class="panel" style="margin-top:0"><div class="panel-bd" style="text-align:center;padding:12px"><span class="dim" style="font-size:10px">沪深300走势 ({len(closes)}天) </span>{bars}</div></div>'
+            bars += f'<span class="mini-bar" style="width:8px;height:{h_pct}px;background:{color};display:inline-block;margin-right:2px" title="{history[i]["date"]}: {c:.0f}点"></span>'
+        spark = f'''<div class="panel" style="margin-top:0"><div class="panel-bd" style="text-align:center;padding:10px 16px">
+          <span class="dim" style="font-size:10px">← 30天前</span> {bars} <span class="dim" style="font-size:10px">最近 →</span>
+          <div class="dim" style="font-size:10px;margin-top:4px">每根柱子 = 一个交易日 · 红色上涨 · 绿色下跌 · 高度 = 指数相对高低</div>
+        </div></div>'''
 
-    body = f'''<div class="hero"><h2>📅 历史对比</h2><p>每日自动存档——信号与市场数据的横向对比</p></div>
+    # ── 市场脉搏表 ──
+    mkt_rows = ''
+    for h in reversed(history):
+        m = h['market']
+        reg_arrow = '↑' if m['regime']=='strong' else '↓'
+        reg_c = 'up' if m['regime']=='strong' else 'dn'
+        idx_close = m.get('idx_close', m.get('close', 0))
+        turnover_str = f'{m.get("turnover",0)/1e8:.0f}亿' if m.get('turnover',0) > 0 else '—'
+
+        # 涨跌家数：红色=上涨多, 绿色=下跌多
+        up_n = m['up']; dn_n = m['down']
+        b_cls = 'up' if m['breadth'] >= 0 else 'dn'
+
+        mkt_rows += f'''<tr>
+          <td style="white-space:nowrap">{h['date']}</td>
+          <td class="ta-r code">{idx_close:.0f}</td>
+          <td class="ta-r"><span class="{reg_c} fw">{reg_arrow}</span></td>
+          <td class="ta-r"><span class="{reg_c}">{m['r5']:+.1f}%</span></td>
+          <td class="ta-r"><span class="up">{up_n}</span> <span class="dim">/</span> <span class="dn">{dn_n}</span></td>
+          <td class="ta-r"><span class="dim">{m['up_pct']}%</span></td>
+          <td class="ta-r"><span class="{b_cls}">{m['breadth']:+d}</span></td>
+          <td class="ta-r"><span class="dim">{turnover_str}</span></td>
+          <td class="ta-r"><span class="up">{m.get('limit_up',0)}</span><span class="dim">/</span><span class="dn">{m.get('limit_down',0)}</span></td>
+        </tr>'''
+
+    mkt_table = f'''<div class="panel"><div class="panel-hd">📊 市场脉搏（{len(history)}天）</div><div class="panel-bd" style="overflow-x:auto">
+      <table><thead><tr>
+        <th>日期</th><th class="ta-r">指数</th><th class="ta-r">方向</th><th class="ta-r">5日涨跌</th><th class="ta-r">上涨/下跌</th><th class="ta-r">上涨率</th><th class="ta-r">净涨家数</th><th class="ta-r">成交额</th><th class="ta-r">涨停/跌停</th>
+      </tr></thead><tbody>{mkt_rows}</tbody></table>
+      <div class="dim" style="font-size:10px;margin-top:8px;line-height:1.6">
+        💡 <strong>方向</strong>：↑ = 指数在20日均线上方(中期上行) ↓ = 下方(中期下行)  ·
+        <strong>净涨家数</strong>：上涨家数 − 下跌家数(正数=偏多)  ·
+        <strong style="color:var(--up)">红</strong>=涨/偏多 · <strong style="color:var(--down)">绿</strong>=跌/偏空
+      </div></div></div>'''
+
+    # ── 信号摘要表 ──
+    sig_rows = ''
+    for h in reversed(history):
+        s = h['signals']
+        bc_items = ' · '.join(f'{k}:{v}' for k,v in sorted(s.get('block_breakdown',{}).items(), key=lambda x:-x[1])) or '—'
+        buy_str = f'<span class="up fw">{s["buy_passed"]}</span><span class="dim">/</span><span class="dn">{s["buy_blocked"]}</span>'
+        top_codes = ' '.join(f'<span class="code" style="font-size:10px">{b["code"]}</span>' for b in s.get('top_buys',[])) or '—'
+        sig_rows += f'''<tr>
+          <td style="white-space:nowrap">{h['date']}</td>
+          <td class="ta-r">{buy_str}</td>
+          <td class="ta-r"><span class="{"dn" if s["sell_passed"] else "dim"}">{s["sell_passed"]}</span></td>
+          <td class="dim" style="font-size:10px;max-width:200px">{bc_items}</td>
+          <td style="font-size:10px">{top_codes}</td>
+        </tr>'''
+
+    sig_table = f'''<div class="panel"><div class="panel-hd">📡 信号摘要（{len(history)}天）</div><div class="panel-bd" style="overflow-x:auto">
+      <table><thead><tr><th>日期</th><th class="ta-r">买入<br><span class="dim" style="font-weight:400;text-transform:none;letter-spacing:0">通过/拦截</span></th><th class="ta-r">卖出<br><span class="dim" style="font-weight:400;text-transform:none;letter-spacing:0">通过</span></th><th>拦截原因</th><th>推荐买入</th></tr></thead><tbody>{sig_rows}</tbody></table>
+      <div class="dim" style="font-size:10px;margin-top:8px">
+        💡 买入列：<strong style="color:var(--up)">红</strong>=通过风控 / <strong style="color:var(--down)">绿</strong>=被拦截  ·  信号仅在有 run.py 运行的日期产生
+      </div></div></div>'''
+
+    body = f'''<div class="hero"><h2>📅 历史对比</h2><p>每日市场脉搏 + 信号摘要 · 横向对比看趋势变化</p></div>
     {spark}
     {mkt_table}
     {sig_table}
-    <div class="dim" style="font-size:10px;text-align:center;margin-top:12px">历史数据来自 web/output/history/ 目录 · 每次运行仪表盘生成自动存档</div>'''
+    <div class="dim" style="font-size:10px;text-align:center;margin-top:12px">数据来自 web/output/history/ · 每次运行仪表盘自动存档</div>'''
     return _page('历史对比','history.html', body)
 
 
