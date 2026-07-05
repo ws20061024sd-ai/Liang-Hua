@@ -220,15 +220,82 @@ def _signal_for_strategy(conn, strat_name):
     df=_q(conn,"SELECT date,code,name,action,price,reason FROM signal_history WHERE strategy LIKE ? AND status='passed' ORDER BY date DESC LIMIT 3",(f'%{strat_name}%',))
     return[{'d':str(r['date']),'c':r['code'],'n':r['name'],'a':r['action'],'p':round(float(r['price']),2)if r['price']else 0,'reason':r['reason']or''}for _,r in df.iterrows()]
 
-# ═══════════════ PAGE RENDERERS ═══════════════
+# ═══════════════ SHARED COMPONENTS ═══════════════
 
 def _page(title,active,body):
     return f'<!DOCTYPE html>\n<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n<title>{title} · 量化交易</title>\n{CSS}\n</head>\n<body>\n{_nav(active)}\n<main>\n{body}\n</main>\n</body>\n</html>'
+
+def _panel_date(date_str, warning=False):
+    """面板日期标签"""
+    cls = 'dn' if warning else 'dim'
+    return f'<span class="{cls}" style="font-size:9px">数据: {date_str}</span>'
+
+def _freshness_banner(m, h):
+    """数据新鲜度警告横幅"""
+    warnings = []
+    today = datetime.now()
+    try:
+        daily_age = (today - datetime.strptime(m['date'], '%Y-%m-%d')).days
+        if daily_age > 2:
+            warnings.append(f'日线数据截止 {m["date"]}，已过期 {daily_age} 天。最新市场状态无法判断。')
+    except: pass
+    try:
+        fin_date = h['daily_date']
+        fin_age = (today - datetime.strptime(fin_date, '%Y-%m-%d')).days
+        if fin_age > 7:
+            warnings.append(f'PE/PB 数据截止 {fin_date}，已过期 {fin_age} 天。估值因子不可靠。')
+    except: pass
+    try:
+        sig_date = None
+        # check signal table
+        conn_check = sqlite3.connect(DB)
+        sd = conn_check.execute("SELECT MAX(date) FROM signal_history").fetchone()[0]
+        conn_check.close()
+        if sd:
+            sig_age = (today - datetime.strptime(sd, '%Y-%m-%d')).days
+            if sd != m['date'] and sig_age > 3:
+                warnings.append(f'信号数据截止 {sd}，策略已有 {sig_age} 天未运行。')
+    except: pass
+
+    if not warnings:
+        return ''
+    items = ''.join(f'<div style="padding:4px 0;font-size:12px">⚠️ {w}</div>' for w in warnings)
+    return f'<div style="background:#f6465d12;border:1px solid #f6465d44;border-radius:6px;padding:10px 16px;margin-bottom:12px">{items}</div>'
+
+def _benchmark_ret(strat_months):
+    """计算CSI300在对应周期的大致年化收益"""
+    try:
+        conn_bm = sqlite3.connect(DB)
+        idx = _q(conn_bm, "SELECT date, AVG(close) as c FROM daily_kline GROUP BY date ORDER BY date")
+        conn_bm.close()
+        if len(idx) < strat_months + 5:
+            return None
+        months_ago = min(strat_months, len(idx) - 1)
+        total_ret = (float(idx['c'].iloc[-1]) / float(idx['c'].iloc[-months_ago]) - 1) * 100
+        years = strat_months / 12
+        ann_ret = ((1 + total_ret/100) ** (1/years) - 1) * 100 if years > 0 else 0
+        return round(ann_ret, 1)
+    except:
+        return None
+
+def _disclaimer():
+    return '''<div style="background:#f0b90b10;border:1px solid #f0b90b33;border-radius:6px;padding:10px 14px;margin-top:12px;font-size:11px;color:var(--am)">
+<strong>⚠️ 回测收益 ≠ 实盘收益。</strong>以下因素导致回测数字偏高：本地数据源(AKShare)与实盘价格存在差异(~3-6pp)、止损模拟假设精确执行(实盘有滑点)、未考虑最低佣金(5元/笔)对小资金的影响。<strong>保守估计: 实盘收益 ≈ 回测收益 × 0.6~0.8。</strong></div>'''
+
+# ═══════════════ PAGE RENDERERS ═══════════════
 
 def page_index(m,h,bd,ps,fs,sigs,sec):
     """仪表盘首页"""
     reg_cls='up'if m['regime']=='strong'else'dn'
     reg_label='TRENDING ↑'if m['regime']=='strong'else'RANGE ↓'
+    fresh_warn=_freshness_banner(m,h)
+
+    # 计算数据新鲜度标记
+    today=datetime.now()
+    try:daily_age=(today-datetime.strptime(m['date'],'%Y-%m-%d')).days
+    except:daily_age=99
+    try:fin_age=(today-datetime.strptime(h['daily_date'],'%Y-%m-%d')).days
+    except:fin_age=99
 
     health=''.join(f'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b);font-size:11px"><span class="dim">{k}</span><span>{_tag("t-up"if ok else"t-dn",v)}{extra}</span></div>'
         for k,v,ok,extra in[('日线',f'{h["daily_stocks"]}只',h['daily_ok'],f'<span class="dim"> {h["daily_date"]} NULL:{h["daily_nulls"]} {h["daily_total"]:,}行</span>'),
@@ -283,24 +350,21 @@ def page_index(m,h,bd,ps,fs,sigs,sec):
     strat_mini=''.join(mini_cards)
 
     body=f'''
-    <div class="grid g4" style="margin-bottom:10px">
-      <div class="panel"><div class="panel-bd"><div class="metric"><div class="l">CSI300</div><div class="v">{m["close"]:.0f}</div><div class="s {reg_cls}">{reg_label}</div></div></div></div>
-      <div class="panel"><div class="panel-bd"><div class="metric"><div class="l">5日</div><div class="v {"up" if m["r5"]>=0 else "dn"}">{"+" if m["r5"]>=0 else ""}{m["r5"]}%</div><div class="s dim">20日 {"+" if m["r20"]>=0 else ""}{m["r20"]}%</div></div></div></div>
-      <div class="panel"><div class="panel-bd"><div class="metric"><div class="l">60日</div><div class="v {"up" if m["r60"]>=0 else "dn"}">{"+" if m["r60"]>=0 else ""}{m["r60"]}%</div><div class="s dim">{m["stocks"]}只 · {m["date"]}</div></div></div></div>
-      <div class="panel"><div class="panel-bd"><div class="metric"><div class="l">涨跌比 20日</div><div class="v"><span class="up">{m["up"]}</span>/<span class="dn">{m["down"]}</span></div><div class="s dim">{"偏多" if m["up"]>m["down"] else "偏空"}</div></div></div></div>
-    </div>
+    {fresh_warn}
+    <div class="hero" style="border-left:3px solid {"var(--up)" if m["regime"]=="strong" else "var(--dn)"}"><h2>{reg_label}</h2><p>CSI300 {m["close"]:.0f} · 5日{"+" if m["r5"]>=0 else ""}{m["r5"]}% · 20日{"+" if m["r20"]>=0 else ""}{m["r20"]}% · {m["stocks"]}只 · 数据日期 {m["date"]}</p></div>
+
     <div class="grid g2">
-      <div class="panel"><div class="panel-hd">策略回测对比 <a href="strategy.html" style="color:var(--bl);font-size:10px;text-decoration:none">详情 →</a></div><div class="panel-bd">{strat_mini}</div></div>
-      <div class="panel"><div class="panel-hd">多因子排名 Top15</div><div class="panel-bd" style="max-height:340px;overflow-y:auto">{factor_html}</div></div>
+      <div class="panel"><div class="panel-hd">策略回测对比 {_panel_date(m["date"], daily_age>2)}<a href="strategy.html" style="color:var(--bl);font-size:10px;text-decoration:none;margin-left:8px">详情 →</a></div><div class="panel-bd">{strat_mini}{_disclaimer()}</div></div>
+      <div class="panel"><div class="panel-hd">多因子排名 Top15 {_panel_date(m["date"], daily_age>2)}<a href="factors.html" style="color:var(--bl);font-size:10px;text-decoration:none;margin-left:8px">详情 →</a></div><div class="panel-bd" style="max-height:340px;overflow-y:auto">{factor_html}</div></div>
     </div>
     <div class="grid g3" style="margin-top:10px">
-      <div class="panel"><div class="panel-hd">数据健康</div><div class="panel-bd">{health}</div></div>
-      <div class="panel"><div class="panel-hd">持仓</div><div class="panel-bd">{pos_html}</div></div>
-      <div class="panel"><div class="panel-hd">市场广度 <a href="market.html" style="color:var(--bl);font-size:10px;text-decoration:none">详情 →</a></div><div class="panel-bd">{breadth_html}</div></div>
+      <div class="panel"><div class="panel-hd">数据健康 {_panel_date(m["date"], daily_age>2)}</div><div class="panel-bd">{health}</div></div>
+      <div class="panel"><div class="panel-hd">持仓 {_panel_date(m["date"], daily_age>2)}</div><div class="panel-bd">{pos_html}</div></div>
+      <div class="panel"><div class="panel-hd">市场广度 {_panel_date(m["date"], daily_age>2)}<a href="market.html" style="color:var(--bl);font-size:10px;text-decoration:none;margin-left:8px">详情 →</a></div><div class="panel-bd">{breadth_html}</div></div>
     </div>
     <div class="grid g2" style="margin-top:10px">
       <div class="panel"><div class="panel-hd">板块</div><div class="panel-bd">{sec_html}</div></div>
-      <div class="panel"><div class="panel-hd">最近信号 <a href="signals.html" style="color:var(--bl);font-size:10px;text-decoration:none">全部 →</a></div><div class="panel-bd" style="max-height:300px;overflow-y:auto">{sig_html}</div></div>
+      <div class="panel"><div class="panel-hd">最近信号 {_panel_date(m["date"], daily_age>2)}<a href="signals.html" style="color:var(--bl);font-size:10px;text-decoration:none;margin-left:8px">全部 →</a></div><div class="panel-bd" style="max-height:300px;overflow-y:auto">{sig_html}</div></div>
     </div>'''
     return _page('仪表盘','index.html',body)
 
@@ -369,15 +433,16 @@ def page_strategy(sigs):
 
     cards=''
     colors=[('#4a9eff','#4a9eff14'),('#0ecb81','#0ecb8114'),('#a85cef','#a85cef14')]
+    bench=_benchmark_ret(max(s['months'] for s in STRATS))
+    bench_str=f'<span class="dim">（同期CSI300: {bench:+.1f}%）</span>' if bench else ''
+
     for i,s in enumerate(STRATS):
-        # 最近信号
-        sig_part='<div class="dim" style="font-size:10px">暂无最近信号</div>'
+        sig_part='<div class="dim" style="font-size:10px">暂无最近信号 · 策略尚未在服务器持续运行</div>'
         if s['signals']:
             sig_part='<div style="font-size:10px;margin-top:4px"><span class="dim">最近信号: </span>'+''.join(
                 f'{_tag("t-buy" if sig["a"]=="BUY" else "t-sell",sig["a"])} {sig["c"]} {sig["n"]} ¥{sig["p"]} <span class="dim">({sig["d"]})</span> '
                 for sig in s['signals'][:3])+'</div>'
 
-        # Walk-Forward 表
         wf_rows=''.join(f'<tr><td>{r[0]}</td><td class="ta-r">{r[1]}</td><td class="ta-r">{r[2]}</td><td class="ta-r">{r[3]}</td><td class="ta-r">{r[4]}</td></tr>'for r in s['wf'])
 
         cards+=f'''<div class="strat-card" style="border-left:3px solid {colors[i][0]}">
@@ -391,18 +456,21 @@ def page_strategy(sigs):
     <div class="explain" style="margin-top:6px"><strong>为什么选这个参数：</strong>{s['why_params']}</div>
 
     <div style="display:flex;gap:20px;align-items:center;margin:12px 0;padding:10px;background:var(--s2);border-radius:6px">
-      <div><span style="font-size:22px;font-weight:700;color:{colors[i][0]}">{s['ret']}%</span><span class="dim" style="font-size:10px;margin-left:3px">年化</span></div>
+      <div><span style="font-size:22px;font-weight:700;color:{colors[i][0]}">{s['ret']}%</span><span class="dim" style="font-size:10px;margin-left:3px">年化</span><div style="font-size:10px;color:var(--dd);margin-top:2px">{bench_str}</div></div>
       <div class="flex-1" style="font-size:10px">
       <div class="bar-row"><span>夏普</span><div class="bar"><div class="bar-f" style="width:{min(s['sharpe']*100,100):.0f}%;background:{colors[i][0]}"></div></div><span>{s['sharpe']:.2f}</span></div>
       <div class="bar-row"><span>回撤</span><div class="bar"><div class="bar-f" style="width:{min(s['dd'],100):.0f}%;background:#f6465d"></div></div><span>{s['dd']:.0f}%</span></div>
       <div class="bar-row"><span>胜率</span><div class="bar"><div class="bar-f" style="width:{s['win']:.0f}%;background:#f0b90b"></div></div><span>{s['win']}%</span></div>
-      <div class="bar-row"><span>交易</span><div class="bar"><div class="bar-f" style="width:{min(s['months'],100):.0f}%;background:var(--d)"></div></div><span>{s['months']}月</span></div>
       </div></div>
 
     <div style="margin-top:10px"><span class="dim" style="font-size:10px;text-transform:uppercase;letter-spacing:.3px">Walk-Forward 验证</span>
     <table style="margin-top:4px"><thead><tr><th>周期</th><th class="ta-r">年化</th><th class="ta-r">夏普</th><th class="ta-r">回撤</th><th class="ta-r">交易</th></tr></thead><tbody>{wf_rows}</tbody></table></div>
+    <div class="dim" style="font-size:10px;margin-top:4px">训练集用于探索参数，验证集评估效果，测试集最终确认。2023-2024验证集表现差→策略在震荡市中失效。趋势策略只在趋势市中有效。</div>
     {sig_part}
     </div>'''
+
+    # 加免责声明
+    cards+=_disclaimer()
 
     # 对比表
     compare='<table><thead><tr><th>维度</th><th>双均线</th><th>动量突破</th><th>均值回归</th></tr></thead><tbody>'+''.join(
