@@ -437,7 +437,7 @@ def _render_svg_kline(ohlc_df, ma20_series, ma60_series):
 
     # ── MA20 (ffill NaN, 线不断) ──
     if ma20_series is not None and len(ma20_series)>=n:
-        ma_vals=ma20_series[-n:].ffill()
+        ma_vals=ma20_series[-n:].bfill().ffill()
         pts=[]
         for i,v in enumerate(ma_vals):
             if pd.isna(v):continue
@@ -446,7 +446,7 @@ def _render_svg_kline(ohlc_df, ma20_series, ma60_series):
 
     # ── MA60 (ffill NaN, 线不断) ──
     if ma60_series is not None and len(ma60_series)>=n:
-        ma_vals=ma60_series[-n:].ffill()
+        ma_vals=ma60_series[-n:].bfill().ffill()
         pts=[]
         for i,v in enumerate(ma_vals):
             if pd.isna(v):continue
