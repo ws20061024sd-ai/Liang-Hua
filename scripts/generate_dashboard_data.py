@@ -156,7 +156,7 @@ def _market(conn):
     ld=_q(conn,"SELECT MAX(date) FROM daily_kline").iloc[0,0]
     sc=int(_q(conn,"SELECT COUNT(DISTINCT code) FROM daily_kline WHERE date=?",(ld,)).iloc[0,0])
 
-    # CSI300 平均价格走势（用于趋势判断）
+    # 市场均价走势（用于趋势判断）
     idx=_q(conn,"SELECT date,AVG(close) as c FROM daily_kline WHERE date>=date('now','-180 days') GROUP BY date ORDER BY date")
     last=float(idx['c'].iloc[-1]) if len(idx) else 0
     r5=round((idx['c'].iloc[-1]/idx['c'].iloc[-5]-1)*100,2) if len(idx)>=5 else 0
@@ -414,17 +414,17 @@ def _render_svg_kline(ohlc_df, ma20_series, ma60_series):
 # ═══════════════ STRATEGY DATA ═══════════════
 
 STRATS=[
-    {'key':'ma','n':'双均线趋势跟踪','p':'MA(20,60)','ret':14.5,'sharpe':0.57,'dd':31.6,'style':'trend','months':61,'win':52,
+    {'key':'ma','n':'双均线趋势跟踪','p':'MA(20,60)','style':'trend',
      'desc':'快线上穿慢线买入，下穿卖出。慢均线减少假信号。','principle':'MA20(短期趋势)上穿MA60(中期趋势)=金叉买入，下穿=死叉卖出。其余时间不操作。',
      'good':'强势趋势市场','bad':'震荡市（反复穿越均线，假信号多）',
      'why':'MA(10,30)→MA(20,60)：假信号减少40%，回撤从-62%降到-32%，代价是入场更晚。'},
-    {'key':'mb','n':'动量突破','p':'DK(10,2%,10)','ret':10.7,'sharpe':0.39,'dd':60.9,'style':'trend','months':77,'win':51,
+    {'key':'mb','n':'动量突破','p':'DK(10,2%,10)','style':'trend',
      'desc':'突破10日最高×(1+2%)买入，跌破10日最低卖出。','principle':'股价突破近期高点=买方力量确立。2%缓冲过滤假突破。',
-     'good':'强势单边行情','bad':'假突破频繁的震荡市(2023-24验证集年化-18%)',
-     'why':'回看周期20→10天：更及时，年化从2.5%→10.7%。但回撤仍大(-61%)，必须配合止损。'},
-    {'key':'mr','n':'均值回归','p':'BB(10,2.0)','ret':18.9,'sharpe':0.65,'dd':39.9,'style':'reversion','months':56,'win':54,
+     'good':'强势单边行情','bad':'假突破频繁的震荡市',
+     'why':'回看周期20→10天：更及时，年化从2.5%→10.7%。但回撤仍大，必须配合止损。'},
+    {'key':'mr','n':'均值回归','p':'BB(10,2.0)','style':'reversion',
      'desc':'布林带下轨超卖+MA60向上时买入，上轨超买卖出。','principle':'价格跌破布林带下轨(超卖)→大概率回归中轨。MA60向上过滤下跌趋势。首次下穿触发，避免重复发信号。',
-     'good':'震荡市(2023-24验证集年化+40%)','bad':'强趋势市（超卖后还有更超卖）',
+     'good':'震荡市','bad':'强趋势市（超卖后还有更超卖）',
      'why':'BB(20,2.0)→BB(10,2.0)：更短周期捕捉短期超卖，反应更快。标准差保持2.0。'},
 ]
 
@@ -465,7 +465,8 @@ def page_index(conn, m, h, sigs, fs, ps):
     reg_label='强势 ↑'if m['regime']=='strong'else'弱势 ↓'
     reg_cls='up'if m['regime']=='strong'else'dn'
     b_label='偏多' if m['breadth']>50 else ('偏空' if m['breadth']<-50 else '中性')
-    mkt_html=f'<div class="panel"><div class="panel-bd" style="display:flex;align-items:center;gap:20px;padding:10px 16px"><span style="font-size:20px;font-weight:700">{m["close"]:.0f}</span><span style="font-size:12px;color:var(--text-muted)">CSI300</span><span class="{reg_cls}" style="font-weight:600">{reg_label}</span><span class="dim" style="font-size:11px">5日{_ud(m["r5"])}% · 20日{_ud(m["r20"])}% · 涨{m["up"]}家/跌{m["down"]}家({m["up_pct"]}%/{m["down_pct"]}%) {b_label}</span>' + (
+    avg_chg_label = f'均价{_ud(m["r5"])}%/{_ud(m["r20"])}%' if m['r5'] else '均价 —'
+    mkt_html=f'<div class="panel"><div class="panel-bd" style="display:flex;align-items:center;gap:20px;padding:10px 16px"><span style="font-size:20px;font-weight:700">{m["close"]:.0f}</span><span style="font-size:12px;color:var(--text-muted)">均价</span><span class="{reg_cls}" style="font-weight:600">{reg_label}</span><span class="dim" style="font-size:11px">5日均价{_ud(m["r5"])}% · 20日均价{_ud(m["r20"])}% · 涨{m["up"]}家/跌{m["down"]}家({m["up_pct"]}%/{m["down_pct"]}%) {b_label}</span>' + (
         f'<span class="dn" style="font-size:10px">跌停{m["limit_down"]}只</span>' if m['limit_down']>0 else ''
     ) + f'<span class="dim" style="font-size:10px;margin-left:auto">数据: {m["date"]}</span></div></div>'
 
@@ -613,7 +614,7 @@ def page_strategy(sigs):
         <div style="font-size:12px;color:var(--text-muted);line-height:1.6"><strong>原理：</strong>{s["principle"]}</div>
         <div style="font-size:12px;margin-top:4px"><strong>适合：</strong><span class="up">{s["good"]}</span> · <strong>不适合：</strong><span class="dn">{s["bad"]}</span></div>
         <div style="font-size:12px;color:var(--text-muted);margin-top:4px"><strong>为什么选这个参数：</strong>{s["why"]}</div>
-        <div style="display:flex;gap:24px;align-items:center;margin-top:12px"><span style="font-size:24px;font-weight:700;color:{colors[i][0]}">{s["ret"]}%</span><span class="dim" style="font-size:11px">年化 · 夏普{s["sharpe"]:.2f} · 回撤{s["dd"]:.0f}% · 胜率{s["win"]}% · {s["months"]}月</span></div>
+        <div style="display:flex;gap:24px;align-items:center;margin-top:12px"><span style="font-size:13px;color:var(--text-muted)">📊 回测数据为参数优化时快照，非实时。</span></div>
         {sig_part}</div></div>'''
 
     disclaimer='''
@@ -664,7 +665,7 @@ def page_market(m,sec,sec_days):
       <div class="dim" style="font-size:11px;margin-top:6px">需要 report.py 每日运行积累 ≥5天数据</div></div></div>'''
 
     body=f'''
-    <div class="hero"><h2>📊 市场监控</h2><p>数据: {m["date"]} · {m["total"]}只股票 · CSI300 {m["close"]:.0f} <span class="{reg_cls}" style="font-weight:500">{reg_label}</span> · 5日{_ud(m["r5"])}% · 20日{_ud(m["r20"])}%</p></div>
+    <div class="hero"><h2>📊 市场监控</h2><p>数据: {m["date"]} · {m["total"]}只股票 · 均价 {m["close"]:.0f}元 <span class="{reg_cls}" style="font-weight:500">{reg_label}</span> · 5日均价{_ud(m["r5"])}% · 20日均价{_ud(m["r20"])}%</p></div>
     {width_html}
     {sec_html}'''
     return _page('市场监控','market.html',body)
@@ -755,7 +756,7 @@ def page_history(history):
         </tr>'''
 
     mkt_table = f'''<div class="panel"><div class="panel-hd">📊 市场宽度历史（{len(history)}天）</div><div class="panel-bd" style="overflow-x:auto">
-      <table><thead><tr><th>日期</th><th class="ta-r">CSI300</th><th class="ta-r">趋势/5日</th><th class="ta-r">涨/跌家</th><th class="ta-r">净涨</th><th class="ta-r">涨%</th><th class="ta-r">涨跌停</th></tr></thead><tbody>{mkt_rows}</tbody></table></div></div>'''
+      <table><thead><tr><th>日期</th><th class="ta-r">均价</th><th class="ta-r">趋势/5日</th><th class="ta-r">涨/跌家</th><th class="ta-r">净涨</th><th class="ta-r">涨%</th><th class="ta-r">涨跌停</th></tr></thead><tbody>{mkt_rows}</tbody></table></div></div>'''
 
     # ── 信号摘要表 ──
     sig_rows = ''
@@ -786,7 +787,7 @@ def page_history(history):
             h_pct = int((c - cmin) / cr * 40) + 2
             color = 'var(--up)' if (i==0 or c >= closes[i-1]) else 'var(--down)'
             bars += f'<span class="mini-bar" style="width:8px;height:{h_pct}px;background:{color};display:inline-block;margin-right:2px" title="{history[i]["date"]}: {c:.0f}"></span>'
-        spark = f'<div class="panel" style="margin-top:0"><div class="panel-bd" style="text-align:center;padding:12px"><span class="dim" style="font-size:10px">CSI300走势 ({len(closes)}天) </span>{bars}</div></div>'
+        spark = f'<div class="panel" style="margin-top:0"><div class="panel-bd" style="text-align:center;padding:12px"><span class="dim" style="font-size:10px">均价走势 ({len(closes)}天) </span>{bars}</div></div>'
 
     body = f'''<div class="hero"><h2>📅 历史对比</h2><p>每日自动存档——信号与市场数据的横向对比</p></div>
     {spark}

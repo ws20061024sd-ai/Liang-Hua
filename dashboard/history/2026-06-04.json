@@ -1,0 +1,25 @@
+{
+  "date": "2026-06-04",
+  "market": {
+    "close": 66.7,
+    "regime": "strong",
+    "r5": 0.43,
+    "r20": 4.63,
+    "up": 70,
+    "down": 247,
+    "flat": 2,
+    "up_pct": 21.9,
+    "down_pct": 77.4,
+    "breadth": -177,
+    "limit_up": 5,
+    "limit_down": 0
+  },
+  "signals": {
+    "buy_total": 0,
+    "buy_passed": 0,
+    "buy_blocked": 0,
+    "sell_passed": 0,
+    "block_breakdown": {},
+    "top_buys": []
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "date": "2026-05-29",
+  "market": {
+    "close": 66.4,
+    "regime": "strong",
+    "r5": -2.42,
+    "r20": 8.2,
+    "up": 177,
+    "down": 137,
+    "flat": 5,
+    "up_pct": 55.5,
+    "down_pct": 42.9,
+    "breadth": 40,
+    "limit_up": 1,
+    "limit_down": 3
+  },
+  "signals": {
+    "buy_total": 0,
+    "buy_passed": 0,
+    "buy_blocked": 0,
+    "sell_passed": 0,
+    "block_breakdown": {},
+    "top_buys": []
+  }
+}

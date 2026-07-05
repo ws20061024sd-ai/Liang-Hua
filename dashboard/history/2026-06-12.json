@@ -1,0 +1,28 @@
+{
+  "date": "2026-06-12",
+  "market": {
+    "close": 64.2,
+    "regime": "strong",
+    "r5": 2.42,
+    "r20": -0.85,
+    "up": 241,
+    "down": 73,
+    "flat": 5,
+    "up_pct": 75.5,
+    "down_pct": 22.9,
+    "breadth": 168,
+    "limit_up": 5,
+    "limit_down": 0
+  },
+  "signals": {
+    "buy_total": 13,
+    "buy_passed": 0,
+    "buy_blocked": 13,
+    "sell_passed": 20,
+    "block_breakdown": {
+      "大盘择时": 9,
+      "买不起(>¥50)": 4
+    },
+    "top_buys": []
+  }
+}
