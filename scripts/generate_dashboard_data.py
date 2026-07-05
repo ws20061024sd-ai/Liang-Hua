@@ -11,45 +11,59 @@ DB = 'data/stocks.db'
 
 # ═══════════════ CSS（博客设计系统） ═══════════════
 
-FONTS_LINK = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;450;500&display=swap" rel="stylesheet">'
+FONTS_LINK = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;450;500&display=swap" rel="stylesheet">'
 
 CSS = '''<style>
 :root {
-  --bg: #fafaf8; --bg-card: #ffffff; --bg-hover: #f5f5f2;
+  --bg: #fafaf8; --bg-card: rgba(255,255,255,0.6); --bg-card-solid: #ffffff; --bg-hover: #f5f5f2;
   --text: #1a1a1a; --text-muted: #6b6b6b; --text-soft: #94948c;
   --border: #e8e8e4; --border-light: #f0f0ec;
   --accent: #2563eb; --accent-hover: #1d4ed8; --accent-soft: #eff6ff;
   --accent-2: #7c3aed; --accent-3: #059669; --code-bg: #f3f3f0;
+  --amber: #d97706; --amber-soft: rgba(217,119,6,0.08);
   --up: #059669; --down: #dc2626; --warn: #d97706; --danger: #dc2626;
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
   --shadow: 0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 6px rgba(0,0,0,0.04),0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.05),0 4px 6px rgba(0,0,0,0.04);
 }
 [data-theme="dark"] {
-  --bg: #111110; --bg-card: #1a1a19; --bg-hover: #22221e;
+  --bg: #111110; --bg-card: rgba(26,26,25,0.6); --bg-card-solid: #1a1a19; --bg-hover: #22221e;
   --text: #e4e4e0; --text-muted: #8b8b85; --text-soft: #6b6b65;
   --border: #2a2a25; --border-light: #22221e;
   --accent: #60a5fa; --accent-hover: #93bbfd; --accent-soft: #1e2a3a;
   --accent-2: #a78bfa; --accent-3: #34d399; --code-bg: #1e1e1a;
+  --amber: #fbbf24; --amber-soft: rgba(251,191,36,0.08);
   --up: #34d399; --down: #f87171; --warn: #fbbf24; --danger: #f87171;
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
   --shadow: 0 1px 3px rgba(0,0,0,0.3),0 1px 2px rgba(0,0,0,0.2);
   --shadow-md: 0 4px 6px rgba(0,0,0,0.3),0 2px 4px rgba(0,0,0,0.2);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.3),0 4px 6px rgba(0,0,0,0.2);
 }
-/* 暗色下纹理反转 */
 [data-theme="dark"] body::before { opacity: 0.04; filter: invert(1); }
 [data-theme="dark"] nav { --bg: #111110; }
+[data-theme="dark"] .glass-card { background: rgba(26,26,25,0.6); border-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .glass-card:hover { border-color: rgba(96,165,250,0.3); }
 
 *,::before,::after{box-sizing:border-box;margin:0;padding:0}
-/* 噪声纹理 —— 博客同款暖黄质感 */
+
+/* ── 噪声纹理（博客同款）── */
 body::before {
   content:""; position:fixed; inset:0; z-index:9999; pointer-events:none;
   opacity:0.025;
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat:repeat; background-size:256px 256px;
 }
+
 body{background:var(--bg);color:var(--text);font-family:"Inter","Noto Sans SC",system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-/* 导航栏 —— 完全对齐博客 Header */
+
+/* ── Geo-blobs 装饰（博客 Hero 同款）── */
+.geo-blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.10;pointer-events:none}
+.geo-grid-bg{position:absolute;inset:0;opacity:0.05;pointer-events:none;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:60px 60px;}
+
+/* ── 导航栏（对齐博客 Header）── */
 nav{background:var(--bg);border-bottom:1px solid transparent;position:sticky;top:0;z-index:50;transition:border-color .3s,box-shadow .3s}
 nav.scrolled, nav {border-bottom-color:var(--border)}
 @supports (backdrop-filter:blur(12px)) { nav{background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)} }
@@ -60,8 +74,17 @@ nav .links{display:flex;align-items:center;gap:4px}
 nav .links a{color:var(--text-muted);text-decoration:none;padding:6px 12px;font-size:14px;font-weight:500;border-radius:6px;transition:all .15s}
 nav .links a:hover{color:var(--text);background:var(--border-light)}
 nav .links a.active{color:var(--accent);background:var(--accent-soft)}
-main{max-width:768px;margin:0 auto;padding:24px 16px 48px}
-.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-sm);margin-bottom:12px;overflow:hidden}
+
+main{max-width:768px;margin:0 auto;padding:24px 16px 48px;position:relative}
+
+/* ── 毛玻璃卡片（博客 glass-card 同款）── */
+.panel{background:var(--bg-card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(0,0,0,0.06);border-radius:12px;box-shadow:var(--shadow-sm);
+  margin-bottom:12px;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s}
+.panel:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:rgba(37,99,235,0.15)}
+.panel-solid{background:var(--bg-card-solid);backdrop-filter:none;-webkit-backdrop-filter:none}
+.panel-solid:hover{transform:none;box-shadow:var(--shadow-sm);border-color:var(--border)}
+
 .panel-hd{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border-light);font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.4px;font-weight:500}
 .panel-bd{padding:12px 16px}
 .up{color:var(--up)}.dn{color:var(--down)}.ac{color:var(--accent)}.dim{color:var(--text-soft)}.muted{color:var(--text-muted)}.fw{font-weight:600}
@@ -82,8 +105,13 @@ tr:hover td{background:var(--bg-hover)}
 .banner-danger{background:#dc262608;border:1px solid #dc262618;color:var(--danger)}
 .grid{display:grid;gap:12px}
 .g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
-.hero{padding:16px 0 12px}
-.hero h2{font-size:16px;font-weight:600;margin-bottom:2px;letter-spacing:-.01em}
+/* ── 装饰分割线（博客同款）── */
+.decorative-hr{display:flex;align-items:center;gap:16px;border:none;margin:24px 0;color:var(--text-soft)}
+.decorative-hr::before,.decorative-hr::after{content:"";flex:1;height:1px;
+  background:linear-gradient(to right,transparent,var(--border),transparent)}
+.decorative-hr span{font-size:11px;font-weight:500;letter-spacing:.4px;text-transform:uppercase}
+.hero{padding:20px 0 12px;position:relative}
+.hero h2{font-family:"Noto Serif SC","Georgia",serif;font-size:20px;font-weight:700;margin-bottom:2px;letter-spacing:-.01em}
 .hero p{color:var(--text-muted);font-size:13px}
 .sig-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-light);font-size:13px}
 .sig-row:hover{background:var(--bg-hover)}
@@ -97,10 +125,9 @@ tr:hover td{background:var(--bg-hover)}
 .stock-header .price{font-size:24px;font-weight:700}
 .stock-header .chg{font-size:13px;margin-left:4px}
 .stock-header .info td{padding:2px 8px 2px 0;border:none;font-size:12px}
-.chart-box{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:12px;overflow-x:auto}
-.card-hover{transition:all .15s}
-.card-hover:hover{border-color:var(--accent);box-shadow:var(--shadow)}
-/* 数据审查：轮询脉冲动画 */
+.chart-box{background:var(--bg-card-solid);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:12px;overflow-x:auto}
+/* 微型走势条（历史对比用） */
+.mini-bar{display:inline-block;height:4px;border-radius:2px;min-width:2px}
 @keyframes pulse-warn { 0%,100%{opacity:1} 50%{opacity:0.6} }
 .data-alert { animation: pulse-warn 2s ease-in-out infinite; }
 @media(max-width:640px){.g2,.g3{grid-template-columns:1fr}nav .links{flex-wrap:wrap}nav .inner{padding:12px 16px}}
@@ -109,8 +136,9 @@ tr:hover td{background:var(--bg-hover)}
 # ═══════════════ SHARED ═══════════════
 
 def _nav(active=''):
-    links = [('index.html','信号'),('strategy.html','策略'),
-             ('market.html','市场'),('factors.html','因子'),('signals.html','日志')]
+    links = [('index.html','信号'),('market.html','市场'),
+             ('history.html','历史'),('strategy.html','策略'),
+             ('factors.html','因子'),('signals.html','日志')]
     items = ''.join(f'<a href="{h}"{" class=active" if h==active else ""}>{n}</a>' for h,n in links)
     return f'<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links">{items}</div></div></nav>'
 
@@ -178,6 +206,70 @@ def _health(conn):
     except:sz=0
     return {'daily_date':str(ld),'daily_stocks':dc,'daily_nulls':nl,'daily_total':tr,'daily_ok':dc>=280 and nl==0,
         'pe_pct':pep,'pe_ok':pep>=80,'pb_pct':pbp,'pb_ok':pbp>=90,'roe_date':str(lr or''),'roe_stocks':rc,'roe_ok':rc>=255,'db':sz}
+
+# ═══════════════ 历史快照系统 ═══════════════
+
+HISTORY_DIR = 'dashboard/history'
+
+def _save_snapshot(m, sigs):
+    """每日快照：保存市场数据 + 信号摘要到 JSON"""
+    import json
+    os.makedirs(HISTORY_DIR, exist_ok=True)
+    today = m['date']
+
+    # 信号摘要
+    buys = [s for s in sigs if s['a']=='BUY' and s['d']==today]
+    buys_passed = [s for s in buys if s['st']=='passed']
+    buys_blocked = [s for s in buys if s['st']=='blocked']
+    sells = [s for s in sigs if s['a']=='SELL' and s['d']==today and s['st']=='passed']
+
+    # 拦截分类
+    bc = {}
+    for b in buys_blocked:
+        r = b.get('filter_reason','') or b.get('reason','')
+        if '跌停' in r: k='跌停'
+        elif '停牌' in r: k='停牌'
+        elif 'ST' in r: k='ST'
+        elif '涨停' in r: k='涨停'
+        elif '大盘' in r or '择时' in r: k='大盘择时'
+        elif '股价' in r or '上限' in r or '买不起' in r: k='买不起(>¥50)'
+        elif '流动' in r: k='流动性'
+        else: k='其他'
+        bc[k] = bc.get(k, 0) + 1
+
+    snap = {
+        'date': today,
+        'market': {
+            'close': m['close'], 'regime': m['regime'],
+            'r5': m['r5'], 'r20': m['r20'],
+            'up': m['up'], 'down': m['down'], 'flat': m['flat'],
+            'up_pct': m['up_pct'], 'down_pct': m['down_pct'],
+            'breadth': m['breadth'],
+            'limit_up': m['limit_up'], 'limit_down': m['limit_down'],
+        },
+        'signals': {
+            'buy_total': len(buys), 'buy_passed': len(buys_passed),
+            'buy_blocked': len(buys_blocked), 'sell_passed': len(sells),
+            'block_breakdown': bc,
+            'top_buys': [{'code': s['c'], 'name': s['n'], 'strategy': s['s'],
+                          'price': s['p'], 'strength': s['strength']}
+                         for s in buys_passed[:5]],
+        },
+    }
+    with open(f'{HISTORY_DIR}/{today}.json', 'w', encoding='utf-8') as f:
+        json.dump(snap, f, ensure_ascii=False, indent=2)
+
+def _load_history(days=30):
+    """加载历史快照，返回按日期排序的列表"""
+    import json, glob
+    files = sorted(glob.glob(f'{HISTORY_DIR}/*.json'), reverse=True)[:days]
+    history = []
+    for fp in sorted(files):  # 按日期升序
+        try:
+            with open(fp, 'r', encoding='utf-8') as f:
+                history.append(json.load(f))
+        except: pass
+    return history
 
 def _sectors(conn):
     """板块历史分析——5日累计涨幅排名"""
@@ -444,6 +536,11 @@ def page_index(conn, m, h, sigs, fs, ps):
             sig_html+=f'<div class="panel"><div class="panel-bd" style="padding:8px 16px;font-size:11px;color:var(--text-muted)">📋 今日拦截 {len(blocked)} 条: {block_items}</div></div>'
 
     body=f'''
+    <div class="hero" style="overflow:hidden;padding:28px 0 12px">
+      <div class="geo-blob" style="top:-40px;left:-30px;width:200px;height:200px;background:#bfdbfe"></div>
+      <div class="geo-blob" style="top:20px;right:-20px;width:150px;height:150px;background:rgba(217,119,6,0.25)"></div>
+      <div class="geo-grid-bg"></div>
+      <div style="position:relative"><h2>🎯 今日信号</h2><p>三策略买入信号排名 · 仅显示买得起(≤¥50) · 信号日期: {latest_date if sigs else m["date"]}</p></div></div>
     {fresh_html}
     {mkt_html}
     {pos_html}
@@ -452,7 +549,7 @@ def page_index(conn, m, h, sigs, fs, ps):
       <a href="strategy.html" style="color:var(--accent);text-decoration:none">📈 策略分析 →</a>
       <a href="factors.html" style="color:var(--accent);text-decoration:none">🔝 因子参考 →</a>
       <a href="market.html" style="color:var(--accent);text-decoration:none">📊 市场监控 →</a>
-      <a href="signals.html" style="color:var(--accent);text-decoration:none">📡 信号日志 →</a>
+      <a href="history.html" style="color:var(--accent);text-decoration:none">📅 历史对比 →</a>
     </div>'''
     return _page('信号首页','index.html',body)
 
@@ -630,6 +727,75 @@ def page_health(h):
     return _page('运维','',body)
 
 
+def page_history(history):
+    """历史对比页 —— 市场宽度 + 信号每日快照"""
+    if not history:
+        return _page('历史对比','history.html',
+            '<div class="hero"><h2>📅 历史对比</h2><p>暂无历史快照——每次生成仪表盘自动存档</p></div>'
+            '<div class="panel"><div class="panel-bd"><div class="empty">数据积累中<br><small class="dim">运行 generate_dashboard_data.py 后自动保存每日快照到 dashboard/history/</small></div></div></div>')
+
+    # ── 市场宽度趋势表 ──
+    mkt_rows = ''
+    for h in reversed(history):
+        m = h['market']
+        reg = '↑' if m['regime']=='strong' else '↓'
+        reg_c = 'up' if m['regime']=='strong' else 'dn'
+        # 涨跌微型条
+        total = m['up']+m['down']+m['flat']
+        up_w = m['up']/total*100 if total else 0
+        dn_w = m['down']/total*100 if total else 0
+        mkt_rows += f'''<tr>
+          <td style="white-space:nowrap">{h['date']}</td>
+          <td class="ta-r code">{m['close']:.0f}</td>
+          <td class="ta-r"><span class="{reg_c} fw">{reg} {m['r5']:+.1f}%</span></td>
+          <td class="ta-r"><span class="up">{m['up']}</span>/<span class="dn">{m['down']}</span></td>
+          <td class="ta-r"><span class="{"up" if m["breadth"]>=0 else "dn"} fw">{m["breadth"]:+d}</span></td>
+          <td class="ta-r"><span class="dim">{m['up_pct']}%</span></td>
+          <td class="ta-r"><span class="dim">{m.get('limit_up',0)}/</span><span class="dn">{m.get('limit_down',0)}</span></td>
+        </tr>'''
+
+    mkt_table = f'''<div class="panel"><div class="panel-hd">📊 市场宽度历史（{len(history)}天）</div><div class="panel-bd" style="overflow-x:auto">
+      <table><thead><tr><th>日期</th><th class="ta-r">CSI300</th><th class="ta-r">趋势/5日</th><th class="ta-r">涨/跌家</th><th class="ta-r">净涨</th><th class="ta-r">涨%</th><th class="ta-r">涨跌停</th></tr></thead><tbody>{mkt_rows}</tbody></table></div></div>'''
+
+    # ── 信号摘要表 ──
+    sig_rows = ''
+    for h in reversed(history):
+        s = h['signals']
+        bc_items = ' · '.join(f'{k}:{v}' for k,v in sorted(s.get('block_breakdown',{}).items(), key=lambda x:-x[1])) or '—'
+        buy_str = f'<span class="up fw">{s["buy_passed"]}</span>/<span class="dn">{s["buy_blocked"]}</span>'
+        top_codes = ' '.join(f'<span class="code" style="font-size:10px">{b["code"]}</span>' for b in s.get('top_buys',[])) or '—'
+        sig_rows += f'''<tr>
+          <td style="white-space:nowrap">{h['date']}</td>
+          <td class="ta-r">{buy_str}</td>
+          <td class="ta-r"><span class="{"dn" if s["sell_passed"] else "dim"}">{s["sell_passed"]}</span></td>
+          <td class="dim" style="font-size:10px;max-width:180px">{bc_items}</td>
+          <td style="font-size:10px">{top_codes}</td>
+        </tr>'''
+
+    sig_table = f'''<div class="panel"><div class="panel-hd">📡 信号摘要历史（{len(history)}天）</div><div class="panel-bd" style="overflow-x:auto">
+      <table><thead><tr><th>日期</th><th class="ta-r">买入(通过/拦截)</th><th class="ta-r">卖出</th><th>拦截原因</th><th>Top买入</th></tr></thead><tbody>{sig_rows}</tbody></table></div></div>'''
+
+    # ── 市场趋势微图（纯文本 sparkline）──
+    closes = [h['market']['close'] for h in history if h['market']['close']]
+    spark = ''
+    if len(closes) >= 3:
+        cmin, cmax = min(closes), max(closes)
+        cr = cmax - cmin or 1
+        bars = ''
+        for i, c in enumerate(closes):
+            h_pct = int((c - cmin) / cr * 40) + 2
+            color = 'var(--up)' if (i==0 or c >= closes[i-1]) else 'var(--down)'
+            bars += f'<span class="mini-bar" style="width:8px;height:{h_pct}px;background:{color};display:inline-block;margin-right:2px" title="{history[i]["date"]}: {c:.0f}"></span>'
+        spark = f'<div class="panel" style="margin-top:0"><div class="panel-bd" style="text-align:center;padding:12px"><span class="dim" style="font-size:10px">CSI300走势 ({len(closes)}天) </span>{bars}</div></div>'
+
+    body = f'''<div class="hero"><h2>📅 历史对比</h2><p>每日自动存档——信号与市场数据的横向对比</p></div>
+    {spark}
+    {mkt_table}
+    {sig_table}
+    <div class="dim" style="font-size:10px;text-align:center;margin-top:12px">历史数据来自 dashboard/history/ 目录 · 每次运行仪表盘生成自动存档</div>'''
+    return _page('历史对比','history.html', body)
+
+
 # ═══════════════ MAIN ═══════════════
 
 def build():
@@ -640,12 +806,17 @@ def build():
     fs=_factors_all(conn);ps=_positions(conn)
     sec,sec_days=_sectors(conn)
 
+    # 历史快照：每日存档
+    _save_snapshot(m, sigs)
+    history = _load_history(30)
+
     os.makedirs('dashboard',exist_ok=True)
 
     pages=[
         ('index.html',page_index(conn,m,h,sigs,fs,ps)),
-        ('strategy.html',page_strategy(sigs)),
         ('market.html',page_market(m,sec,sec_days)),
+        ('history.html',page_history(history)),
+        ('strategy.html',page_strategy(sigs)),
         ('factors.html',page_factors(fs,sigs)),
         ('signals.html',page_signals(sigs)),
         ('health.html',page_health(h)),

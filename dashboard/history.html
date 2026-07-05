@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>运维 · 量化交易</title>
+<title>历史对比 · 量化交易</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;450;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -123,22 +123,29 @@ tr:hover td{background:var(--bg-hover)}
 </style>
 </head>
 <body>
-<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links"><a href="index.html">信号</a><a href="market.html">市场</a><a href="history.html">历史</a><a href="strategy.html">策略</a><a href="factors.html">因子</a><a href="signals.html">日志</a></div></div></nav>
+<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links"><a href="index.html">信号</a><a href="market.html">市场</a><a href="history.html" class=active>历史</a><a href="strategy.html">策略</a><a href="factors.html">因子</a><a href="signals.html">日志</a></div></div></nav>
 <main>
-<div class="hero"><h2>🩺 数据健康</h2><p>运维数据——平时不需要看</p></div>
-    <div class="grid g2">
-      <div class="panel"><div class="panel-hd">数据库概览</div><div class="panel-bd">
-        <div class="kv"><span class="dim">daily_kline</span><span>542,110行 · 2026-07-03 · 287只</span></div>
-        <div class="kv"><span class="dim">PE覆盖率</span><span><span class="tag t-pass">92%</span></span></div>
-        <div class="kv"><span class="dim">PB覆盖率</span><span><span class="tag t-pass">99%</span></span></div>
-        <div class="kv"><span class="dim">ROE</span><span>300只 · 2026-03-31</span></div>
-        <div class="kv"><span class="dim">DB大小</span><span>134.3 MB</span></div>
-      </div></div>
-      <div class="panel"><div class="panel-hd">数据校验</div><div class="panel-bd">
-        <div class="kv"><span class="dim">日线NULL</span><span>0</span></div>
-        <div class="kv"><span class="dim">日线股票数</span><span><span class="tag t-pass">达标</span></span></div>
-      </div></div>
-    </div>
+<div class="hero"><h2>📅 历史对比</h2><p>每日自动存档——信号与市场数据的横向对比</p></div>
+    
+    <div class="panel"><div class="panel-hd">📊 市场宽度历史（1天）</div><div class="panel-bd" style="overflow-x:auto">
+      <table><thead><tr><th>日期</th><th class="ta-r">CSI300</th><th class="ta-r">趋势/5日</th><th class="ta-r">涨/跌家</th><th class="ta-r">净涨</th><th class="ta-r">涨%</th><th class="ta-r">涨跌停</th></tr></thead><tbody><tr>
+          <td style="white-space:nowrap">2026-07-03</td>
+          <td class="ta-r code">70</td>
+          <td class="ta-r"><span class="up fw">↑ -3.9%</span></td>
+          <td class="ta-r"><span class="up">196</span>/<span class="dn">84</span></td>
+          <td class="ta-r"><span class="up fw">+112</span></td>
+          <td class="ta-r"><span class="dim">68.3%</span></td>
+          <td class="ta-r"><span class="dim">5/</span><span class="dn">1</span></td>
+        </tr></tbody></table></div></div>
+    <div class="panel"><div class="panel-hd">📡 信号摘要历史（1天）</div><div class="panel-bd" style="overflow-x:auto">
+      <table><thead><tr><th>日期</th><th class="ta-r">买入(通过/拦截)</th><th class="ta-r">卖出</th><th>拦截原因</th><th>Top买入</th></tr></thead><tbody><tr>
+          <td style="white-space:nowrap">2026-07-03</td>
+          <td class="ta-r"><span class="up fw">0</span>/<span class="dn">12</span></td>
+          <td class="ta-r"><span class="dn">6</span></td>
+          <td class="dim" style="font-size:10px;max-width:180px">大盘择时:7 · 涨停:3 · 买不起(>¥50):1 · 其他:1</td>
+          <td style="font-size:10px">—</td>
+        </tr></tbody></table></div></div>
+    <div class="dim" style="font-size:10px;text-align:center;margin-top:12px">历史数据来自 dashboard/history/ 目录 · 每次运行仪表盘生成自动存档</div>
 </main>
 </body>
 </html>

@@ -1,0 +1,30 @@
+{
+  "date": "2026-07-03",
+  "market": {
+    "close": 70.07794425087107,
+    "regime": "strong",
+    "r5": -3.85,
+    "r20": 8.47,
+    "up": 196,
+    "down": 84,
+    "flat": 7,
+    "up_pct": 68.3,
+    "down_pct": 29.3,
+    "breadth": 112,
+    "limit_up": 5,
+    "limit_down": 1
+  },
+  "signals": {
+    "buy_total": 12,
+    "buy_passed": 0,
+    "buy_blocked": 12,
+    "sell_passed": 6,
+    "block_breakdown": {
+      "大盘择时": 7,
+      "涨停": 3,
+      "买不起(>¥50)": 1,
+      "其他": 1
+    },
+    "top_buys": []
+  }
+}

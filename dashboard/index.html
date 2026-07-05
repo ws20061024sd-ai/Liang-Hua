@@ -1,44 +1,58 @@
 <!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>信号首页 · 量化交易</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;450;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;450;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #fafaf8; --bg-card: #ffffff; --bg-hover: #f5f5f2;
+  --bg: #fafaf8; --bg-card: rgba(255,255,255,0.6); --bg-card-solid: #ffffff; --bg-hover: #f5f5f2;
   --text: #1a1a1a; --text-muted: #6b6b6b; --text-soft: #94948c;
   --border: #e8e8e4; --border-light: #f0f0ec;
   --accent: #2563eb; --accent-hover: #1d4ed8; --accent-soft: #eff6ff;
   --accent-2: #7c3aed; --accent-3: #059669; --code-bg: #f3f3f0;
+  --amber: #d97706; --amber-soft: rgba(217,119,6,0.08);
   --up: #059669; --down: #dc2626; --warn: #d97706; --danger: #dc2626;
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
   --shadow: 0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 6px rgba(0,0,0,0.04),0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.05),0 4px 6px rgba(0,0,0,0.04);
 }
 [data-theme="dark"] {
-  --bg: #111110; --bg-card: #1a1a19; --bg-hover: #22221e;
+  --bg: #111110; --bg-card: rgba(26,26,25,0.6); --bg-card-solid: #1a1a19; --bg-hover: #22221e;
   --text: #e4e4e0; --text-muted: #8b8b85; --text-soft: #6b6b65;
   --border: #2a2a25; --border-light: #22221e;
   --accent: #60a5fa; --accent-hover: #93bbfd; --accent-soft: #1e2a3a;
   --accent-2: #a78bfa; --accent-3: #34d399; --code-bg: #1e1e1a;
+  --amber: #fbbf24; --amber-soft: rgba(251,191,36,0.08);
   --up: #34d399; --down: #f87171; --warn: #fbbf24; --danger: #f87171;
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
   --shadow: 0 1px 3px rgba(0,0,0,0.3),0 1px 2px rgba(0,0,0,0.2);
   --shadow-md: 0 4px 6px rgba(0,0,0,0.3),0 2px 4px rgba(0,0,0,0.2);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.3),0 4px 6px rgba(0,0,0,0.2);
 }
-/* 暗色下纹理反转 */
 [data-theme="dark"] body::before { opacity: 0.04; filter: invert(1); }
 [data-theme="dark"] nav { --bg: #111110; }
+[data-theme="dark"] .glass-card { background: rgba(26,26,25,0.6); border-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .glass-card:hover { border-color: rgba(96,165,250,0.3); }
 
 *,::before,::after{box-sizing:border-box;margin:0;padding:0}
-/* 噪声纹理 —— 博客同款暖黄质感 */
+
+/* ── 噪声纹理（博客同款）── */
 body::before {
   content:""; position:fixed; inset:0; z-index:9999; pointer-events:none;
   opacity:0.025;
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat:repeat; background-size:256px 256px;
 }
+
 body{background:var(--bg);color:var(--text);font-family:"Inter","Noto Sans SC",system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-/* 导航栏 —— 完全对齐博客 Header */
+
+/* ── Geo-blobs 装饰（博客 Hero 同款）── */
+.geo-blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.10;pointer-events:none}
+.geo-grid-bg{position:absolute;inset:0;opacity:0.05;pointer-events:none;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:60px 60px;}
+
+/* ── 导航栏（对齐博客 Header）── */
 nav{background:var(--bg);border-bottom:1px solid transparent;position:sticky;top:0;z-index:50;transition:border-color .3s,box-shadow .3s}
 nav.scrolled, nav {border-bottom-color:var(--border)}
 @supports (backdrop-filter:blur(12px)) { nav{background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)} }
@@ -49,8 +63,17 @@ nav .links{display:flex;align-items:center;gap:4px}
 nav .links a{color:var(--text-muted);text-decoration:none;padding:6px 12px;font-size:14px;font-weight:500;border-radius:6px;transition:all .15s}
 nav .links a:hover{color:var(--text);background:var(--border-light)}
 nav .links a.active{color:var(--accent);background:var(--accent-soft)}
-main{max-width:768px;margin:0 auto;padding:24px 16px 48px}
-.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-sm);margin-bottom:12px;overflow:hidden}
+
+main{max-width:768px;margin:0 auto;padding:24px 16px 48px;position:relative}
+
+/* ── 毛玻璃卡片（博客 glass-card 同款）── */
+.panel{background:var(--bg-card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(0,0,0,0.06);border-radius:12px;box-shadow:var(--shadow-sm);
+  margin-bottom:12px;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s}
+.panel:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:rgba(37,99,235,0.15)}
+.panel-solid{background:var(--bg-card-solid);backdrop-filter:none;-webkit-backdrop-filter:none}
+.panel-solid:hover{transform:none;box-shadow:var(--shadow-sm);border-color:var(--border)}
+
 .panel-hd{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border-light);font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.4px;font-weight:500}
 .panel-bd{padding:12px 16px}
 .up{color:var(--up)}.dn{color:var(--down)}.ac{color:var(--accent)}.dim{color:var(--text-soft)}.muted{color:var(--text-muted)}.fw{font-weight:600}
@@ -71,8 +94,13 @@ tr:hover td{background:var(--bg-hover)}
 .banner-danger{background:#dc262608;border:1px solid #dc262618;color:var(--danger)}
 .grid{display:grid;gap:12px}
 .g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
-.hero{padding:16px 0 12px}
-.hero h2{font-size:16px;font-weight:600;margin-bottom:2px;letter-spacing:-.01em}
+/* ── 装饰分割线（博客同款）── */
+.decorative-hr{display:flex;align-items:center;gap:16px;border:none;margin:24px 0;color:var(--text-soft)}
+.decorative-hr::before,.decorative-hr::after{content:"";flex:1;height:1px;
+  background:linear-gradient(to right,transparent,var(--border),transparent)}
+.decorative-hr span{font-size:11px;font-weight:500;letter-spacing:.4px;text-transform:uppercase}
+.hero{padding:20px 0 12px;position:relative}
+.hero h2{font-family:"Noto Serif SC","Georgia",serif;font-size:20px;font-weight:700;margin-bottom:2px;letter-spacing:-.01em}
 .hero p{color:var(--text-muted);font-size:13px}
 .sig-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-light);font-size:13px}
 .sig-row:hover{background:var(--bg-hover)}
@@ -86,19 +114,23 @@ tr:hover td{background:var(--bg-hover)}
 .stock-header .price{font-size:24px;font-weight:700}
 .stock-header .chg{font-size:13px;margin-left:4px}
 .stock-header .info td{padding:2px 8px 2px 0;border:none;font-size:12px}
-.chart-box{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:12px;overflow-x:auto}
-.card-hover{transition:all .15s}
-.card-hover:hover{border-color:var(--accent);box-shadow:var(--shadow)}
-/* 数据审查：轮询脉冲动画 */
+.chart-box{background:var(--bg-card-solid);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:12px;overflow-x:auto}
+/* 微型走势条（历史对比用） */
+.mini-bar{display:inline-block;height:4px;border-radius:2px;min-width:2px}
 @keyframes pulse-warn { 0%,100%{opacity:1} 50%{opacity:0.6} }
 .data-alert { animation: pulse-warn 2s ease-in-out infinite; }
 @media(max-width:640px){.g2,.g3{grid-template-columns:1fr}nav .links{flex-wrap:wrap}nav .inner{padding:12px 16px}}
 </style>
 </head>
 <body>
-<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links"><a href="index.html" class=active>信号</a><a href="strategy.html">策略</a><a href="market.html">市场</a><a href="factors.html">因子</a><a href="signals.html">日志</a></div></div></nav>
+<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links"><a href="index.html" class=active>信号</a><a href="market.html">市场</a><a href="history.html">历史</a><a href="strategy.html">策略</a><a href="factors.html">因子</a><a href="signals.html">日志</a></div></div></nav>
 <main>
 
+    <div class="hero" style="overflow:hidden;padding:28px 0 12px">
+      <div class="geo-blob" style="top:-40px;left:-30px;width:200px;height:200px;background:#bfdbfe"></div>
+      <div class="geo-blob" style="top:20px;right:-20px;width:150px;height:150px;background:rgba(217,119,6,0.25)"></div>
+      <div class="geo-grid-bg"></div>
+      <div style="position:relative"><h2>🎯 今日信号</h2><p>三策略买入信号排名 · 仅显示买得起(≤¥50) · 信号日期: 2026-07-03</p></div></div>
     <div class="banner banner-ok">✅ 数据: 2026-07-03 · 股票287只 · NULL=0 · PE覆盖92% · ROE300只 · 信号可信</div>
     <div class="panel"><div class="panel-bd" style="display:flex;align-items:center;gap:20px;padding:10px 16px"><span style="font-size:20px;font-weight:700">70</span><span style="font-size:12px;color:var(--text-muted)">CSI300</span><span class="up" style="font-weight:600">强势 ↑</span><span class="dim" style="font-size:11px">5日<span class="dn">-3.9</span>% · 20日<span class="up">+8.5</span>% · 涨196家/跌84家(68.3%/29.3%) 偏多</span><span class="dn" style="font-size:10px">跌停1只</span><span class="dim" style="font-size:10px;margin-left:auto">数据: 2026-07-03</span></div></div>
     
@@ -107,7 +139,7 @@ tr:hover td{background:var(--bg-hover)}
       <a href="strategy.html" style="color:var(--accent);text-decoration:none">📈 策略分析 →</a>
       <a href="factors.html" style="color:var(--accent);text-decoration:none">🔝 因子参考 →</a>
       <a href="market.html" style="color:var(--accent);text-decoration:none">📊 市场监控 →</a>
-      <a href="signals.html" style="color:var(--accent);text-decoration:none">📡 信号日志 →</a>
+      <a href="history.html" style="color:var(--accent);text-decoration:none">📅 历史对比 →</a>
     </div>
 </main>
 </body>
