@@ -14,6 +14,7 @@ TOTAL_CAPITAL = 10000  # 总资金（元），修改这里自动切换仓位档�
 DB_PATH = "data/stocks.db"              # SQLite 数据库路径
 INDEX_CODE = "000300"                    # 跟踪的指数：沪深300
 YEARS_OF_DATA = 7                         # 下载多少年的历史数据（2019-2026覆盖完整牛熊）
+DAILY_START_DATE = '2019-01-01'          # 日线数据最早日期（覆盖比 YEARS_OF_DATA 更早的部分）
 
 # ============================================================
 # 策略设置
@@ -25,18 +26,21 @@ ENABLED_STRATEGIES = [
     "MeanReversionStrategy",        # 均值回归（🟡震荡）
 ]
 
-# 动量突破策略参数
-MOMENTUM_LOOKBACK = 20       # 突破回顾天数
+# 动量突破策略参数（v2 优化 2026-07-05: lookback 20→10, exit 20→10）
+MOMENTUM_LOOKBACK = 10       # 突破回顾天数（10日更灵敏）
 MOMENTUM_BUFFER = 0.02       # 突破缓冲区（2%）
-MOMENTUM_EXIT_PERIOD = 20    # 卖出信号回顾天数（和买入对称）
+MOMENTUM_EXIT_PERIOD = 10    # 卖出信号回顾天数
 
-# 双均线策略参数
-MA_FAST = 10   # 快线周期
-MA_SLOW = 30   # 慢线周期
+# 双均线策略参数（v2 优化 2026-07-05: fast 10→20, slow 30→60）
+MA_FAST = 20                 # 快线周期（20日更稳定，减少假信号）
+MA_SLOW = 60                 # 慢线周期（60日捕获中期趋势）
 
-# 均值回归策略参数（布林带）
-BB_PERIOD = 20               # 布林带周期
+# 均值回归策略参数（v2 优化 2026-07-05: period 20→10）
+BB_PERIOD = 10               # 布林带周期（10日更敏感，捕捉短期超卖）
 BB_STD_DEV = 2.0             # 标准差倍数
+
+# 风控参数
+TRAILING_STOP = 0.05         # 移动止损（从最高点回落5%止损）
 
 # ============================================================
 # 股票池设置
@@ -89,8 +93,9 @@ MAX_EXTREME_COUNT = 5           # 极值条数超过此值告警
 # 回测设置
 # ============================================================
 BACKTEST_CAPITAL = 100_000       # 回测初始资金
-BACKTEST_COMMISSION = 0.0008     # 手续费+印花税（往返）
-BACKTEST_SLIPPAGE = 0.001        # 滑点
+BACKTEST_COMMISSION = 0.0008     # 手续费（往返，买卖各0.0004）
+BACKTEST_TAX = 0.0005            # 印花税（仅卖出）
+BACKTEST_SLIPPAGE = 0.001        # 滑点（单边，往返×2）
 BACKTEST_MAX_POSITIONS = 10      # 最大持仓数
 BACKTEST_PER_POSITION_PCT = 0.10 # 单票仓位占比
 

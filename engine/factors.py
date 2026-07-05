@@ -13,20 +13,14 @@ import numpy as np
 # ============================================================
 
 def momentum(df: pd.DataFrame, date: str) -> float | None:
-    """动量因子：过去12个月涨幅（剔除最近1个月）"""
+    """动量因子：12-1动量 = (P[-21] - P[-252]) / P[-252]（剔除最近1个月的标准学术定义）"""
     df = df[df['date'] <= date].copy()
     if len(df) < 252:
         return None
-    one_month = 21
-    if len(df) < one_month:
-        return None
-    recent = df['close'].iloc[-one_month]
     past = df['close'].iloc[-252]
     if past <= 0:
         return None
-    total_ret = (df['close'].iloc[-1] - past) / past
-    recent_ret = (df['close'].iloc[-1] - recent) / recent
-    return round(total_ret - recent_ret, 4)
+    return round((df['close'].iloc[-21] - past) / past, 4)
 
 
 def volatility(df: pd.DataFrame, date: str) -> float | None:
@@ -50,12 +44,13 @@ def reversal(df: pd.DataFrame, date: str) -> float | None:
 
 
 def turnover_factor(df: pd.DataFrame, date: str) -> float | None:
-    """换手率因子：20日平均换手率（越低越好）"""
+    """换手率因子：成交量比率 v20/v60（越低越好，与聚宽一致）"""
     df = df[df['date'] <= date].copy()
-    if 'turnover' not in df.columns or len(df) < 20:
+    if 'volume' not in df.columns or len(df) < 60:
         return None
-    avg = df['turnover'].tail(20).mean()
-    return round(-avg, 4) if pd.notna(avg) else None
+    v20 = df['volume'].tail(20).mean()
+    v60 = df['volume'].tail(60).mean()
+    return round(-(v20 / v60), 4) if v60 > 0 else None
 
 
 # ============================================================
@@ -63,13 +58,11 @@ def turnover_factor(df: pd.DataFrame, date: str) -> float | None:
 # ============================================================
 
 def momentum_vectorized(close_wide: pd.DataFrame) -> pd.Series:
-    """动量因子（向量化版）：12个月涨幅剔除近1个月"""
+    """动量因子（向量化版）：12-1动量 = (P[-21] - P[-252]) / P[-252]"""
     n = len(close_wide)
     if n < 252:
         return pd.Series(np.nan, index=close_wide.columns)
-    total_ret = (close_wide.iloc[-1] - close_wide.iloc[-252]) / close_wide.iloc[-252]
-    recent_ret = (close_wide.iloc[-1] - close_wide.iloc[-21]) / close_wide.iloc[-21]
-    return total_ret - recent_ret
+    return (close_wide.iloc[-21] - close_wide.iloc[-252]) / close_wide.iloc[-252]
 
 
 def volatility_vectorized(close_wide: pd.DataFrame) -> pd.Series:

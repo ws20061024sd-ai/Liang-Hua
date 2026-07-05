@@ -22,6 +22,8 @@ source venv/bin/activate
 python run.py              # Full run: download data + generate signals + push DingTalk
 python run.py --no-update  # Signals only (skip data download, for testing)
 python run.py --init       # First-time: download all years of HS300 data
+python scripts/data_check.py           # Data health check (report only)
+python scripts/data_check.py --block   # Data health check (fail on block)
 python analysis/report.py  # Generate + push daily market report
 python -m engine.factor_engine  # Multi-factor scoring (monthly stock ranking)
 
@@ -106,15 +108,37 @@ print(f'Date:{maxd} | Stocks:{cnt}/300 | NULL:{nulls}')
 "
 ```
 
+## Data & Backtest Governance (宪法级)
+
+**`docs/核心/数据与回测正确性保障规范.md`** 是项目的**数据与回测宪法**。任何数据操作、回测工作、策略修改都必须遵守其中的规则。
+
+### 强制规则摘要
+
+- **数据校验必须先于策略运行** — `python scripts/data_check.py --block`，阻断则不推送信号
+- **聚宽回测 = 真理，本地回测 = 方向验证** — 上线决策必须经聚宽确认
+- **因子公式/权重必须三处同步** — `engine/factors.py` ↔ `backtest/local_factor_backtest.py` ↔ 聚宽策略
+- **修改因子/权重后必须**: 本地回测(5个TOP_N) → pytest(26个) → 聚宽验证(如变化>5pp)
+- **`except Exception: pass` 禁止** — 必须至少 print 到 stderr
+- **禁止在策略/因子文件中硬编码参数** — 必须在 settings.py 或文件头部常量区
+- **新数据源必须**: 单只验证 → 10只验证 → 全量 → 覆盖率≥85% → 人工核对 → 文档记录
+
+### 关键校验命令
+
+```bash
+python scripts/data_check.py --block   # 数据健康检查（阻断模式）
+python -m pytest tests/ -v             # 26个核心逻辑测试
+PYTHONPATH=. python backtest/local_factor_backtest.py  # 本地回测（5个TOP_N，40秒）
+```
+
 ## Critical Rules
 
 - **Never hardcode parameters in strategy files** — all config lives in `config/settings.py`
 - **Secrets go in `config/settings_local.py`** (gitignored), never in `settings.py` — webhook tokens, API keys
 - **Data sources must have fallbacks** — Sina primary, Eastmoney backup, THS for industries
-- **Before deploying to server**: run locally + run tests (`python -m pytest tests/ -v`), then `git push` + server `git pull`
+- **Before deploying to server**: run locally + run tests (`python -m pytest tests/ -v`) + run data check (`python scripts/data_check.py --block`), then `git push` + server `git pull`
 - **After deploying**: check `crontab -l` on server ONLY (Mac crontab must remain empty)
 - **Server cron MUST include**: run.py (21:00) + report.py (21:05) + health_check.py (21:10) + backup (21:15)
-- **Strategy changes require backtest first** — use `backtest/simple_backtest.py`, compare before/after metrics
+- **Strategy changes require backtest first** — use `backtest/local_factor_backtest.py` for direction, JoinQuant for final confirmation
 - **All report components must use the same data date** — pass `data_date` explicitly, never query MAX(date) independently
 - **pct_change must never be NULL in production data** — `fix_pct_change()` runs automatically, verify with health check
 - **Tokens must be rotated** if ever committed to Git — old tokens are in Git history forever
@@ -124,16 +148,23 @@ print(f'Date:{maxd} | Stocks:{cnt}/300 | NULL:{nulls}')
 | File | Purpose |
 |------|------|
 | `docs/项目完整方案.md` | **Authoritative reference** — architecture, strategies, defense, deployment |
+| `docs/核心/数据与回测正确性保障规范.md` | **宪法级** — 数据标准、回测规则、红线、校验流程 |
 | `docs/核心/项目状态与待办.md` | Current status, TODO, run log |
+| `docs/核心/项目下一步计划.md` | Roadmap, priorities, data source decisions |
 | `docs/核心/项目梳理与优化方案.md` | Audit checklist (7-layer), strategy iteration protocol |
+| `docs/核心/项目综合审查报告_2026-07-05.md` | **Latest audit** — 28 issues found, 26 resolved |
+| `docs/核心/优化执行计划_2026-07-05.md` | Execution plan + plain-language summary of all fixes |
 | `docs/架构/项目复盘与经验整理.md` | Problems encountered, solutions, deployment checklist |
 | `docs/架构/半自动化交易方案.md` | Original design blueprint (historical reference) |
+| `docs/架构/服务器部署指南.md` | Server setup guide with exact commands |
 | `docs/策略/策略回测报告.md` | Backtest results — 3 strategies × 3 timing modes |
 | `docs/策略/回测指标完全解释.md` | Beginner's guide to backtest metrics |
-| `docs/数据/数据审查报告_2026-06-09.md` | Data quality risks and 5-layer defense system |
-| `docs/核心/项目综合审查报告_2026-07-05.md` | **Latest audit** — 28 issues found, 27 resolved |
-| `docs/核心/优化执行计划_2026-07-05.md` | Execution plan + plain-language summary of all fixes |
+| `docs/策略/002_多因子选股_回测分析报告.md` | 002 strategy detailed analysis |
+| `docs/策略/聚宽策略编码须知.md` | JoinQuant API correct usage, common errors |
 | `docs/策略/策略与回测代码审查规范.md` | Code review checklist for strategies/backtests |
+| `docs/参考/Claude Code Skills 完全指南.md` | All 58+ Skills categorized by relevance |
+| `docs/参考/GitHub量化交易开源项目速查.md` | Open-source quant projects on GitHub |
+| `docs/数据/数据审查报告_2026-06-09.md` | Data quality risks and 5-layer defense system |
 
 ## Known Deployments
 

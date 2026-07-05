@@ -1,0 +1,30 @@
+{
+  "saved_at": "2026-07-05T17:41:36.463147",
+  "metrics": {
+    "TOP_N=5": {
+      "ann_ret": 27.86,
+      "sharpe": 0.759,
+      "max_dd": -45.4
+    },
+    "TOP_N=10": {
+      "ann_ret": 16.54,
+      "sharpe": 0.57,
+      "max_dd": -33.7
+    },
+    "TOP_N=15": {
+      "ann_ret": 16.51,
+      "sharpe": 0.612,
+      "max_dd": -30.6
+    },
+    "TOP_N=20": {
+      "ann_ret": 14.96,
+      "sharpe": 0.611,
+      "max_dd": -26.9
+    },
+    "TOP_N=30": {
+      "ann_ret": 14.64,
+      "sharpe": 0.652,
+      "max_dd": -25.0
+    }
+  }
+}

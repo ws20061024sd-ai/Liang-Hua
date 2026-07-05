@@ -1,18 +1,19 @@
 """
-因子引擎 —— 多因子选股评分系统
+因子引擎 —— 多因子选股评分系统（v2.1 权重）
 
-六个因子：
+七个因子：
   价格因子（从 daily_kline）：
-    1. 动量因子：12个月涨幅（剔除最近1个月）
+    1. 动量因子：12-1动量 = (P[-21]-P[-252])/P[-252]
     2. 低波动因子：60日波动率（越低越好）
     3. 短期反转因子：5日涨幅取负（跌多反弹）
-    4. 换手率因子：20日平均换手率（越低越好）
+    4. 换手率因子：成交量比率 v20/v60（越低越好）
 
-  估值因子（从 financial_data）：
-    5. 价值因子：PE + PB（越低越好）
-    6. 质量因子：ROE（越高越好）
+  估值/质量因子（从 financial_data）：
+    5. PE：市盈率（越低越好）
+    6. PB：市净率（已砍——单因子回测负收益-0.74%）
+    7. ROE：净资产收益率（越高越好）
 
-权重：动量 25% + 低波 15% + 反转 15% + 换手 10% + 价值 20% + 质量 15%
+权重(v2.1)：动量 30% + 低波 20% + 反转 15% + 换手 10% + PE 10% + PB 0% + ROE 15%
 
 用法：
   scores = compute_factor_scores(date='2026-06-12')
@@ -30,18 +31,17 @@ from config import settings
 from engine.factors import momentum as _compute_momentum
 from engine.factors import volatility as _compute_volatility
 from engine.factors import reversal as _compute_reversal
-from engine.factors import turnover_factor as _compute_turnover
 
 
 def _fetch_financial_factors(conn, date: str) -> pd.DataFrame:
     """
-    从 financial_data 表获取最新可用的 PE/PB/ROE
+    从 financial_data 表获取最新可用的 PE/PB
 
     策略：取 ≤ date 的最新一条记录（季度数据有滞后）
-    返回 DataFrame: [code, pe, pb, roe]
+    返回 DataFrame: [code, pe, pb]
     """
     df = pd.read_sql_query("""
-        SELECT f.code, f.pe, f.pb, f.roe, f.date as fin_date
+        SELECT f.code, f.pe, f.pb, f.date as fin_date
         FROM financial_data f
         WHERE f.date <= ?
           AND f.date = (
@@ -52,16 +52,41 @@ def _fetch_financial_factors(conn, date: str) -> pd.DataFrame:
     return df
 
 
+def _fetch_roe(conn, date: str) -> dict:
+    """
+    从 financial_roe 表获取最新 ROE（季度数据）
+
+    财报披露延迟：Q1(3/31)约4月底披露, Q2/半年报(6/30)约8月底, Q3(9/30)约10月底, Q4/年报(12/31)约次年4月底
+    统一滞后 120 天，避免未来数据泄露
+
+    返回 {code: roe} 字典
+    """
+    from datetime import datetime, timedelta
+    lagged = (datetime.strptime(date, '%Y-%m-%d') - timedelta(days=120)).strftime('%Y-%m-%d')
+    df = pd.read_sql_query("""
+        SELECT r.code, r.roe, r.date
+        FROM financial_roe r
+        WHERE r.date <= ?
+          AND r.date = (
+              SELECT MAX(r2.date) FROM financial_roe r2
+              WHERE r2.code = r.code AND r2.date <= ?
+          )
+    """, conn, params=(lagged, lagged))
+    if df.empty:
+        return {}
+    return dict(zip(df['code'], df['roe']))
+
+
 # ============================================================
 # 多因子合成
 # ============================================================
 
 def compute_factor_scores(date: str = None) -> pd.DataFrame:
     """
-    计算某一天所有股票的多因子得分
+    计算某一天所有股票的多因子得分（v2.1）
 
     因子权重：
-      动量 25% + 低波动 15% + 反转 15% + 换手率 10% + 价值(PE+PB) 20% + 质量(ROE) 15%
+      动量 30% + 低波动 20% + 反转 15% + 换手率 10% + PE 10% + PB 0% + ROE 15%
 
     返回 DataFrame: [code, name, momentum, volatility, reversal, turnover, pe, pb, roe, score]
     """
@@ -75,20 +100,28 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
     codes = pd.read_sql_query("SELECT code, name FROM stock_info", conn)
     code_name_map = dict(zip(codes['code'], codes['name']))
 
-    # 获取财务因子数据
+    # 获取财务因子数据（PE/PB 从 financial_data，ROE 从 financial_roe）
     fin_df = _fetch_financial_factors(conn, date)
+    roe_map = _fetch_roe(conn, date)
+
     fin_map = {}
     if not fin_df.empty:
         for _, r in fin_df.iterrows():
             fin_map[r['code']] = {
                 'pe': r['pe'] if pd.notna(r['pe']) else None,
                 'pb': r['pb'] if pd.notna(r['pb']) else None,
-                'roe': r['roe'] if pd.notna(r['roe']) else None,
+                'roe': None,
             }
+    # 合并 ROE
+    for code, roe_val in roe_map.items():
+        if code in fin_map:
+            fin_map[code]['roe'] = roe_val if pd.notna(roe_val) else None
+        else:
+            fin_map[code] = {'pe': None, 'pb': None, 'roe': roe_val if pd.notna(roe_val) else None}
 
     # 批量加载所有股票的日线数据（1次查询替代300次）
     all_kline = pd.read_sql_query(
-        "SELECT code, date, close, turnover FROM daily_kline WHERE date <= ? ORDER BY code, date",
+        "SELECT code, date, close, volume FROM daily_kline WHERE date <= ? ORDER BY code, date",
         conn, params=(date,)
     )
     conn.close()
@@ -106,7 +139,13 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
         mom = _compute_momentum(df, date)
         vol = _compute_volatility(df, date)
         rev = _compute_reversal(df, date)
-        tur = _compute_turnover(df, date)
+        # 换手率因子 = 成交量比率 v20/v60（与聚宽一致）
+        if len(df) >= 60:
+            v20 = df['volume'].tail(20).mean()
+            v60 = df['volume'].tail(60).mean()
+            tur = round(-(v20 / v60), 4) if v60 > 0 else None
+        else:
+            tur = None
 
         # 财务因子
         fin = fin_map.get(code, {})
@@ -139,8 +178,8 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
 
     # 价格因子 z-score 标准化
     price_factors = [
-        ('momentum', 0.25),    # 动量（正向）
-        ('volatility', 0.15),  # 低波动（负向）
+        ('momentum', 0.30),    # 动量（正向）—— v2.1 提权，单因子收益王
+        ('volatility', 0.20),  # 低波动（负向）—— v2.1 提权，组合防御核心
         ('reversal', 0.15),    # 反转（正向）
         ('turnover', 0.10),    # 低换手（负向）
     ]
@@ -158,8 +197,9 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
             )
 
     # 估值因子 z-score（如果数据可用）
-    value_weight = 0.20
-    quality_weight = 0.15
+    # v2.1: PE 10%, PB 0%（单因子回测负收益，已砍）
+    value_weight = 0.10   # 全部给 PE
+    quality_weight = 0.15  # ROE
     has_financial = df_score['pe'].notna().sum() > 10
 
     if has_financial:
@@ -199,18 +239,18 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
         value_weight = 0
         quality_weight = 0
         # 财务数据缺失 → 将估值/质量权重按比例分配给价格因子
-        slack = 0.35  # value_weight(0.20) + quality_weight(0.15)
-        price_total = 0.65  # 四个价格因子权重之和
+        slack = 0.25  # value_weight(0.10) + quality_weight(0.15)
+        price_total = 0.75  # 四个价格因子权重之和 (0.30+0.20+0.15+0.10)
         if price_total > 0:
             scale = 1.0 / price_total  # 归一化到 1.0
 
     # 合成总分
-    w_mom = 0.25 * (scale if not has_financial else 1.0)
-    w_vol = 0.15 * (scale if not has_financial else 1.0)
+    w_mom = 0.30 * (scale if not has_financial else 1.0)
+    w_vol = 0.20 * (scale if not has_financial else 1.0)
     w_rev = 0.15 * (scale if not has_financial else 1.0)
     w_tur = 0.10 * (scale if not has_financial else 1.0)
-    w_pe  = (value_weight / 2) if has_financial else 0
-    w_pb  = (value_weight / 2) if has_financial else 0
+    w_pe  = value_weight if has_financial else 0
+    w_pb  = 0   # v2.1: PB 因子已砍（单因子回测负收益-0.74%）
     w_roe = quality_weight if has_financial else 0
 
     df_score['score'] = (

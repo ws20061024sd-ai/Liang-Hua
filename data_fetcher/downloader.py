@@ -258,6 +258,9 @@ def download_all(force_update: bool = False):
     today = pd.Timestamp.now().strftime('%Y-%m-%d')
     start_default = pd.Timestamp.now() - pd.DateOffset(years=settings.YEARS_OF_DATA)
     start_default = start_default.strftime('%Y-%m-%d')
+    # 如果配置了更早的固定起点，使用更早的日期
+    if hasattr(settings, 'DAILY_START_DATE') and settings.DAILY_START_DATE:
+        start_default = min(start_default, settings.DAILY_START_DATE)
 
     total = len(stocks)
     new_data_count = 0
@@ -283,6 +286,19 @@ def download_all(force_update: bool = False):
                 if skip_count <= 3:
                     print(f"   [{i+1}/{total}] {code} {name} ✓ 已是最新")
                 continue
+
+            # 检查是否需要前向回填（最早数据 > 配置起点）
+            first_date = conn.execute(
+                "SELECT MIN(date) FROM daily_kline WHERE code=?", (code,)
+            ).fetchone()[0]
+            if first_date and first_date > start_default:
+                print(f"   [{i+1}/{total}] {code} {name} ↺ 回填 {start_default}~{first_date}")
+                gap_df = download_stock_history(code, start_default,
+                    (pd.Timestamp(first_date) - pd.DateOffset(days=1)).strftime('%Y-%m-%d'))
+                if gap_df is not None and not gap_df.empty:
+                    save_kline(conn, gap_df)
+                    new_data_count += 1
+
             # 从最新日期后一天开始
             start_date = (last_dt + pd.DateOffset(days=1)).strftime('%Y-%m-%d')
         else:
