@@ -11,42 +11,61 @@ DB = 'data/stocks.db'
 
 # ═══════════════ CSS（博客设计系统） ═══════════════
 
+FONTS_LINK = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;450;500&display=swap" rel="stylesheet">'
+
 CSS = '''<style>
 :root {
   --bg: #fafaf8; --bg-card: #ffffff; --bg-hover: #f5f5f2;
   --text: #1a1a1a; --text-muted: #6b6b6b; --text-soft: #94948c;
   --border: #e8e8e4; --border-light: #f0f0ec;
-  --accent: #2563eb; --accent-soft: #eff6ff;
-  --accent-2: #7c3aed; --accent-3: #059669;
-  --up: #059669; --down: #dc2626; --warn: #d97706;
+  --accent: #2563eb; --accent-hover: #1d4ed8; --accent-soft: #eff6ff;
+  --accent-2: #7c3aed; --accent-3: #059669; --code-bg: #f3f3f0;
+  --up: #059669; --down: #dc2626; --warn: #d97706; --danger: #dc2626;
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
   --shadow: 0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.04),0 2px 4px rgba(0,0,0,0.04);
 }
 [data-theme="dark"] {
   --bg: #111110; --bg-card: #1a1a19; --bg-hover: #22221e;
   --text: #e4e4e0; --text-muted: #8b8b85; --text-soft: #6b6b65;
   --border: #2a2a25; --border-light: #22221e;
-  --accent: #60a5fa; --accent-soft: #1e2a3a;
-  --accent-2: #a78bfa; --accent-3: #34d399;
-  --up: #34d399; --down: #f87171; --warn: #fbbf24;
+  --accent: #60a5fa; --accent-hover: #93bbfd; --accent-soft: #1e2a3a;
+  --accent-2: #a78bfa; --accent-3: #34d399; --code-bg: #1e1e1a;
+  --up: #34d399; --down: #f87171; --warn: #fbbf24; --danger: #f87171;
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
   --shadow: 0 1px 3px rgba(0,0,0,0.3),0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.3),0 2px 4px rgba(0,0,0,0.2);
 }
+/* 暗色下纹理反转 */
+[data-theme="dark"] body::before { opacity: 0.04; filter: invert(1); }
+[data-theme="dark"] nav { --bg: #111110; }
+
 *,::before,::after{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
-nav{background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-nav .inner{max-width:768px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px}
-nav .brand{font-weight:600;font-size:15px;letter-spacing:-.3px;color:var(--text);text-decoration:none}
-nav .links{display:flex;align-items:center;gap:2px}
-nav .links a{color:var(--text-muted);text-decoration:none;padding:6px 10px;font-size:13px;border-radius:6px;transition:all .15s}
-nav .links a:hover{color:var(--text);background:var(--bg-hover)}
-nav .links a.active{color:var(--accent);background:var(--accent-soft);font-weight:500}
+/* 噪声纹理 —— 博客同款暖黄质感 */
+body::before {
+  content:""; position:fixed; inset:0; z-index:9999; pointer-events:none;
+  opacity:0.025;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat:repeat; background-size:256px 256px;
+}
+body{background:var(--bg);color:var(--text);font-family:"Inter","Noto Sans SC",system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+/* 导航栏 —— 完全对齐博客 Header */
+nav{background:var(--bg);border-bottom:1px solid transparent;position:sticky;top:0;z-index:50;transition:border-color .3s,box-shadow .3s}
+nav.scrolled, nav {border-bottom-color:var(--border)}
+@supports (backdrop-filter:blur(12px)) { nav{background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)} }
+nav .inner{max-width:768px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:16px}
+nav .brand{font-weight:600;font-size:18px;letter-spacing:-.02em;color:var(--text);text-decoration:none;transition:opacity .15s}
+nav .brand:hover{opacity:0.7}
+nav .links{display:flex;align-items:center;gap:4px}
+nav .links a{color:var(--text-muted);text-decoration:none;padding:6px 12px;font-size:14px;font-weight:500;border-radius:6px;transition:all .15s}
+nav .links a:hover{color:var(--text);background:var(--border-light)}
+nav .links a.active{color:var(--accent);background:var(--accent-soft)}
 main{max-width:768px;margin:0 auto;padding:24px 16px 48px}
 .panel{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-sm);margin-bottom:12px;overflow:hidden}
 .panel-hd{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border-light);font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.4px;font-weight:500}
 .panel-bd{padding:12px 16px}
 .up{color:var(--up)}.dn{color:var(--down)}.ac{color:var(--accent)}.dim{color:var(--text-soft)}.muted{color:var(--text-muted)}.fw{font-weight:600}
-.code{font-family:'SF Mono','Cascadia Code','JetBrains Mono',monospace;font-weight:600;font-size:13px}
+.code{font-family:"JetBrains Mono","SF Mono","Cascadia Code",ui-monospace,monospace;font-weight:450;font-size:13px}
 .ta-r{text-align:right}.ta-c{text-align:center}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;color:var(--text-soft);font-weight:500;padding:5px 8px;border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
@@ -56,14 +75,15 @@ tr:hover td{background:var(--bg-hover)}
 .t-buy{background:#05966915;color:var(--up)}.t-sell{background:#dc262615;color:var(--down)}
 .t-pass{background:#2563eb12;color:var(--accent)}.t-block{background:#6b6b6b12;color:var(--text-muted)}
 .t-trend{background:#2563eb10;color:var(--accent)}.t-rev{background:#7c3aed10;color:var(--accent-2)}
-.t-warn{background:#d9770615;color:var(--warn)}
+.t-warn{background:#d9770615;color:var(--warn)}.t-danger{background:#dc262615;color:var(--danger)}
 .banner{padding:9px 14px;border-radius:8px;margin-bottom:12px;font-size:12px}
 .banner-ok{background:#05966908;border:1px solid #05966918;color:var(--accent-3)}
 .banner-warn{background:#d9770608;border:1px solid #d9770618;color:var(--warn)}
+.banner-danger{background:#dc262608;border:1px solid #dc262618;color:var(--danger)}
 .grid{display:grid;gap:12px}
 .g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
 .hero{padding:16px 0 12px}
-.hero h2{font-size:16px;font-weight:600;margin-bottom:2px;letter-spacing:-.3px}
+.hero h2{font-size:16px;font-weight:600;margin-bottom:2px;letter-spacing:-.01em}
 .hero p{color:var(--text-muted);font-size:13px}
 .sig-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-light);font-size:13px}
 .sig-row:hover{background:var(--bg-hover)}
@@ -80,7 +100,10 @@ tr:hover td{background:var(--bg-hover)}
 .chart-box{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:12px;overflow-x:auto}
 .card-hover{transition:all .15s}
 .card-hover:hover{border-color:var(--accent);box-shadow:var(--shadow)}
-@media(max-width:640px){.g2,.g3{grid-template-columns:1fr}nav .links{flex-wrap:wrap}}
+/* 数据审查：轮询脉冲动画 */
+@keyframes pulse-warn { 0%,100%{opacity:1} 50%{opacity:0.6} }
+.data-alert { animation: pulse-warn 2s ease-in-out infinite; }
+@media(max-width:640px){.g2,.g3{grid-template-columns:1fr}nav .links{flex-wrap:wrap}nav .inner{padding:12px 16px}}
 </style>'''
 
 # ═══════════════ SHARED ═══════════════
@@ -92,7 +115,7 @@ def _nav(active=''):
     return f'<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links">{items}</div></div></nav>'
 
 def _page(title,active,body):
-    return f'<!DOCTYPE html>\n<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n<title>{title} · 量化交易</title>\n{CSS}\n</head>\n<body>\n{_nav(active)}\n<main>\n{body}\n</main>\n</body>\n</html>'
+    return f'<!DOCTYPE html>\n<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n<title>{title} · 量化交易</title>\n{FONTS_LINK}\n{CSS}\n</head>\n<body>\n{_nav(active)}\n<main>\n{body}\n</main>\n</body>\n</html>'
 
 def _tag(c,t): return f'<span class="tag {c}">{t}</span>'
 def _ud(v): return f'<span class="{"up" if v>=0 else "dn"}">{v:+.1f}</span>' if v!=0 else '<span class="dim">0.0</span>'
@@ -104,6 +127,8 @@ def _q(c,s,p=None): return pd.read_sql_query(s,c,params=p) if p else pd.read_sql
 def _market(conn):
     ld=_q(conn,"SELECT MAX(date) FROM daily_kline").iloc[0,0]
     sc=int(_q(conn,"SELECT COUNT(DISTINCT code) FROM daily_kline WHERE date=?",(ld,)).iloc[0,0])
+
+    # CSI300 平均价格走势（用于趋势判断）
     idx=_q(conn,"SELECT date,AVG(close) as c FROM daily_kline WHERE date>=date('now','-180 days') GROUP BY date ORDER BY date")
     last=float(idx['c'].iloc[-1]) if len(idx) else 0
     r5=round((idx['c'].iloc[-1]/idx['c'].iloc[-5]-1)*100,2) if len(idx)>=5 else 0
@@ -112,9 +137,30 @@ def _market(conn):
         m20=idx['c'].rolling(20).mean();m60=idx['c'].rolling(60).mean()
         reg='strong' if m20.iloc[-1]>m60.iloc[-1] else 'weak'
     else: reg='unknown'
-    chg=idx['c'].pct_change().tail(20)
+
+    # === 真正的市场宽度：今日涨/跌/平家数 ===
+    pct_df=_q(conn,"SELECT pct_change FROM daily_kline WHERE date=?",(ld,))
+    up_stocks=int((pct_df['pct_change']>0).sum())      # 上涨家数
+    down_stocks=int((pct_df['pct_change']<0).sum())     # 下跌家数
+    flat_stocks=int((pct_df['pct_change']==0).sum())    # 平盘家数
+    total_stocks=up_stocks+down_stocks+flat_stocks
+    up_pct=round(up_stocks/total_stocks*100,1) if total_stocks else 0
+    down_pct=round(down_stocks/total_stocks*100,1) if total_stocks else 0
+    breadth=up_stocks-down_stocks                       # 净涨家数（正=偏多）
+
+    # 涨跌停/极端行情统计
+    limit_up=int((pct_df['pct_change']>=9.9).sum())     # 涨停≈
+    limit_down=int((pct_df['pct_change']<=-9.9).sum())  # 跌停≈
+
+    # 数据新鲜度
+    from datetime import datetime
+    try:data_age=(datetime.now()-datetime.strptime(str(ld),'%Y-%m-%d')).days
+    except:data_age=99
+
     return {'date':str(ld),'stocks':sc,'regime':reg,'close':last,'r5':r5,'r20':r20,
-        'up':int((chg>0).sum()),'down':int((chg<0).sum())}
+        'up':up_stocks,'down':down_stocks,'flat':flat_stocks,'total':total_stocks,
+        'up_pct':up_pct,'down_pct':down_pct,'breadth':breadth,
+        'limit_up':limit_up,'limit_down':limit_down,'data_age':data_age}
 
 def _health(conn):
     ld=_q(conn,"SELECT MAX(date) FROM daily_kline").iloc[0,0]
@@ -166,10 +212,11 @@ def _sectors(conn):
         'bottom':[{'n':n,'cum':d['cum'],'streak':d['streak']}for n,d in bottom]},days
 
 def _signals_all(conn):
-    df=_q(conn,"SELECT date,code,name,strategy,action,price,strength,status,reason FROM signal_history ORDER BY date DESC,id DESC LIMIT 200")
+    df=_q(conn,"SELECT date,code,name,strategy,action,price,strength,status,reason,filter_reason FROM signal_history ORDER BY date DESC,id DESC LIMIT 200")
     return[{'d':str(r['date']),'c':r['code'],'n':r['name'],'s':r['strategy'],'a':r['action'],
         'p':round(float(r['price']),2)if r['price']else 0,'st':r['status'],
-        'strength':round(float(r['strength']),3)if r['strength']else 0,'reason':r['reason']or''}for _,r in df.iterrows()]
+        'strength':round(float(r['strength']),3)if r['strength']else 0,
+        'reason':r['reason']or'','filter_reason':r['filter_reason']or''}for _,r in df.iterrows()]
 
 def _factors_all(conn):
     try:
@@ -300,16 +347,35 @@ def page_index(conn, m, h, sigs, fs, ps):
     except:sig_age=99
     fresh_ok=daily_age<=2 and sig_age<=3
 
-    # 数据状态条
-    fresh_html=f'<div class="banner {"banner-ok" if fresh_ok else "banner-warn"}">'
-    if fresh_ok: fresh_html+=f'✅ 数据: {m["date"]} · 信号: {sig_date or "无"} · 信号可信'
-    else: fresh_html+=f'⚠️ 数据: {m["date"]}({daily_age}天前) · 信号: {sig_date or "无"}({sig_age}天前) · 信号不可信'
-    fresh_html+='</div>'
+    # ── 数据审查报警系统 ──
+    alerts = []
+    # 1. 数据新鲜度
+    if daily_age > 2: alerts.append(f'日线数据过期({m["date"]}, {daily_age}天前)')
+    if sig_age > 3: alerts.append(f'信号未更新({sig_date}, {sig_age}天前)')
+    # 2. 股票数量
+    if m['total'] < 280: alerts.append(f'股票数不足({m["total"]}/280)')
+    # 3. NULL 值检查
+    if h['daily_nulls'] > 0: alerts.append(f'日线NULL值({h["daily_nulls"]}条)')
+    # 4. PE 覆盖率
+    if not h['pe_ok']: alerts.append(f'PE覆盖率低({h["pe_pct"]}%)')
+    # 5. ROE 覆盖率
+    if not h['roe_ok']: alerts.append(f'ROE覆盖率低({h["roe_stocks"]}/300)')
 
-    # 市场条
+    if alerts:
+        alert_items = ' · '.join(f'⚠️ {a}' for a in alerts)
+        fresh_html = f'<div class="banner banner-danger data-alert">{alert_items}</div>'
+    elif fresh_ok:
+        fresh_html = f'<div class="banner banner-ok">✅ 数据: {m["date"]} · 股票{m["total"]}只 · NULL={h["daily_nulls"]} · PE覆盖{h["pe_pct"]}% · ROE{h["roe_stocks"]}只 · 信号可信</div>'
+    else:
+        fresh_html = f'<div class="banner banner-warn">⚠️ 数据: {m["date"]}({daily_age}天前) · 信号: {sig_date or "无"}({sig_age}天前) · 信号不可信</div>'
+
+    # ── 市场条 ──
     reg_label='强势 ↑'if m['regime']=='strong'else'弱势 ↓'
     reg_cls='up'if m['regime']=='strong'else'dn'
-    mkt_html=f'<div class="panel"><div class="panel-bd" style="display:flex;align-items:center;gap:20px;padding:10px 16px"><span style="font-size:20px;font-weight:700">{m["close"]:.0f}</span><span style="font-size:12px;color:var(--text-muted)">CSI300</span><span class="{reg_cls}" style="font-weight:600">{reg_label}</span><span class="dim" style="font-size:11px">5日{_ud(m["r5"])}% · 20日{_ud(m["r20"])}% · 涨{m["up"]}/跌{m["down"]} {"偏多"if m["up"]>m["down"] else"偏空"}</span><span class="dim" style="font-size:10px;margin-left:auto">数据: {m["date"]}</span></div></div>'
+    b_label='偏多' if m['breadth']>50 else ('偏空' if m['breadth']<-50 else '中性')
+    mkt_html=f'<div class="panel"><div class="panel-bd" style="display:flex;align-items:center;gap:20px;padding:10px 16px"><span style="font-size:20px;font-weight:700">{m["close"]:.0f}</span><span style="font-size:12px;color:var(--text-muted)">CSI300</span><span class="{reg_cls}" style="font-weight:600">{reg_label}</span><span class="dim" style="font-size:11px">5日{_ud(m["r5"])}% · 20日{_ud(m["r20"])}% · 涨{m["up"]}家/跌{m["down"]}家({m["up_pct"]}%/{m["down_pct"]}%) {b_label}</span>' + (
+        f'<span class="dn" style="font-size:10px">跌停{m["limit_down"]}只</span>' if m['limit_down']>0 else ''
+    ) + f'<span class="dim" style="font-size:10px;margin-left:auto">数据: {m["date"]}</span></div></div>'
 
     # 持仓
     pos_html=''
@@ -364,13 +430,13 @@ def page_index(conn, m, h, sigs, fs, ps):
         if blocked:
             bc={}
             for b in blocked:
-                r=b.get('reason','其他')
+                r=b.get('filter_reason','') or b.get('reason','')
                 if'跌停'in r:k='跌停'
                 elif'停牌'in r:k='停牌'
                 elif'ST'in r:k='ST'
                 elif'涨停'in r:k='涨停'
                 elif'大盘'in r or'择时'in r:k='大盘择时'
-                elif'股价'in r or'上限'in r:k='买不起(>¥50)'
+                elif'股价'in r or'上限'in r or'买不起'in r:k='买不起(>¥50)'
                 elif'流动'in r:k='流动性'
                 else:k='其他'
                 bc[k]=bc.get(k,0)+1
@@ -465,6 +531,22 @@ def page_market(m,sec,sec_days):
     """市场监控"""
     reg_label='强势 ↑'if m['regime']=='strong'else'弱势 ↓'
     reg_cls='up'if m['regime']=='strong'else'dn'
+    b_label='偏多' if m['breadth']>50 else ('偏空' if m['breadth']<-50 else '中性')
+    b_cls='up' if m['breadth']>50 else ('dn' if m['breadth']<-50 else 'dim')
+
+    # 市场宽度详情
+    width_html=f'''<div class="panel"><div class="panel-hd">📊 市场宽度（{m["date"]}）</div><div class="panel-bd">
+      <div class="grid g3" style="margin-bottom:12px">
+        <div style="text-align:center"><div class="up" style="font-size:28px;font-weight:700">{m["up"]}</div><div class="dim" style="font-size:10px">上涨家数</div></div>
+        <div style="text-align:center"><div class="dn" style="font-size:28px;font-weight:700">{m["down"]}</div><div class="dim" style="font-size:10px">下跌家数</div></div>
+        <div style="text-align:center"><div class="dim" style="font-size:28px;font-weight:700">{m["flat"]}</div><div class="dim" style="font-size:10px">平盘</div></div>
+      </div>
+      <div class="kv"><span class="dim">净涨家数</span><span class="{b_cls} fw">{m["breadth"]:+d}</span></div>
+      <div class="kv"><span class="dim">上涨比例</span><span class="up">{m["up_pct"]}%</span></div>
+      <div class="kv"><span class="dim">下跌比例</span><span class="dn">{m["down_pct"]}%</span></div>
+      <div class="kv"><span class="dim">涨跌停</span><span>涨停 <span class="up fw">{m["limit_up"]}</span> 只 · 跌停 <span class="dn fw">{m["limit_down"]}</span> 只</span></div>
+      <div class="kv"><span class="dim">数据日期</span><span>{m["date"]} ({m["data_age"]}天前)</span></div>
+    </div></div>'''
 
     sec_html=''
     if sec:
@@ -485,7 +567,8 @@ def page_market(m,sec,sec_days):
       <div class="dim" style="font-size:11px;margin-top:6px">需要 report.py 每日运行积累 ≥5天数据</div></div></div>'''
 
     body=f'''
-    <div class="hero"><h2>📊 市场监控</h2><p>数据: {m["date"]} · {m["stocks"]}只 · CSI300 {m["close"]:.0f} <span class="{reg_cls}" style="font-weight:500">{reg_label}</span> · 5日{_ud(m["r5"])}% · 20日{_ud(m["r20"])}% · 涨{m["up"]}/跌{m["down"]} {"偏多"if m["up"]>m["down"]else"偏空"}</p></div>
+    <div class="hero"><h2>📊 市场监控</h2><p>数据: {m["date"]} · {m["total"]}只股票 · CSI300 {m["close"]:.0f} <span class="{reg_cls}" style="font-weight:500">{reg_label}</span> · 5日{_ud(m["r5"])}% · 20日{_ud(m["r20"])}%</p></div>
+    {width_html}
     {sec_html}'''
     return _page('市场监控','market.html',body)
 
