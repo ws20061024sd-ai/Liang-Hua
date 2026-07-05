@@ -387,7 +387,7 @@ def _stock_detail(conn, code):
         'bb_upper':bb_upper,'bb_lower':bb_lower,'pe':pe,'pb':pb,'sig_rows':sig_rows,
         'high20':high20,'low20':low20,'avg_vol':avg_vol,'latest_vol':latest_vol}
 
-def _render_svg_kline(ohlc_df, ma20_series, ma60_series):
+def _render_svg_kline(ohlc_df, ma5_series=None, ma10_series=None, ma20_series=None, ma60_series=None):
     """生成120天SVG K线图 + 底部成交量"""
     w,h=800,310;ml,mr,mt,mb=50,20,20,20
     data=ohlc_df.tail(120)
@@ -435,7 +435,25 @@ def _render_svg_kline(ohlc_df, ma20_series, ma60_series):
     # 成交量基线
     parts.append(f'<line x1="{ml}" y1="{vol_y0:.0f}" x2="{w-mr}" y2="{vol_y0:.0f}" stroke="var(--border)" stroke-width="0.5"/>')
 
-    # ── MA20 (ffill NaN, 线不断) ──
+    # ── MA5 ──
+    if ma5_series is not None and len(ma5_series)>=n:
+        ma_vals=ma5_series[-n:].ffill()
+        pts=[]
+        for i,v in enumerate(ma_vals):
+            if pd.isna(v):continue
+            x=ml+i*(w-ml-mr)/n;y=mt+(pmax-v)/pr*kline_h;pts.append(f'{x:.1f},{y:.1f}')
+        if pts:parts.append(f'<polyline points="{" ".join(pts)}" fill="none" stroke="var(--warn)" stroke-width="1" opacity="0.7"/>')
+
+    # ── MA10 ──
+    if ma10_series is not None and len(ma10_series)>=n:
+        ma_vals=ma10_series[-n:].ffill()
+        pts=[]
+        for i,v in enumerate(ma_vals):
+            if pd.isna(v):continue
+            x=ml+i*(w-ml-mr)/n;y=mt+(pmax-v)/pr*kline_h;pts.append(f'{x:.1f},{y:.1f}')
+        if pts:parts.append(f'<polyline points="{" ".join(pts)}" fill="none" stroke="var(--accent-3)" stroke-width="1" opacity="0.7"/>')
+
+    # ── MA20 ──
     if ma20_series is not None and len(ma20_series)>=n:
         ma_vals=ma20_series[-n:].ffill()
         pts=[]
@@ -454,6 +472,10 @@ def _render_svg_kline(ohlc_df, ma20_series, ma60_series):
         if pts:parts.append(f'<polyline points="{" ".join(pts)}" fill="none" stroke="var(--accent-2)" stroke-width="1.5"/>')
 
     # 图例
+    parts.append(f'<line x1="{w-200}" y1="14" x2="{w-185}" y2="14" stroke="var(--warn)" stroke-width="1" opacity="0.7"/>')
+    parts.append(f'<text x="{w-181}" y="18" fill="var(--text-soft)" font-size="9">MA5</text>')
+    parts.append(f'<line x1="{w-160}" y1="14" x2="{w-145}" y2="14" stroke="var(--accent-3)" stroke-width="1" opacity="0.7"/>')
+    parts.append(f'<text x="{w-141}" y="18" fill="var(--text-soft)" font-size="9">MA10</text>')
     parts.append(f'<line x1="{w-120}" y1="14" x2="{w-100}" y2="14" stroke="var(--accent)" stroke-width="1.5"/>')
     parts.append(f'<text x="{w-96}" y="18" fill="var(--text-soft)" font-size="9">MA20</text>')
     parts.append(f'<line x1="{w-60}" y1="14" x2="{w-40}" y2="14" stroke="var(--accent-2)" stroke-width="1.5"/>')
@@ -613,9 +635,11 @@ def page_stock(conn, code):
 
     df=_q(conn,"SELECT date,open,close,high,low,volume FROM daily_kline WHERE code=? AND date>=date('now','-260 days') ORDER BY date",(code,))
     closes=df['close'].values
+    ma5_s=pd.Series(closes).rolling(5).mean()
+    ma10_s=pd.Series(closes).rolling(10).mean()
     ma20_s=pd.Series(closes).rolling(20).mean()
     ma60_s=pd.Series(closes).rolling(60).mean()
-    svg=_render_svg_kline(df,ma20_s,ma60_s)
+    svg=_render_svg_kline(df,ma5_s,ma10_s,ma20_s,ma60_s)
 
     pe_str=f'PE: {d["pe"]}'if d['pe']else'PE: —'
     pb_str=f'PB: {d["pb"]}'if d['pb']else'PB: —'
@@ -691,9 +715,11 @@ def page_market(m,sec,sec_days,conn=None):
         if len(idx_df) >= 5:
             idx_df = idx_df.sort_values('date')  # 渲染器需要时间升序
             closes = idx_df['close'].values
+            ma5_s = pd.Series(closes).rolling(5).mean()
+            ma10_s = pd.Series(closes).rolling(10).mean()
             ma20_s = pd.Series(closes).rolling(20).mean()
             ma60_s = pd.Series(closes).rolling(60).mean()
-            svg = _render_svg_kline(idx_df, ma20_s, ma60_s)
+            svg = _render_svg_kline(idx_df, ma5_s, ma10_s, ma20_s, ma60_s)
             kline_html = f'''<div class="panel"><div class="panel-hd">📈 沪深300 K线（120天）</div><div class="panel-bd" style="padding:4px">{svg}</div></div>'''
 
     # 市场宽度详情
