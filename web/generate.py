@@ -252,7 +252,6 @@ def _save_snapshot(m, sigs):
         elif '停牌' in r: k='停牌'
         elif 'ST' in r: k='ST'
         elif '涨停' in r: k='涨停'
-        elif '大盘' in r or '择时' in r: k='大盘择时'
         elif '股价' in r or '上限' in r or '买不起' in r: k='买不起(>¥50)'
         elif '流动' in r: k='流动性'
         else: k='其他'
@@ -540,7 +539,7 @@ def page_index(conn, m, h, sigs, fs, ps):
 
             sig_html=f'<div class="panel"><div class="panel-hd">🎯 今日信号（¥50以内） <span class="dim" style="font-size:10px;text-transform:none;letter-spacing:0">{latest_date} · {len(ranked_list)}只</span></div><div class="panel-bd">{rows}</div></div>'
         else:
-            sig_html=f'<div class="panel"><div class="panel-hd">🎯 今日信号（¥50以内） <span class="dim" style="font-size:10px;text-transform:none;letter-spacing:0">{latest_date}</span></div><div class="panel-bd"><div class="empty">📭 今日无符合条件的买入信号<br><small class="dim">（所有买入信号均被拦截：大盘择时/价格超限/涨停/停牌）</small></div></div></div>'
+            sig_html=f'<div class="panel"><div class="panel-hd">🎯 今日信号（¥50以内） <span class="dim" style="font-size:10px;text-transform:none;letter-spacing:0">{latest_date}</span></div><div class="panel-bd"><div class="empty">📭 今日无符合条件的买入信号<br><small class="dim">（所有买入信号均被拦截：价格超限/涨停/停牌/ST）</small></div></div></div>'
 
         # 拦截统计
         if blocked:
