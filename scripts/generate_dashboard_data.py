@@ -420,6 +420,63 @@ def page_strategy(sigs):
     '''
     return _page('策略分析','strategy.html',body)
 
+def page_signals(sigs):
+    """信号日志页"""
+    if not sigs:
+        body='<div class="hero"><h2>📡 信号日志</h2><p>暂无信号记录</p></div><div class="empty">信号历史为空——系统尚未产生过交易信号</div>'
+        return _page('信号日志','signals.html',body)
+
+    gb={}
+    for s in sigs:
+        if s['d']not in gb:gb[s['d']]=[]
+        gb[s['d']].append(s)
+
+    buy_count=sum(1 for s in sigs if s['a']=='BUY')
+    sell_count=sum(1 for s in sigs if s['a']=='SELL')
+    passed=sum(1 for s in sigs if s['st']=='passed')
+    blocked=sum(1 for s in sigs if s['st']=='blocked')
+
+    rows=''
+    for date,slist in sorted(gb.items(),reverse=True):
+        rows+=f'<div style="font-size:11px;color:var(--d);padding:6px 0;font-weight:600;border-bottom:1px solid var(--b);margin:8px 0 4px;position:sticky;top:0;background:var(--s1)">{date} <span class="dim">({len(slist)}条)</span></div>'
+        for s in slist:
+            rows+=f'<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">{s["c"]}</span><span class="dim" style="font-size:10px;min-width:40px">{s["n"]}</span><span class="dim flex-1" style="font-size:10px">{s["s"]}</span>{_tag("t-buy" if s["a"]=="BUY" else "t-sell",s["a"])}<span class="ta-r" style="min-width:48px">¥{s["p"]}</span>{_tag("t-pass" if s["st"]=="passed" else "t-block",s["st"])}<span class="dim" style="font-size:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{s["reason"]}">{s["reason"]}</span></div>'
+
+    body=f'''
+    <div class="hero"><h2>📡 信号日志</h2><p>共 {len(sigs)} 条信号 · 买入 {buy_count} · 卖出 {sell_count} · 通过 {passed} · 拦截 {blocked}</p></div>
+    <div class="panel"><div class="panel-bd" style="max-height:70vh;overflow-y:auto">{rows}</div></div>'''
+    return _page('信号日志','signals.html',body)
+
+
+def page_factors(fs):
+    """因子引擎页"""
+    header='<div class="hero"><h2>🔝 多因子引擎</h2><p>7因子 Z-score 标准化后加权合成。权重 v2.1: 动量30% + 低波20% + 反转15% + 换手10% + PE10% + PB0% + ROE15%。ROE 数据已做 120 天未来数据泄露防护。</p></div>'
+
+    if not fs:
+        return _page('因子引擎','factors.html',header+'<div class="empty">暂无因子数据</div>')
+
+    table='<table><thead><tr><th>#</th><th>代码</th><th>名称</th><th class="ta-r">现价</th><th class="ta-r">得分</th><th class="ta-r">动量</th><th class="ta-r">波动</th></tr></thead><tbody>'+''.join(
+        f'<tr><td>{f["r"]}</td><td class="code">{f["code"]}</td><td>{f["name"]}</td><td class="ta-r">¥{f["price"]:.2f}</td>'
+        f'<td class="ta-r"><span class="bl fw">{f["score"]:.1f}</span></td>'
+        f'<td class="ta-r {"up" if f["mom"]>=0 else "dn"}">{"+" if f["mom"]>=0 else ""}{f["mom"]}</td>'
+        f'<td class="ta-r">{f["vol"]}</td></tr>'
+        for f in fs)+'</tbody></table>'
+
+    weights='''
+    <div class="panel" style="margin-top:10px"><div class="panel-hd">因子权重说明 (v2.1)</div><div class="panel-bd">
+    <table><thead><tr><th>因子</th><th>权重</th><th>方向</th><th>含义</th><th>一句话</th></tr></thead><tbody>
+    <tr><td>momentum</td><td class="ta-r fw">30%</td><td class="up">正向</td><td>12-1月动量</td><td class="dim">"过去11个月涨得多的股票"</td></tr>
+    <tr><td>volatility</td><td class="ta-r fw">20%</td><td class="dn">负向</td><td>60日波动率</td><td class="dim">"波动小的股票更稳"</td></tr>
+    <tr><td>reversal</td><td class="ta-r fw">15%</td><td class="up">正向</td><td>5日反转</td><td class="dim">"最近跌多了该反弹了"</td></tr>
+    <tr><td>turnover</td><td class="ta-r fw">10%</td><td class="dn">负向</td><td>成交量比 v20/v60</td><td class="dim">"缩量的股票在蓄力"</td></tr>
+    <tr><td>pe</td><td class="ta-r fw">10%</td><td class="dn">负向</td><td>市盈率</td><td class="dim">"便宜的股票安全边际高"</td></tr>
+    <tr><td>pb</td><td class="ta-r fw" style="color:var(--dd)">0%</td><td>—</td><td>市净率（已砍）</td><td class="dim">"单因子回测负收益 -0.74%，不用了"</td></tr>
+    <tr><td>roe</td><td class="ta-r fw">15%</td><td class="up">正向</td><td>净资产收益率</td><td class="dim">"赚钱能力强的公司"</td></tr>
+    </tbody></table></div></div>'''
+
+    return _page('因子引擎','factors.html',header+f'<div class="panel"><div class="panel-bd" style="max-height:60vh;overflow-y:auto">{table}</div></div>'+weights)
+
+
 # ═══════════════ MAIN ═══════════════
 
 def build():
@@ -436,6 +493,8 @@ def build():
         ('index.html',page_index(m,h,bd,ps,fs,sigs,sec)),
         ('market.html',page_market(m,bd,sec)),
         ('strategy.html',page_strategy(sigs)),
+        ('signals.html',page_signals(sigs)),
+        ('factors.html',page_factors(fs)),
     ]
 
     for fn,html in pages:

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>因子引擎 · 量化交易</title>
+<style>
+:root{--bg:#0b0e11;--s1:#1e2329;--s2:#252a30;--b:#2b3139;--t:#eaecef;--d:#848e9c;--dd:#5e6673;--up:#0ecb81;--dn:#f6465d;--bl:#4a9eff;--am:#f0b90b;--pu:#a85cef}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--t);font:13px/1.45 -apple-system,BlinkMacSystemFont,'SF Mono','Segoe UI',monospace;padding:0;-webkit-font-smoothing:antialiased}
+nav{background:var(--s1);border-bottom:1px solid var(--b);padding:0 20px;display:flex;align-items:center;gap:0;position:sticky;top:0;z-index:10}
+nav a{color:var(--d);text-decoration:none;padding:12px 16px;font-size:12px;border-bottom:2px solid transparent;transition:all .15s}
+nav a:hover{color:var(--t);background:var(--s2)}
+nav a.active{color:var(--bl);border-bottom-color:var(--bl)}
+nav .brand{font-weight:700;color:var(--t);margin-right:16px;font-size:13px;letter-spacing:-.2px}
+main{padding:16px 20px;max-width:1280px;margin:0 auto}
+.grid{display:grid;gap:10px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:1fr 1fr 1fr 1fr}
+.g13{grid-template-columns:1fr 3fr}.g31{grid-template-columns:3fr 1fr}
+.panel{background:var(--s1);border:1px solid var(--b);border-radius:6px;overflow:hidden;margin-bottom:10px}
+.panel-hd{padding:8px 14px;border-bottom:1px solid var(--b);font-size:11px;color:var(--d);text-transform:uppercase;letter-spacing:.5px;font-weight:500;display:flex;justify-content:space-between;align-items:center}
+.panel-bd{padding:12px 14px}
+.up{color:var(--up)}.dn{color:var(--dn)}.bl{color:var(--bl)}.dim{color:var(--dd)}.fw{font-weight:600}
+.code{font-weight:600;font-size:12px}.ta-r{text-align:right}.ta-c{text-align:center}
+.metric{text-align:center;padding:6px 4px}
+.metric .l{font-size:10px;color:var(--dd);text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
+.metric .v{font-size:18px;font-weight:600;line-height:1.1}
+.metric .s{font-size:10px;margin-top:1px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{text-align:left;color:var(--dd);font-weight:500;padding:5px 8px;border-bottom:1px solid var(--b);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+td{padding:4px 8px;border-bottom:1px solid rgba(43,49,57,0.5)}tr:hover td{background:rgba(255,255,255,0.02)}
+.tag{display:inline-block;padding:1px 5px;border-radius:2px;font-size:10px;font-weight:600}
+.t-up{background:#0ecb8118;color:var(--up)}.t-dn{background:#f6465d18;color:var(--dn)}
+.t-bl{background:#4a9eff18;color:var(--bl)}.t-pass{background:#0ecb8114;color:var(--up)}.t-block{background:#848e9c14;color:var(--d)}
+.t-trend{background:#4a9eff12;color:var(--bl)}.t-rev{background:#a85cef12;color:var(--pu)}
+.t-buy{background:#0ecb8118;color:var(--up)}.t-sell{background:#f6465d18;color:var(--dn)}
+.empty{color:var(--dd);text-align:center;padding:28px;font-size:12px}
+.bar-row{display:flex;align-items:center;gap:6px;margin:2px 0}
+.bar-row span:first-child{color:var(--d);width:28px;font-size:10px}
+.bar-row span:last-child{width:32px;text-align:right;font-size:10px;color:var(--d)}
+.bar{flex:1;height:3px;background:var(--s2);border-radius:2px;overflow:hidden}
+.bar-f{height:100%;border-radius:2px}
+.pos-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--b)}
+.pos-item:last-child{border-bottom:none}
+.pos-code{font-weight:600;font-size:13px;min-width:50px}
+.pos-meta{flex:1;font-size:10px;color:var(--d);line-height:1.4}
+.pos-pnl{font-size:16px;font-weight:600}
+.strat-card{border:1px solid var(--b);border-radius:8px;padding:16px;margin-bottom:10px}
+.hero{background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:20px 24px;margin-bottom:14px}
+.hero h2{font-size:16px;margin-bottom:6px}
+.hero p{color:var(--d);font-size:12px;line-height:1.6;max-width:700px}
+.explain{font-size:12px;color:var(--d);line-height:1.7}
+.explain strong{color:var(--t)}
+.row-item{display:flex;justify-content:space-between;padding:3px 0;font-size:11px}
+@media(max-width:900px){.g2,.g3,.g4,.g13,.g31{grid-template-columns:1fr}nav{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<nav><span class="brand">量化交易</span><a href="index.html">仪表盘</a><a href="market.html">市场监控</a><a href="strategy.html">策略分析</a><a href="signals.html">信号日志</a><a href="factors.html" class=active>因子引擎</a></nav>
+<main>
+<div class="hero"><h2>🔝 多因子引擎</h2><p>7因子 Z-score 标准化后加权合成。权重 v2.1: 动量30% + 低波20% + 反转15% + 换手10% + PE10% + PB0% + ROE15%。ROE 数据已做 120 天未来数据泄露防护。</p></div><div class="panel"><div class="panel-bd" style="max-height:60vh;overflow-y:auto"><table><thead><tr><th>#</th><th>代码</th><th>名称</th><th class="ta-r">现价</th><th class="ta-r">得分</th><th class="ta-r">动量</th><th class="ta-r">波动</th></tr></thead><tbody><tr><td>1</td><td class="code">300308</td><td>中际旭创</td><td class="ta-r">¥1116.00</td><td class="ta-r"><span class="bl fw">2.6</span></td><td class="ta-r up">+8.9</td><td class="ta-r">0.63</td></tr><tr><td>2</td><td class="code">300502</td><td>新易盛</td><td class="ta-r">¥526.00</td><td class="ta-r"><span class="bl fw">1.9</span></td><td class="ta-r up">+6.1</td><td class="ta-r">0.83</td></tr><tr><td>3</td><td class="code">300394</td><td>天孚通信</td><td class="ta-r">¥250.10</td><td class="ta-r"><span class="bl fw">1.4</span></td><td class="ta-r up">+5.5</td><td class="ta-r">0.85</td></tr><tr><td>4</td><td class="code">301308</td><td>江波龙</td><td class="ta-r">¥618.02</td><td class="ta-r"><span class="bl fw">1.3</span></td><td class="ta-r up">+6.1</td><td class="ta-r">0.87</td></tr><tr><td>5</td><td class="code">000657</td><td>中钨高新</td><td class="ta-r">¥89.63</td><td class="ta-r"><span class="bl fw">1.2</span></td><td class="ta-r up">+5.4</td><td class="ta-r">0.79</td></tr><tr><td>6</td><td class="code">600183</td><td>生益科技</td><td class="ta-r">¥160.78</td><td class="ta-r"><span class="bl fw">0.8</span></td><td class="ta-r up">+4.0</td><td class="ta-r">0.71</td></tr><tr><td>7</td><td class="code">002384</td><td>东山精密</td><td class="ta-r">¥232.73</td><td class="ta-r"><span class="bl fw">0.6</span></td><td class="ta-r up">+5.6</td><td class="ta-r">0.84</td></tr><tr><td>8</td><td class="code">601138</td><td>工业富联</td><td class="ta-r">¥64.72</td><td class="ta-r"><span class="bl fw">0.6</span></td><td class="ta-r up">+2.9</td><td class="ta-r">0.66</td></tr><tr><td>9</td><td class="code">600221</td><td>海航控股</td><td class="ta-r">¥1.37</td><td class="ta-r"><span class="bl fw">0.6</span></td><td class="ta-r up">+0.1</td><td class="ta-r">0.29</td></tr><tr><td>10</td><td class="code">605117</td><td>德业股份</td><td class="ta-r">¥96.44</td><td class="ta-r"><span class="bl fw">0.6</span></td><td class="ta-r up">+2.2</td><td class="ta-r">0.61</td></tr><tr><td>11</td><td class="code">300408</td><td>三环集团</td><td class="ta-r">¥144.89</td><td class="ta-r"><span class="bl fw">0.6</span></td><td class="ta-r up">+3.4</td><td class="ta-r">0.87</td></tr><tr><td>12</td><td class="code">600549</td><td>厦门钨业</td><td class="ta-r">¥75.05</td><td class="ta-r"><span class="bl fw">0.6</span></td><td class="ta-r up">+2.2</td><td class="ta-r">0.75</td></tr><tr><td>13</td><td class="code">002837</td><td>英维克</td><td class="ta-r">¥71.43</td><td class="ta-r"><span class="bl fw">0.5</span></td><td class="ta-r up">+2.2</td><td class="ta-r">0.73</td></tr><tr><td>14</td><td class="code">002353</td><td>杰瑞股份</td><td class="ta-r">¥161.46</td><td class="ta-r"><span class="bl fw">0.5</span></td><td class="ta-r up">+3.4</td><td class="ta-r">0.69</td></tr><tr><td>15</td><td class="code">002463</td><td>沪电股份</td><td class="ta-r">¥135.35</td><td class="ta-r"><span class="bl fw">0.5</span></td><td class="ta-r up">+2.3</td><td class="ta-r">0.75</td></tr><tr><td>16</td><td class="code">601066</td><td>中信建投</td><td class="ta-r">¥28.32</td><td class="ta-r"><span class="bl fw">0.5</span></td><td class="ta-r up">+0.1</td><td class="ta-r">0.44</td></tr><tr><td>17</td><td class="code">600522</td><td>中天科技</td><td class="ta-r">¥50.22</td><td class="ta-r"><span class="bl fw">0.5</span></td><td class="ta-r up">+2.5</td><td class="ta-r">0.83</td></tr><tr><td>18</td><td class="code">002938</td><td>鹏鼎控股</td><td class="ta-r">¥96.77</td><td class="ta-r"><span class="bl fw">0.5</span></td><td class="ta-r up">+2.7</td><td class="ta-r">0.79</td></tr><tr><td>19</td><td class="code">000100</td><td>TCL科技</td><td class="ta-r">¥0.00</td><td class="ta-r"><span class="bl fw">0.4</span></td><td class="ta-r up">+-0.0</td><td class="ta-r">0.4</td></tr><tr><td>20</td><td class="code">300274</td><td>阳光电源</td><td class="ta-r">¥0.00</td><td class="ta-r"><span class="bl fw">0.4</span></td><td class="ta-r up">+1.6</td><td class="ta-r">0.63</td></tr></tbody></table></div></div>
+    <div class="panel" style="margin-top:10px"><div class="panel-hd">因子权重说明 (v2.1)</div><div class="panel-bd">
+    <table><thead><tr><th>因子</th><th>权重</th><th>方向</th><th>含义</th><th>一句话</th></tr></thead><tbody>
+    <tr><td>momentum</td><td class="ta-r fw">30%</td><td class="up">正向</td><td>12-1月动量</td><td class="dim">"过去11个月涨得多的股票"</td></tr>
+    <tr><td>volatility</td><td class="ta-r fw">20%</td><td class="dn">负向</td><td>60日波动率</td><td class="dim">"波动小的股票更稳"</td></tr>
+    <tr><td>reversal</td><td class="ta-r fw">15%</td><td class="up">正向</td><td>5日反转</td><td class="dim">"最近跌多了该反弹了"</td></tr>
+    <tr><td>turnover</td><td class="ta-r fw">10%</td><td class="dn">负向</td><td>成交量比 v20/v60</td><td class="dim">"缩量的股票在蓄力"</td></tr>
+    <tr><td>pe</td><td class="ta-r fw">10%</td><td class="dn">负向</td><td>市盈率</td><td class="dim">"便宜的股票安全边际高"</td></tr>
+    <tr><td>pb</td><td class="ta-r fw" style="color:var(--dd)">0%</td><td>—</td><td>市净率（已砍）</td><td class="dim">"单因子回测负收益 -0.74%，不用了"</td></tr>
+    <tr><td>roe</td><td class="ta-r fw">15%</td><td class="up">正向</td><td>净资产收益率</td><td class="dim">"赚钱能力强的公司"</td></tr>
+    </tbody></table></div></div>
+</main>
+</body>
+</html>
