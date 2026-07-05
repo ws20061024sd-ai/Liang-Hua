@@ -388,42 +388,71 @@ def _stock_detail(conn, code):
         'high20':high20,'low20':low20,'avg_vol':avg_vol,'latest_vol':latest_vol}
 
 def _render_svg_kline(ohlc_df, ma20_series, ma60_series):
-    """生成120天SVG K线图"""
-    w,h=800,260;ml,mr,mt,mb=50,20,20,30
-    pw,ph=w-ml-mr,h-mt-mb
+    """生成120天SVG K线图 + 底部成交量"""
+    w,h=800,310;ml,mr,mt,mb=50,20,20,20
     data=ohlc_df.tail(120)
     if len(data)<5:return'<div class="empty">K线数据不足</div>'
+
+    # 价格区占78%高度, 成交量区占22%
+    kline_h=(h-mt-mb)*0.78;vol_h=(h-mt-mb)*0.22
+    vol_y0=mt+kline_h+4  # 成交量区顶部(y坐标)
+
     all_p=[float(x)for x in list(data['high'])+list(data['low'])]
     pmin,pmax=min(all_p),max(all_p);pr=pmax-pmin or 1
-    bar_w=max(1,pw/len(data)-1)
+    n=len(data);bar_w=max(1,(w-ml-mr)/n-1)
+
+    # 成交量范围
+    if 'volume' in data.columns:
+        vols=[float(v)for _,v in data['volume'].items()]
+        vmax=max(vols)if vols else 1
+    else:
+        vols=[0]*n;vmax=1
+
     parts=[f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" style="width:100%;max-width:800px">']
-    # 网格
+
+    # ── 价格网格(5条水平线) ──
     for i in range(5):
-        y=mt+ph*i/4;price=pmax-pr*i/4
+        y=mt+kline_h*i/4;price=pmax-pr*i/4
         parts.append(f'<line x1="{ml}" y1="{y:.0f}" x2="{w-mr}" y2="{y:.0f}" stroke="var(--border)" stroke-width="0.5"/>')
         parts.append(f'<text x="{ml-5}" y="{y+4:.0f}" text-anchor="end" fill="var(--text-soft)" font-size="9">{price:.1f}</text>')
-    # K线
+
+    # ── K线 + 成交量柱 ──
     for i,(_,d)in enumerate(data.iterrows()):
-        x=ml+i*pw/len(data);o,c,h_v,l_v=float(d['open']),float(d['close']),float(d['high']),float(d['low'])
+        x=ml+i*(w-ml-mr)/n
+        o,c,h_v,l_v=float(d['open']),float(d['close']),float(d['high']),float(d['low'])
         up=c>=o;color='var(--up)'if up else'var(--down)'
-        hy=mt+(pmax-h_v)/pr*ph;ly=mt+(pmax-l_v)/pr*ph
+        # 影线
+        hy=mt+(pmax-h_v)/pr*kline_h;ly=mt+(pmax-l_v)/pr*kline_h
         parts.append(f'<line x1="{x+bar_w/2:.1f}" y1="{hy:.1f}" x2="{x+bar_w/2:.1f}" y2="{ly:.1f}" stroke="{color}" stroke-width="1"/>')
-        bt=mt+(pmax-max(o,c))/pr*ph;bh=max(1,abs(c-o)/pr*ph)
+        # 实体
+        bt=mt+(pmax-max(o,c))/pr*kline_h;bh=max(1,abs(c-o)/pr*kline_h)
         parts.append(f'<rect x="{x:.1f}" y="{bt:.1f}" width="{bar_w:.1f}" height="{bh:.1f}" fill="{color}"/>')
-    # MA20
-    if ma20_series is not None and len(ma20_series)>=len(data):
+        # 成交量柱(半透明)
+        vh=(vols[i]/vmax)*vol_h*0.9 if vmax>0 else 0
+        vh=max(1,vh)if vh>0 else 0
+        parts.append(f'<rect x="{x:.1f}" y="{vol_y0+vol_h-vh:.1f}" width="{bar_w:.1f}" height="{vh:.1f}" fill="{color}" opacity="0.35"/>')
+
+    # 成交量基线
+    parts.append(f'<line x1="{ml}" y1="{vol_y0:.0f}" x2="{w-mr}" y2="{vol_y0:.0f}" stroke="var(--border)" stroke-width="0.5"/>')
+
+    # ── MA20 (ffill NaN, 线不断) ──
+    if ma20_series is not None and len(ma20_series)>=n:
+        ma_vals=ma20_series[-n:].ffill()
         pts=[]
-        for i,v in enumerate(ma20_series[-len(data):]):
+        for i,v in enumerate(ma_vals):
             if pd.isna(v):continue
-            x=ml+i*pw/len(data);y=mt+(pmax-v)/pr*ph;pts.append(f'{x:.1f},{y:.1f}')
+            x=ml+i*(w-ml-mr)/n;y=mt+(pmax-v)/pr*kline_h;pts.append(f'{x:.1f},{y:.1f}')
         if pts:parts.append(f'<polyline points="{" ".join(pts)}" fill="none" stroke="var(--accent)" stroke-width="1.5"/>')
-    # MA60
-    if ma60_series is not None and len(ma60_series)>=len(data):
+
+    # ── MA60 (ffill NaN, 线不断) ──
+    if ma60_series is not None and len(ma60_series)>=n:
+        ma_vals=ma60_series[-n:].ffill()
         pts=[]
-        for i,v in enumerate(ma60_series[-len(data):]):
+        for i,v in enumerate(ma_vals):
             if pd.isna(v):continue
-            x=ml+i*pw/len(data);y=mt+(pmax-v)/pr*ph;pts.append(f'{x:.1f},{y:.1f}')
+            x=ml+i*(w-ml-mr)/n;y=mt+(pmax-v)/pr*kline_h;pts.append(f'{x:.1f},{y:.1f}')
         if pts:parts.append(f'<polyline points="{" ".join(pts)}" fill="none" stroke="var(--accent-2)" stroke-width="1.5"/>')
+
     # 图例
     parts.append(f'<line x1="{w-120}" y1="14" x2="{w-100}" y2="14" stroke="var(--accent)" stroke-width="1.5"/>')
     parts.append(f'<text x="{w-96}" y="18" fill="var(--text-soft)" font-size="9">MA20</text>')
