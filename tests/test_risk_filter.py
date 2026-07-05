@@ -80,11 +80,11 @@ class TestFilterSignals:
 
     def test_price_over_max_filtered(self):
         """超过价格上限应被过滤"""
-        sig = _make_signal(price=50.0)
-        snap = _make_snapshot([{"close": 50.0}])
+        sig = _make_signal(price=51.0)
+        snap = _make_snapshot([{"close": 51.0}])
         passed, rejected = filter_signals([sig], snap)
 
-        # MAX_STOCK_PRICE = 30
+        # MAX_STOCK_PRICE = 50
         assert len(passed) == 0, "高价股不应通过"
         assert "超过上限" in rejected[0]["reject_reason"]
 

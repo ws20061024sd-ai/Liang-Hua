@@ -100,6 +100,18 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
     codes = pd.read_sql_query("SELECT code, name FROM stock_info", conn)
     code_name_map = dict(zip(codes['code'], codes['name']))
 
+    # 价格过滤：排除买不起的股票（1手 > 单仓位资金）
+    # 查询所有股票的最新价格
+    latest_prices = pd.read_sql_query(
+        "SELECT code, close FROM daily_kline WHERE date=?", conn, params=(date,)
+    )
+    price_map = dict(zip(latest_prices['code'], latest_prices['close']))
+
+    # 价格过滤：排除买不起的股票（1手 > 单仓位资金）
+    if settings.MAX_STOCK_PRICE > 0:
+        affordable = {c for c, p in price_map.items() if p and p <= settings.MAX_STOCK_PRICE}
+        codes = codes[codes['code'].isin(affordable)]
+
     # 获取财务因子数据（PE/PB 从 financial_data，ROE 从 financial_roe）
     fin_df = _fetch_financial_factors(conn, date)
     roe_map = _fetch_roe(conn, date)
@@ -125,6 +137,13 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
         conn, params=(date,)
     )
     conn.close()
+
+    if all_kline.empty:
+        return pd.DataFrame()
+
+    # 只计算买得起的股票（已在上面过滤过 codes）
+    affordable_set = set(codes['code'].tolist())
+    all_kline = all_kline[all_kline['code'].isin(affordable_set)]
 
     if all_kline.empty:
         return pd.DataFrame()
@@ -161,6 +180,7 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
         results.append({
             'code': code,
             'name': name,
+            'close': round(float(price_map.get(code, 0)), 2),
             'momentum': mom,
             'volatility': vol,
             'reversal': rev,

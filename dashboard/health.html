@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>信号首页 · 量化交易</title>
+<title>运维 · 量化交易</title>
 <style>
 :root {
   --bg: #fafaf8; --bg-card: #ffffff; --bg-hover: #f5f5f2;
@@ -73,18 +73,21 @@ tr:hover td { background:var(--bg-hover); }
 </style>
 </head>
 <body>
-<nav><span class="brand">量化交易</span><a href="index.html" class=active>信号首页</a><a href="strategy.html">策略分析</a><a href="market.html">市场监控</a><a href="factors.html">因子参考</a><a href="signals.html">信号日志</a></nav>
+<nav><span class="brand">量化交易</span><a href="index.html">信号首页</a><a href="strategy.html">策略分析</a><a href="market.html">市场监控</a><a href="factors.html">因子参考</a><a href="signals.html">信号日志</a></nav>
 <main>
-
-    <div class="banner banner-ok">✅ 数据: 2026-07-03 · 信号: 2026-07-03 · 信号可信</div>
-    <div class="panel"><div class="panel-bd" style="display:flex;align-items:center;gap:20px;padding:10px 16px"><span style="font-size:20px;font-weight:700">70</span><span style="font-size:12px;color:var(--text-muted)">CSI300</span><span class="up" style="font-weight:600">强势 ↑</span><span class="dim" style="font-size:11px">5日<span class="dn">-3.9</span>% · 20日<span class="up">+8.2</span>% · 涨11/跌9 偏多</span><span class="dim" style="font-size:10px;margin-left:auto">数据: 2026-07-03</span></div></div>
-    
-    <div class="panel"><div class="panel-hd">🎯 今日信号（¥50以内） <span class="dim" style="font-size:10px;text-transform:none;letter-spacing:0">2026-07-03</span></div><div class="panel-bd"><div class="empty">📭 今日无符合条件的买入信号<br><small class="dim">（所有买入信号均被拦截：大盘择时/价格超限/涨停/停牌）</small></div></div></div><div class="panel"><div class="panel-bd" style="padding:8px 16px;font-size:11px;color:var(--text-muted)">📋 今日拦截 21 条: 其他:21</div></div>
-    <div style="display:flex;gap:12px;margin-top:12px;font-size:12px">
-      <a href="strategy.html" style="color:var(--accent);text-decoration:none">📈 策略分析 →</a>
-      <a href="factors.html" style="color:var(--accent);text-decoration:none">🔝 因子参考 →</a>
-      <a href="market.html" style="color:var(--accent);text-decoration:none">📊 市场监控 →</a>
-      <a href="signals.html" style="color:var(--accent);text-decoration:none">📡 信号日志 →</a>
+<div class="hero"><h2>🩺 数据健康</h2><p>运维数据——平时不需要看</p></div>
+    <div class="grid g2">
+      <div class="panel"><div class="panel-hd">数据库概览</div><div class="panel-bd">
+        <div class="kv"><span class="dim">daily_kline</span><span>542,110行 · 2026-07-03 · 287只</span></div>
+        <div class="kv"><span class="dim">PE覆盖率</span><span><span class="tag t-pass">92%</span></span></div>
+        <div class="kv"><span class="dim">PB覆盖率</span><span><span class="tag t-pass">99%</span></span></div>
+        <div class="kv"><span class="dim">ROE</span><span>300只 · 2026-03-31</span></div>
+        <div class="kv"><span class="dim">DB大小</span><span>134.3 MB</span></div>
+      </div></div>
+      <div class="panel"><div class="panel-hd">数据校验</div><div class="panel-bd">
+        <div class="kv"><span class="dim">日线NULL</span><span>0</span></div>
+        <div class="kv"><span class="dim">日线股票数</span><span><span class="tag t-pass">达标</span></span></div>
+      </div></div>
     </div>
 </main>
 </body>

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-仪表盘生成器 v4 —— 多页面输出，Python 直渲染 HTML，零 JS 依赖
-输出: dashboard/{index,market,strategy}.html
+仪表盘生成器 v5 —— 博客设计系统 + SVG K线 + 信号首页
 用法: PYTHONPATH=. python scripts/generate_dashboard_data.py
 """
 import sqlite3, os, sys
@@ -10,119 +9,111 @@ import pandas as pd, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DB = 'data/stocks.db'
 
-# ═══════════════ CSS ═══════════════
+# ═══════════════ CSS（博客设计系统） ═══════════════
 
 CSS = '''<style>
-:root{--bg:#0b0e11;--s1:#1e2329;--s2:#252a30;--b:#2b3139;--t:#eaecef;--d:#848e9c;--dd:#5e6673;--up:#0ecb81;--dn:#f6465d;--bl:#4a9eff;--am:#f0b90b;--pu:#a85cef}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--t);font:13px/1.45 -apple-system,BlinkMacSystemFont,'SF Mono','Segoe UI',monospace;padding:0;-webkit-font-smoothing:antialiased}
-nav{background:var(--s1);border-bottom:1px solid var(--b);padding:0 20px;display:flex;align-items:center;gap:0;position:sticky;top:0;z-index:10}
-nav a{color:var(--d);text-decoration:none;padding:12px 16px;font-size:12px;border-bottom:2px solid transparent;transition:all .15s}
-nav a:hover{color:var(--t);background:var(--s2)}
-nav a.active{color:var(--bl);border-bottom-color:var(--bl)}
-nav .brand{font-weight:700;color:var(--t);margin-right:16px;font-size:13px;letter-spacing:-.2px}
-main{padding:16px 20px;max-width:1280px;margin:0 auto}
-.grid{display:grid;gap:10px}
-.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:1fr 1fr 1fr 1fr}
-.g13{grid-template-columns:1fr 3fr}.g31{grid-template-columns:3fr 1fr}
-.panel{background:var(--s1);border:1px solid var(--b);border-radius:6px;overflow:hidden;margin-bottom:10px}
-.panel-hd{padding:8px 14px;border-bottom:1px solid var(--b);font-size:11px;color:var(--d);text-transform:uppercase;letter-spacing:.5px;font-weight:500;display:flex;justify-content:space-between;align-items:center}
-.panel-bd{padding:12px 14px}
-.up{color:var(--up)}.dn{color:var(--dn)}.bl{color:var(--bl)}.dim{color:var(--dd)}.fw{font-weight:600}
-.code{font-weight:600;font-size:12px}.ta-r{text-align:right}.ta-c{text-align:center}
-.metric{text-align:center;padding:6px 4px}
-.metric .l{font-size:10px;color:var(--dd);text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
-.metric .v{font-size:18px;font-weight:600;line-height:1.1}
-.metric .s{font-size:10px;margin-top:1px}
-table{width:100%;border-collapse:collapse;font-size:11px}
-th{text-align:left;color:var(--dd);font-weight:500;padding:5px 8px;border-bottom:1px solid var(--b);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
-td{padding:4px 8px;border-bottom:1px solid rgba(43,49,57,0.5)}tr:hover td{background:rgba(255,255,255,0.02)}
-.tag{display:inline-block;padding:1px 5px;border-radius:2px;font-size:10px;font-weight:600}
-.t-up{background:#0ecb8118;color:var(--up)}.t-dn{background:#f6465d18;color:var(--dn)}
-.t-bl{background:#4a9eff18;color:var(--bl)}.t-pass{background:#0ecb8114;color:var(--up)}.t-block{background:#848e9c14;color:var(--d)}
-.t-trend{background:#4a9eff12;color:var(--bl)}.t-rev{background:#a85cef12;color:var(--pu)}
-.t-buy{background:#0ecb8118;color:var(--up)}.t-sell{background:#f6465d18;color:var(--dn)}
-.empty{color:var(--dd);text-align:center;padding:28px;font-size:12px}
-.bar-row{display:flex;align-items:center;gap:6px;margin:2px 0}
-.bar-row span:first-child{color:var(--d);width:28px;font-size:10px}
-.bar-row span:last-child{width:32px;text-align:right;font-size:10px;color:var(--d)}
-.bar{flex:1;height:3px;background:var(--s2);border-radius:2px;overflow:hidden}
-.bar-f{height:100%;border-radius:2px}
-.pos-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--b)}
-.pos-item:last-child{border-bottom:none}
-.pos-code{font-weight:600;font-size:13px;min-width:50px}
-.pos-meta{flex:1;font-size:10px;color:var(--d);line-height:1.4}
-.pos-pnl{font-size:16px;font-weight:600}
-.strat-card{border:1px solid var(--b);border-radius:8px;padding:16px;margin-bottom:10px}
-.hero{background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:20px 24px;margin-bottom:14px}
-.hero h2{font-size:16px;margin-bottom:6px}
-.hero p{color:var(--d);font-size:12px;line-height:1.6;max-width:700px}
-.explain{font-size:12px;color:var(--d);line-height:1.7}
-.explain strong{color:var(--t)}
-.row-item{display:flex;justify-content:space-between;padding:3px 0;font-size:11px}
-@media(max-width:900px){.g2,.g3,.g4,.g13,.g31{grid-template-columns:1fr}nav{flex-wrap:wrap}}
+:root {
+  --bg: #fafaf8; --bg-card: #ffffff; --bg-hover: #f5f5f2;
+  --text: #1a1a1a; --text-muted: #6b6b6b; --text-soft: #94948c;
+  --border: #e8e8e4; --border-light: #f0f0ec;
+  --accent: #2563eb; --accent-2: #7c3aed; --accent-3: #059669;
+  --up: #059669; --down: #dc2626; --warn: #d97706;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+  --radius: 8px;
+  --font: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-mono: 'SF Mono','Cascadia Code','JetBrains Mono',monospace;
+}
+[data-theme="dark"] {
+  --bg: #111110; --bg-card: #1a1a19; --bg-hover: #22221e;
+  --text: #e4e4e0; --text-muted: #8b8b85; --text-soft: #6b6b65;
+  --border: #2a2a25; --border-light: #22221e;
+  --accent: #60a5fa; --accent-2: #a78bfa; --accent-3: #34d399;
+  --up: #34d399; --down: #f87171; --warn: #fbbf24;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font:13px/1.5 var(--font); -webkit-font-smoothing:antialiased; }
+nav { background:var(--bg-card); border-bottom:1px solid var(--border); padding:0 20px; display:flex; align-items:center; position:sticky; top:0; z-index:10; backdrop-filter:blur(8px); }
+nav a { color:var(--text-muted); text-decoration:none; padding:10px 14px; font-size:12px; border-bottom:2px solid transparent; transition:all .15s; }
+nav a:hover { color:var(--text); }
+nav a.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:500; }
+nav .brand { font-weight:700; color:var(--text); margin-right:20px; font-size:14px; letter-spacing:-.3px; }
+main { max-width:1280px; margin:0 auto; padding:20px 24px; }
+.panel { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-sm); margin-bottom:12px; overflow:hidden; }
+.panel-hd { display:flex; justify-content:space-between; align-items:center; padding:9px 16px; border-bottom:1px solid var(--border-light); font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; font-weight:500; }
+.panel-bd { padding:14px 16px; }
+.up { color:var(--up); } .dn { color:var(--down); } .ac { color:var(--accent); } .dim { color:var(--text-soft); } .muted { color:var(--text-muted); } .fw { font-weight:600; }
+.code { font-family:var(--font-mono); font-weight:600; font-size:12px; }
+.ta-r { text-align:right; }.ta-c { text-align:center; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th { text-align:left; color:var(--text-soft); font-weight:500; padding:5px 8px; border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; letter-spacing:.3px; }
+td { padding:5px 8px; border-bottom:1px solid var(--border-light); }
+tr:hover td { background:var(--bg-hover); }
+.tag { display:inline-block; padding:1px 6px; border-radius:3px; font-size:10px; font-weight:600; }
+.t-buy { background:#05966915; color:var(--up); } .t-sell { background:#dc262615; color:var(--down); }
+.t-pass { background:#2563eb12; color:var(--accent); } .t-block { background:#6b6b6b12; color:var(--text-muted); }
+.t-trend { background:#2563eb10; color:var(--accent); } .t-rev { background:#7c3aed10; color:var(--accent-2); }
+.t-warn { background:#d9770615; color:var(--warn); }
+.banner { padding:10px 16px; border-radius:var(--radius); margin-bottom:12px; font-size:12px; }
+.banner-ok { background:#05966908; border:1px solid #05966922; color:var(--accent-3); }
+.banner-warn { background:#d9770608; border:1px solid #d9770622; color:var(--warn); }
+.grid { display:grid; gap:10px; }
+.g2 { grid-template-columns:1fr 1fr; } .g3 { grid-template-columns:1fr 1fr 1fr; }
+.hero { padding:16px 20px; margin-bottom:12px; }
+.hero h2 { font-size:18px; font-weight:700; margin-bottom:4px; }
+.hero p { color:var(--text-muted); font-size:12px; }
+.sig-row { display:flex; align-items:center; gap:12px; padding:6px 0; border-bottom:1px solid var(--border-light); font-size:12px; }
+.sig-row:hover { background:var(--bg-hover); }
+.sig-rank { font-size:16px; font-weight:700; color:var(--text-soft); min-width:28px; }
+.sig-meta { flex:1; min-width:0; }
+.sig-meta .reason { font-size:11px; color:var(--text-muted); margin-top:1px; }
+.progress { display:flex; align-items:center; gap:6px; }
+.progress-bar { flex:1; height:3px; background:var(--border-light); border-radius:2px; overflow:hidden; }
+.progress-fill { height:100%; border-radius:2px; }
+.empty { color:var(--text-soft); text-align:center; padding:32px; font-size:13px; }
+.kv { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--border-light); font-size:12px; }
+.kv:last-child { border-bottom:none; }
+.stock-header { display:flex; gap:24px; align-items:flex-start; margin-bottom:16px; }
+.stock-header .price { font-size:28px; font-weight:700; }
+.stock-header .chg { font-size:14px; margin-left:6px; }
+.stock-header .info { flex:1; }
+.stock-header .info td { padding:2px 12px 2px 0; border:none; font-size:12px; }
+.chart-box { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:8px; margin-bottom:12px; overflow-x:auto; }
+@media(max-width:900px) { .g2,.g3 { grid-template-columns:1fr; } nav { flex-wrap:wrap; } }
 </style>'''
 
-# ═══════════════ SHARED NAV ═══════════════
+# ═══════════════ SHARED ═══════════════
 
 def _nav(active=''):
-    links = [('index.html','仪表盘'),('market.html','市场监控'),('strategy.html','策略分析'),
-             ('signals.html','信号日志'),('factors.html','因子引擎')]
+    links = [('index.html','信号首页'),('strategy.html','策略分析'),
+             ('market.html','市场监控'),('factors.html','因子参考'),('signals.html','信号日志')]
     items = ''.join(f'<a href="{h}"{" class=active" if h==active else ""}>{n}</a>' for h,n in links)
     return f'<nav><span class="brand">量化交易</span>{items}</nav>'
 
-# ═══════════════ DATA HELPERS ═══════════════
-
-def _q(conn,s,p=None):
-    return pd.read_sql_query(s,conn,params=p) if p else pd.read_sql_query(s,conn)
+def _page(title,active,body):
+    return f'<!DOCTYPE html>\n<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n<title>{title} · 量化交易</title>\n{CSS}\n</head>\n<body>\n{_nav(active)}\n<main>\n{body}\n</main>\n</body>\n</html>'
 
 def _tag(c,t): return f'<span class="tag {c}">{t}</span>'
-def _ud(v,f='+.1f'): return f'<span class="{"up" if v>=0 else "dn"}">{v:{f}}</span>' if v<0 else f'<span class="up">+{v:{f}}</span>'
+def _ud(v): return f'<span class="{"up" if v>=0 else "dn"}">{v:+.1f}</span>' if v!=0 else '<span class="dim">0.0</span>'
 
-STRATS = [
-    {'key':'ma','n':'双均线趋势跟踪','p':'MA(20,60)','ret':14.5,'sharpe':0.57,'dd':31.6,'style':'trend','months':61,'win':52,
-     'desc':'快线(MA20)上穿慢线(MA60)买入，下穿卖出。慢均线减少震荡市假信号，捕获中期趋势。',
-     'principle':'两条移动平均线——快线(MA20)代表短期趋势，慢线(MA60)代表中期趋势。当短期趋势向上穿越中期趋势时（金叉），说明上涨动能确立，买入。反过来（死叉）卖出。其余时间不操作。',
-     'good_for':'强势趋势市场——有明显的方向性行情，均线呈多头排列。',
-     'bad_for':'震荡市——价格反复穿越均线，产生大量假信号（反复买卖都被打脸）。',
-     'why_params':'MA(10,30)→MA(20,60)。更慢的均线减少了40%的假信号，交易次数从295次降到179次，回撤从-62%降到-32%。代价是入场更晚——在快速趋势中可能错过前半段。',
-     'signals':[],'wf':[('训练集 19-22','24.5%','0.87','-21.7%','79次'),('验证集 23-24','0.3%','0.09','-31.6%','42次'),('测试集 25-26','6.7%','0.33','-14.4%','48次')]},
-    {'key':'mb','n':'动量突破','p':'DK(10,2%,10)','ret':10.7,'sharpe':0.39,'dd':60.9,'style':'trend','months':77,'win':51,
-     'desc':'收盘价突破过去10日最高价×(1+2%缓冲)买入，跌破10日最低价卖出。快速识别突破行情。',
-     'principle':'当股价突破近期高点时，说明买方力量压倒卖方，趋势可能启动。2%的缓冲区过滤掉假突破（小幅刺穿后回落）。卖出用10日最低价——跌破近期支撑说明趋势反转。',
-     'good_for':'强势单边行情——突破后持续上涨，涨幅远超2%缓冲。',
-     'bad_for':'假突破频繁的震荡市——突破后立刻回落，反复止损。2023-2024验证集年化-18%就是这个原因。',
-     'why_params':'回看周期20→10天。10天突破比20天更及时，年化从2.5%提升到10.7%。但回撤仍然大(-61%)，必须配合止损使用。',
-     'signals':[],'wf':[('训练集 19-22','31.6%','0.81','-34.8%','157次'),('验证集 23-24','-18.0%','-0.55','-53.6%','100次'),('测试集 25-26','40.6%','1.01','-14.4%','80次')]},
-    {'key':'mr','n':'均值回归','p':'BB(10,2.0)','ret':18.9,'sharpe':0.65,'dd':39.9,'style':'reversion','months':56,'win':54,
-     'desc':'布林带(10,2.0)下轨超卖+MA60向上时买入，上轨超买卖出。捕捉短期过度反应后的回归。',
-     'principle':'布林带是MA20±2倍标准差构成的通道。统计学上，价格在通道内的概率约95%。当价格跌破下轨时（超卖），大概率会回归中轨。MA60向上的过滤条件确保不在下跌趋势中接飞刀。首次下穿触发避免连续多天重复发信号。',
-     'good_for':'震荡市——价格有明确的上下边界，反复在通道内波动。2023-2024验证集年化+40%正得益于此。',
-     'bad_for':'强趋势市——价格可以一直贴着上轨涨或下轨跌，布林带不断扩张，"超卖"之后还有"更超卖"。',
-     'why_params':'BB(20,2.0)→BB(10,2.0)。更短的周期让布林带更敏感地捕捉到短期超卖——10日均线比20日均线反应更快。标准差保持2.0——太窄(1.5)假信号多，太宽(2.5)信号太少。',
-     'signals':[],'wf':[('训练集 19-22','-4.2%','0.00','-39.9%','72次'),('验证集 23-24','40.7%','1.41','-6.9%','46次'),('测试集 25-26','52.3%','1.60','-14.7%','49次')]},
-]
+# ═══════════════ DATA ═══════════════
 
-# ═══════════════ DATA QUERIES ═══════════════
+def _q(c,s,p=None): return pd.read_sql_query(s,c,params=p) if p else pd.read_sql_query(s,c)
 
 def _market(conn):
     ld=_q(conn,"SELECT MAX(date) FROM daily_kline").iloc[0,0]
     sc=int(_q(conn,"SELECT COUNT(DISTINCT code) FROM daily_kline WHERE date=?",(ld,)).iloc[0,0])
-    idx=_q(conn,"SELECT date, AVG(close) as c FROM daily_kline WHERE date>=date('now','-180 days') GROUP BY date ORDER BY date")
-    last=float(idx['c'].iloc[-1])if len(idx)else 0
-    r5=round((idx['c'].iloc[-1]/idx['c'].iloc[-5]-1)*100,2)if len(idx)>=5 else 0
-    r20=round((idx['c'].iloc[-1]/idx['c'].iloc[-20]-1)*100,2)if len(idx)>=20 else 0
-    r60=round((idx['c'].iloc[-1]/idx['c'].iloc[-60]-1)*100,2)if len(idx)>=60 else 0
+    idx=_q(conn,"SELECT date,AVG(close) as c FROM daily_kline WHERE date>=date('now','-180 days') GROUP BY date ORDER BY date")
+    last=float(idx['c'].iloc[-1]) if len(idx) else 0
+    r5=round((idx['c'].iloc[-1]/idx['c'].iloc[-5]-1)*100,2) if len(idx)>=5 else 0
+    r20=round((idx['c'].iloc[-1]/idx['c'].iloc[-20]-1)*100,2) if len(idx)>=20 else 0
     if len(idx)>=60:
         m20=idx['c'].rolling(20).mean();m60=idx['c'].rolling(60).mean()
-        reg='strong'if m20.iloc[-1]>m60.iloc[-1]else'weak'
-    else:reg='unknown'
+        reg='strong' if m20.iloc[-1]>m60.iloc[-1] else 'weak'
+    else: reg='unknown'
     chg=idx['c'].pct_change().tail(20)
-    # 近期趋势线数据
-    trend_pts=idx.tail(90)[['date','c']].copy();trend_pts['date']=trend_pts['date'].apply(lambda x:str(x)[5:])
-    return {'date':str(ld),'stocks':sc,'regime':reg,'close':last,'r5':r5,'r20':r20,'r60':r60,
-        'up':int((chg>0).sum()),'down':int((chg<0).sum()),
-        'trend':[{'d':str(d)[5:],'v':round(float(c),1)}for d,c in zip(trend_pts['date'].tail(60),trend_pts['c'].tail(60))]}
+    return {'date':str(ld),'stocks':sc,'regime':reg,'close':last,'r5':r5,'r20':r20,
+        'up':int((chg>0).sum()),'down':int((chg<0).sum())}
 
 def _health(conn):
     ld=_q(conn,"SELECT MAX(date) FROM daily_kline").iloc[0,0]
@@ -141,34 +132,21 @@ def _health(conn):
     return {'daily_date':str(ld),'daily_stocks':dc,'daily_nulls':nl,'daily_total':tr,'daily_ok':dc>=280 and nl==0,
         'pe_pct':pep,'pe_ok':pep>=80,'pb_pct':pbp,'pb_ok':pbp>=90,'roe_date':str(lr or''),'roe_stocks':rc,'roe_ok':rc>=255,'db':sz}
 
-def _breadth(conn):
-    """市场广度——计算多天历史数据"""
-    ld=_q(conn,"SELECT MAX(date) FROM daily_kline").iloc[0,0]
-    # 取最近60天的数据
-    all_dates=_q(conn,"SELECT DISTINCT date FROM daily_kline WHERE date>=date('now','-90 days') ORDER BY date")
-    dates=all_dates['date'].tolist()
-    breadth_daily=[]
-    for i,d in enumerate(dates[-30:]):  # 最近30天
-        df=_q(conn,"SELECT code,close FROM daily_kline WHERE date=?",(d,))
-        prev=_q(conn,"SELECT code,close FROM daily_kline WHERE date=(SELECT MAX(date) FROM daily_kline WHERE date<?)",(d,))
-        if df.empty or prev.empty:continue
-        pm=dict(zip(prev['code'],prev['close']))
-        adv=decl=0
-        for _,r in df.iterrows():
-            if r['code']in pm:
-                if r['close']>pm[r['code']]:adv+=1
-                elif r['close']<pm[r['code']]:decl+=1
-        # 采样 MA20/MA60 以上占比
-        sample=min(50,len(df))
-        a20=a60=0
-        for _,r in df.head(sample).iterrows():
-            hist=_q(conn,"SELECT close FROM daily_kline WHERE code=? AND date<=? ORDER BY date LIMIT 80",(r['code'],d))
-            if len(hist)>=60:
-                if float(hist['close'].iloc[-1])>hist['close'].rolling(20).mean().iloc[-1]:a20+=1
-                if float(hist['close'].iloc[-1])>hist['close'].rolling(60).mean().iloc[-1]:a60+=1
-        breadth_daily.append({'d':str(d)[5:],'adv':adv,'decl':decl,'total':adv+decl,
-            'a20':round(a20/sample*100)if sample else 0,'a60':round(a60/sample*100)if sample else 0})
-    return breadth_daily
+def _signals_all(conn):
+    df=_q(conn,"SELECT date,code,name,strategy,action,price,strength,status,reason FROM signal_history ORDER BY date DESC,id DESC LIMIT 200")
+    return[{'d':str(r['date']),'c':r['code'],'n':r['name'],'s':r['strategy'],'a':r['action'],
+        'p':round(float(r['price']),2)if r['price']else 0,'st':r['status'],
+        'strength':round(float(r['strength']),3)if r['strength']else 0,'reason':r['reason']or''}for _,r in df.iterrows()]
+
+def _factors_all(conn):
+    try:
+        from engine.factor_engine import compute_factor_scores
+        df=compute_factor_scores()
+        if df.empty:return[]
+        return[{'r':i+1,'code':r['code'],'name':r['name'],'score':round(float(r['score']),2),
+            'price':round(float(r.get('close',0)),2),'mom':round(float(r.get('momentum',0)or 0),1),
+            'vol':round(float(r.get('volatility',0)or 0),2)}for i,(_,r)in enumerate(df.head(15).iterrows())]
+    except:return[]
 
 def _positions(conn):
     try:
@@ -189,461 +167,370 @@ def _positions(conn):
         out.append({'code':p['code'],'name':p['name'],'buy_date':p['buy_date'],'buy':round(p['buy_price'],2),'now':round(float(cur),2),'pnl':pnl,'peak':round(pk,2),'stop':round(pk*0.95,2)})
     return out
 
-def _factors(conn):
-    try:
-        from engine.factor_engine import compute_factor_scores
-        df=compute_factor_scores()
-        if df.empty:return[]
-        codes=[r['code']for _,r in df.head(20).iterrows()]
-        ph=','.join('?'*len(codes))
-        ld=_q(conn,"SELECT MAX(date) FROM daily_kline").iloc[0,0]
-        prices=_q(conn,f"SELECT code,close FROM daily_kline WHERE date=? AND code IN ({ph})",[ld]+codes)
-        pm=dict(zip(prices['code'],prices['close']))
-        return[{'r':i+1,'code':r['code'],'name':r['name'],'score':round(float(r['score']),2),
-            'mom':round(float(r.get('momentum',0)or 0),1),'vol':round(float(r.get('volatility',0)or 0),2),
-            'price':round(float(pm.get(r['code'],0)),2)}for i,(_,r)in enumerate(df.head(20).iterrows())]
-    except:return[]
-
-def _signals(conn):
-    df=_q(conn,"SELECT date,code,name,strategy,action,price,status,reason FROM signal_history ORDER BY date DESC,id DESC LIMIT 100")
-    return[{'d':str(r['date']),'c':r['code'],'n':r['name'],'s':r['strategy'],'a':r['action'],'p':round(float(r['price']),2)if r['price']else 0,'st':r['status'],'reason':r['reason']or''}for _,r in df.iterrows()]
-
-def _sectors(conn):
-    df=_q(conn,"SELECT date,name,pct_change FROM sector_history ORDER BY date DESC LIMIT 180")
+def _stock_detail(conn, code):
+    df=_q(conn,"SELECT date,open,close,high,low,volume FROM daily_kline WHERE code=? AND date>=date('now','-200 days') ORDER BY date",(code,))
     if df.empty:return None
-    ld=df['date'].iloc[0];latest=df[df['date']==ld]
-    return{'date':str(ld),'top':[{'n':r['name'],'pct':round(float(r['pct_change']),1)}for _,r in latest.nlargest(5,'pct_change').iterrows()],
-        'bottom':[{'n':r['name'],'pct':round(float(r['pct_change']),1)}for _,r in latest.nsmallest(5,'pct_change').iterrows()]}
+    name=_q(conn,"SELECT name FROM stock_info WHERE code=?",(code,))
+    stock_name=name.iloc[0,0] if not name.empty else code
+    closes=df['close'].values;last=float(closes[-1])
+    prev=float(closes[-2]) if len(closes)>=2 else last
+    chg=(last-prev)/prev*100 if prev else 0
+    ma20=float(pd.Series(closes).rolling(20).mean().iloc[-1])if len(closes)>=20 else last
+    ma60=float(pd.Series(closes).rolling(60).mean().iloc[-1])if len(closes)>=60 else last
+    std20=float(pd.Series(closes).rolling(20).std().iloc[-1])if len(closes)>=20 else 0
+    bb_upper=ma20+2*std20;bb_lower=ma20-2*std20
+    fin=_q(conn,"SELECT pe,pb FROM financial_data WHERE code=? AND date=(SELECT MAX(date) FROM financial_data WHERE code=? AND date<=?)",(code,code,str(df['date'].iloc[-1])[:10]))
+    pe=round(float(fin['pe'].iloc[0]),1)if not fin.empty and fin['pe'].notna().iloc[0] else None
+    pb=round(float(fin['pb'].iloc[0]),2)if not fin.empty and fin['pb'].notna().iloc[0] else None
+    high20=round(float(df['high'].tail(20).max()),2);low20=round(float(df['low'].tail(20).min()),2)
+    avg_vol=float(df['volume'].tail(20).mean());latest_vol=float(df['volume'].iloc[-1])
+    sigs=_q(conn,"SELECT date,strategy,action,price,status FROM signal_history WHERE code=? ORDER BY date DESC LIMIT 10",(code,))
+    sig_rows=''
+    if not sigs.empty:
+        sig_rows='<table><thead><tr><th>日期</th><th>策略</th><th>操作</th><th class="ta-r">价格</th><th>状态</th></tr></thead><tbody>'+''.join(
+            f'<tr><td>{r["date"]}</td><td class="dim">{r["strategy"]}</td><td>{_tag("t-buy"if r["action"]=="BUY"else"t-sell",r["action"])}</td><td class="ta-r code">¥{float(r["price"]):.2f}</td><td>{_tag("t-pass"if r["status"]=="passed"else"t-block",r["status"])}</td></tr>'
+            for _,r in sigs.iterrows())+'</tbody></table>'
+    return {'code':code,'name':stock_name,'last':last,'chg':chg,'ma20':ma20,'ma60':ma60,
+        'bb_upper':bb_upper,'bb_lower':bb_lower,'pe':pe,'pb':pb,'sig_rows':sig_rows,
+        'high20':high20,'low20':low20,'avg_vol':avg_vol,'latest_vol':latest_vol}
 
-def _signal_for_strategy(conn, strat_name):
-    """取某策略的最近信号作为示例"""
-    df=_q(conn,"SELECT date,code,name,action,price,reason FROM signal_history WHERE strategy LIKE ? AND status='passed' ORDER BY date DESC LIMIT 3",(f'%{strat_name}%',))
-    return[{'d':str(r['date']),'c':r['code'],'n':r['name'],'a':r['action'],'p':round(float(r['price']),2)if r['price']else 0,'reason':r['reason']or''}for _,r in df.iterrows()]
+def _render_svg_kline(ohlc_df, ma20_series, ma60_series):
+    """生成120天SVG K线图"""
+    w,h=800,260;ml,mr,mt,mb=50,20,20,30
+    pw,ph=w-ml-mr,h-mt-mb
+    data=ohlc_df.tail(120)
+    if len(data)<5:return'<div class="empty">K线数据不足</div>'
+    all_p=[float(x)for x in list(data['high'])+list(data['low'])]
+    pmin,pmax=min(all_p),max(all_p);pr=pmax-pmin or 1
+    bar_w=max(1,pw/len(data)-1)
+    parts=[f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" style="width:100%;max-width:800px">']
+    # 网格
+    for i in range(5):
+        y=mt+ph*i/4;price=pmax-pr*i/4
+        parts.append(f'<line x1="{ml}" y1="{y:.0f}" x2="{w-mr}" y2="{y:.0f}" stroke="var(--border)" stroke-width="0.5"/>')
+        parts.append(f'<text x="{ml-5}" y="{y+4:.0f}" text-anchor="end" fill="var(--text-soft)" font-size="9">{price:.1f}</text>')
+    # K线
+    for i,(_,d)in enumerate(data.iterrows()):
+        x=ml+i*pw/len(data);o,c,h_v,l_v=float(d['open']),float(d['close']),float(d['high']),float(d['low'])
+        up=c>=o;color='var(--up)'if up else'var(--down)'
+        hy=mt+(pmax-h_v)/pr*ph;ly=mt+(pmax-l_v)/pr*ph
+        parts.append(f'<line x1="{x+bar_w/2:.1f}" y1="{hy:.1f}" x2="{x+bar_w/2:.1f}" y2="{ly:.1f}" stroke="{color}" stroke-width="1"/>')
+        bt=mt+(pmax-max(o,c))/pr*ph;bh=max(1,abs(c-o)/pr*ph)
+        parts.append(f'<rect x="{x:.1f}" y="{bt:.1f}" width="{bar_w:.1f}" height="{bh:.1f}" fill="{color}"/>')
+    # MA20
+    if ma20_series is not None and len(ma20_series)>=len(data):
+        pts=[]
+        for i,v in enumerate(ma20_series[-len(data):]):
+            if pd.isna(v):continue
+            x=ml+i*pw/len(data);y=mt+(pmax-v)/pr*ph;pts.append(f'{x:.1f},{y:.1f}')
+        if pts:parts.append(f'<polyline points="{" ".join(pts)}" fill="none" stroke="var(--accent)" stroke-width="1.5"/>')
+    # MA60
+    if ma60_series is not None and len(ma60_series)>=len(data):
+        pts=[]
+        for i,v in enumerate(ma60_series[-len(data):]):
+            if pd.isna(v):continue
+            x=ml+i*pw/len(data);y=mt+(pmax-v)/pr*ph;pts.append(f'{x:.1f},{y:.1f}')
+        if pts:parts.append(f'<polyline points="{" ".join(pts)}" fill="none" stroke="var(--accent-2)" stroke-width="1.5"/>')
+    # 图例
+    parts.append(f'<line x1="{w-120}" y1="14" x2="{w-100}" y2="14" stroke="var(--accent)" stroke-width="1.5"/>')
+    parts.append(f'<text x="{w-96}" y="18" fill="var(--text-soft)" font-size="9">MA20</text>')
+    parts.append(f'<line x1="{w-60}" y1="14" x2="{w-40}" y2="14" stroke="var(--accent-2)" stroke-width="1.5"/>')
+    parts.append(f'<text x="{w-36}" y="18" fill="var(--text-soft)" font-size="9">MA60</text>')
+    parts.append('</svg>')
+    return'\n'.join(parts)
 
-def _cross_signals(fs, sigs):
-    """交叉信号检测：因子排名+策略买入信号的重合股票"""
-    if not fs or not sigs: return None, [], [], {}
+# ═══════════════ STRATEGY DATA ═══════════════
 
-    factor_codes = {f['code']: f['name'] for f in fs[:20]}
-    # 最近一天通过的买入信号
-    latest_date = sigs[0]['d'] if sigs else ''
-    buy_sigs = [s for s in sigs if s['a'] == 'BUY' and s['st'] == 'passed' and s['d'] == latest_date]
-    buy_codes = {s['c']: s for s in buy_sigs}
+STRATS=[
+    {'key':'ma','n':'双均线趋势跟踪','p':'MA(20,60)','ret':14.5,'sharpe':0.57,'dd':31.6,'style':'trend','months':61,'win':52,
+     'desc':'快线上穿慢线买入，下穿卖出。慢均线减少假信号。','principle':'MA20(短期趋势)上穿MA60(中期趋势)=金叉买入，下穿=死叉卖出。其余时间不操作。',
+     'good':'强势趋势市场','bad':'震荡市（反复穿越均线，假信号多）',
+     'why':'MA(10,30)→MA(20,60)：假信号减少40%，回撤从-62%降到-32%，代价是入场更晚。'},
+    {'key':'mb','n':'动量突破','p':'DK(10,2%,10)','ret':10.7,'sharpe':0.39,'dd':60.9,'style':'trend','months':77,'win':51,
+     'desc':'突破10日最高×(1+2%)买入，跌破10日最低卖出。','principle':'股价突破近期高点=买方力量确立。2%缓冲过滤假突破。',
+     'good':'强势单边行情','bad':'假突破频繁的震荡市(2023-24验证集年化-18%)',
+     'why':'回看周期20→10天：更及时，年化从2.5%→10.7%。但回撤仍大(-61%)，必须配合止损。'},
+    {'key':'mr','n':'均值回归','p':'BB(10,2.0)','ret':18.9,'sharpe':0.65,'dd':39.9,'style':'reversion','months':56,'win':54,
+     'desc':'布林带下轨超卖+MA60向上时买入，上轨超买卖出。','principle':'价格跌破布林带下轨(超卖)→大概率回归中轨。MA60向上过滤下跌趋势。首次下穿触发，避免重复发信号。',
+     'good':'震荡市(2023-24验证集年化+40%)','bad':'强趋势市（超卖后还有更超卖）',
+     'why':'BB(20,2.0)→BB(10,2.0)：更短周期捕捉短期超卖，反应更快。标准差保持2.0。'},
+]
 
-    # 双确认：因子Top20 且 策略买入
-    double = []
-    for c in factor_codes:
-        if c in buy_codes:
-            s = buy_codes[c]
-            factor_rank = next((f['r'] for f in fs if f['code'] == c), '?')
-            double.append({'code': c, 'name': factor_codes[c], 'rank': factor_rank,
-                'strategy': s['s'], 'price': s['p'], 'signal_date': s['d']})
+# ═══════════════ PAGES ═══════════════
 
-    # 单因子确认（仅因子Top10但无策略信号）
-    single_factor = []
-    for c in list(factor_codes.keys())[:10]:
-        if c not in buy_codes:
-            f = next(x for x in fs if x['code'] == c)
-            single_factor.append({'code': c, 'name': factor_codes[c], 'rank': f['r'], 'score': f['score']})
-
-    # 单策略确认（仅策略买入但不在因子Top20）
-    single_strat = []
-    for c, s in buy_codes.items():
-        if c not in factor_codes:
-            single_strat.append({'code': c, 'name': s['n'], 'strategy': s['s'], 'price': s['p']})
-
-    # 阻塞统计
-    blocked_sigs = [s for s in sigs if s['st'] == 'blocked' and s['d'] == latest_date]
-    block_stats = {}
-    for s in blocked_sigs:
-        reason = s.get('reason', '未知原因')
-        # 简化分类
-        if '跌停' in reason: k = '跌停'
-        elif '停牌' in reason: k = '停牌'
-        elif 'ST' in reason: k = 'ST'
-        elif '涨停' in reason: k = '涨停'
-        elif '大盘' in reason or '择时' in reason: k = '大盘择时'
-        elif '股价' in reason or '上限' in reason: k = '股价超限'
-        elif '流动性' in reason: k = '流动性不足'
-        else: k = '其他'
-        block_stats[k] = block_stats.get(k, 0) + 1
-
-    return latest_date, double, single_factor, single_strat, block_stats, len(buy_sigs), len(blocked_sigs)
-
-# ═══════════════ SHARED COMPONENTS ═══════════════
-
-def _page(title,active,body):
-    return f'<!DOCTYPE html>\n<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n<title>{title} · 量化交易</title>\n{CSS}\n</head>\n<body>\n{_nav(active)}\n<main>\n{body}\n</main>\n</body>\n</html>'
-
-def _panel_date(date_str, warning=False):
-    """面板日期标签"""
-    cls = 'dn' if warning else 'dim'
-    return f'<span class="{cls}" style="font-size:9px">数据: {date_str}</span>'
-
-def _freshness_banner(m, h):
-    """数据新鲜度警告横幅"""
-    warnings = []
-    today = datetime.now()
-    try:
-        daily_age = (today - datetime.strptime(m['date'], '%Y-%m-%d')).days
-        if daily_age > 2:
-            warnings.append(f'日线数据截止 {m["date"]}，已过期 {daily_age} 天。最新市场状态无法判断。')
-    except: pass
-    try:
-        fin_date = h['daily_date']
-        fin_age = (today - datetime.strptime(fin_date, '%Y-%m-%d')).days
-        if fin_age > 7:
-            warnings.append(f'PE/PB 数据截止 {fin_date}，已过期 {fin_age} 天。估值因子不可靠。')
-    except: pass
-    try:
-        sig_date = None
-        # check signal table
-        conn_check = sqlite3.connect(DB)
-        sd = conn_check.execute("SELECT MAX(date) FROM signal_history").fetchone()[0]
-        conn_check.close()
-        if sd:
-            sig_age = (today - datetime.strptime(sd, '%Y-%m-%d')).days
-            if sd != m['date'] and sig_age > 3:
-                warnings.append(f'信号数据截止 {sd}，策略已有 {sig_age} 天未运行。')
-    except: pass
-
-    if not warnings:
-        return ''
-    items = ''.join(f'<div style="padding:4px 0;font-size:12px">⚠️ {w}</div>' for w in warnings)
-    return f'<div style="background:#f6465d12;border:1px solid #f6465d44;border-radius:6px;padding:10px 16px;margin-bottom:12px">{items}</div>'
-
-def _benchmark_ret(strat_months):
-    """计算CSI300在对应周期的大致年化收益"""
-    try:
-        conn_bm = sqlite3.connect(DB)
-        idx = _q(conn_bm, "SELECT date, AVG(close) as c FROM daily_kline GROUP BY date ORDER BY date")
-        conn_bm.close()
-        if len(idx) < strat_months + 5:
-            return None
-        months_ago = min(strat_months, len(idx) - 1)
-        total_ret = (float(idx['c'].iloc[-1]) / float(idx['c'].iloc[-months_ago]) - 1) * 100
-        years = strat_months / 12
-        ann_ret = ((1 + total_ret/100) ** (1/years) - 1) * 100 if years > 0 else 0
-        return round(ann_ret, 1)
-    except:
-        return None
-
-def _disclaimer():
-    return '''<div style="background:#f0b90b10;border:1px solid #f0b90b33;border-radius:6px;padding:10px 14px;margin-top:12px;font-size:11px;color:var(--am)">
-<strong>⚠️ 回测收益 ≠ 实盘收益。</strong>以下因素导致回测数字偏高：本地数据源(AKShare)与实盘价格存在差异(~3-6pp)、止损模拟假设精确执行(实盘有滑点)、未考虑最低佣金(5元/笔)对小资金的影响。<strong>保守估计: 实盘收益 ≈ 回测收益 × 0.6~0.8。</strong></div>'''
-
-# ═══════════════ PAGE RENDERERS ═══════════════
-
-def page_index(m,h,bd,ps,fs,sigs,sec):
-    """仪表盘首页"""
-    reg_cls='up'if m['regime']=='strong'else'dn'
-    reg_label='TRENDING ↑'if m['regime']=='strong'else'RANGE ↓'
-    fresh_warn=_freshness_banner(m,h)
-
-    # 计算数据新鲜度
+def page_index(conn, m, h, sigs, fs, ps):
+    """信号首页"""
     today=datetime.now()
     try:daily_age=(today-datetime.strptime(m['date'],'%Y-%m-%d')).days
     except:daily_age=99
+    try:sig_date=sigs[0]['d'] if sigs else None;sig_age=(today-datetime.strptime(sig_date,'%Y-%m-%d')).days if sig_date else 99
+    except:sig_age=99
+    fresh_ok=daily_age<=2 and sig_age<=3
 
-    # 交叉信号
-    sig_date, double, single_f, single_s, block_stats, n_buy, n_block = _cross_signals(fs, sigs)
+    # 数据状态条
+    fresh_html=f'<div class="banner {"banner-ok" if fresh_ok else "banner-warn"}">'
+    if fresh_ok: fresh_html+=f'✅ 数据: {m["date"]} · 信号: {sig_date or "无"} · 信号可信'
+    else: fresh_html+=f'⚠️ 数据: {m["date"]}({daily_age}天前) · 信号: {sig_date or "无"}({sig_age}天前) · 信号不可信'
+    fresh_html+='</div>'
 
-    # 综合推荐面板
-    rec_html=''
-    if double or single_f or single_s:
-        rec_parts=[]
-        if double:
-            items=''.join(f'<tr><td>⭐⭐</td><td class="code">{d["code"]}</td><td>{d["name"]}</td><td class="dim">因子#{d["rank"]}</td><td>{d["strategy"]}</td><td class="ta-r">¥{d["price"]}</td></tr>'for d in double)
-            rec_parts.append(f'<div style="margin-bottom:8px"><span class="up" style="font-weight:600">双信号确认</span><span class="dim" style="font-size:10px">（因子Top20 且 策略买入）</span><table style="margin-top:4px"><thead><tr><th></th><th>代码</th><th>名称</th><th>因子</th><th>策略</th><th class="ta-r">现价</th></tr></thead><tbody>{items}</tbody></table></div>')
-        if single_f:
-            items=''.join(f'<span style="margin:2px 6px;display:inline-block"><span class="code">{f["code"]}</span> {f["name"]}<span class="dim">#{f["rank"]}</span></span>'for f in single_f[:8])
-            rec_parts.append(f'<div style="margin-bottom:4px;font-size:11px"><span class="bl" style="font-weight:600">因子关注</span><span class="dim" style="font-size:10px">（因子Top10但无策略信号）</span><br>{items}</div>')
-        if single_s:
-            items=''.join(f'<span style="margin:2px 6px;display:inline-block"><span class="code">{s["code"]}</span> {s["name"]}<span class="dim">{s["strategy"]}</span></span>'for s in single_s[:6])
-            rec_parts.append(f'<div style="margin-bottom:4px;font-size:11px"><span class="am" style="font-weight:600">策略信号</span><span class="dim" style="font-size:10px">（策略买入但不在因子Top20）</span><br>{items}</div>')
-        if block_stats:
-            block_items=' · '.join(f'{k}:{v}条' for k,v in sorted(block_stats.items(), key=lambda x:-x[1]))
-            rec_parts.append(f'<div style="font-size:10px;color:var(--dd);margin-top:6px">📋 今日拦截 {n_block} 条: {block_items} | 通过 {n_buy} 条</div>')
-
-        rec_html=f'<div class="panel" style="border-left:3px solid var(--bl)"><div class="panel-hd">🎯 今日综合推荐 {_panel_date(sig_date or m["date"], daily_age>2)}</div><div class="panel-bd">{"".join(rec_parts)}</div></div>'
-
-    health=''.join(f'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b);font-size:11px"><span class="dim">{k}</span><span>{_tag("t-up"if ok else"t-dn",v)}{extra}</span></div>'
-        for k,v,ok,extra in[('日线',f'{h["daily_stocks"]}只',h['daily_ok'],f'<span class="dim"> {h["daily_date"]} NULL:{h["daily_nulls"]} {h["daily_total"]:,}行</span>'),
-        ('PE',f'{h["pe_pct"]}%',h['pe_ok'],''),('PB',f'{h["pb_pct"]}%',h['pb_ok'],''),
-        ('ROE',f'{h["roe_stocks"]}只',h['roe_ok'],f'<span class="dim"> {h["roe_date"]}</span>'),('DB',f'{h["db"]} MB',True,'')])
-
-    breadth_html='<div class="empty">计算中...</div>'
-    if bd:
-        latest=bd[-1]
-        breadth_html=f'''<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center">
-        <div class="metric"><div class="l">上涨/下跌</div><div class="v"><span class="up">{latest['adv']}</span>/<span class="dn">{latest['decl']}</span></div></div>
-        <div class="metric"><div class="l">ADR</div><div class="v {"up" if latest["adv"]>latest["decl"] else "dn"}">{f"{latest['adv']/latest['decl']:.2f}" if latest["decl"] else "∞"}</div></div>
-        <div class="metric"><div class="l">MA20以上</div><div class="v">{latest["a20"]}%</div></div>
-        <div class="metric"><div class="l">MA60以上</div><div class="v">{latest["a60"]}%</div></div></div>'''
-
-    pos_html='<div class="empty">无持仓</div>'
-    if ps:pos_html=''.join(f'<div class="pos-item"><span class="pos-code {"up" if p["pnl"]>=0 else "dn"}">{p["code"]}</span><span class="pos-meta">{p["name"]} · 买 ¥{p["buy"]}<br>现 ¥{p["now"]} · 止损 ¥{p["stop"]}</span><span class="pos-pnl {"up" if p["pnl"]>=0 else "dn"}">{"+" if p["pnl"]>=0 else ""}{p["pnl"]}%</span></div>'for p in ps)
-
-    factor_html='<div class="empty">暂无数据</div>'
-    if fs:factor_html='<table><thead><tr><th>#</th><th>代码</th><th>名称</th><th class="ta-r">现价</th><th class="ta-r">得分</th><th class="ta-r">动量</th></tr></thead><tbody>'+''.join(f'<tr><td>{f["r"]}</td><td class="code">{f["code"]}</td><td>{f["name"]}</td><td class="ta-r">¥{f["price"]:.2f}</td><td class="ta-r"><span class="bl fw">{f["score"]:.1f}</span></td><td class="ta-r {"up" if f["mom"]>=0 else "dn"}">{"+" if f["mom"]>=0 else ""}{f["mom"]}</td></tr>'for f in fs[:15])+'</tbody></table>'
-
-    sec_html='<div class="empty">板块数据收集中<br><small>需 report.py 积累 ≥2 天数据</small></div>'
-    if sec:sec_html=f'<div class="dim" style="margin-bottom:8px">{sec["date"]}</div><div class="dim" style="margin-bottom:4px">▲ 最强</div>'+''.join(f'<div class="row-item"><span>{s["n"]}</span><span class="up">+{s["pct"]}%</span></div>'for s in sec['top'])+'<div class="dim" style="margin:10px 0 4px">▼ 最弱</div>'+''.join(f'<div class="row-item"><span>{s["n"]}</span><span class="dn">{s["pct"]}%</span></div>'for s in sec['bottom'])
-
-    sig_html='<div class="empty">暂无信号</div>'
-    if sigs:
-        gb={}
-        for s in sigs:
-            if s['d']not in gb:gb[s['d']]=[]
-            gb[s['d']].append(s)
-        parts=[]
-        for date,slist in list(gb.items())[:4]:
-            rows=''.join(f'<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">{s["c"]}</span><span class="dim" style="font-size:10px;min-width:36px">{s["n"]}</span><span class="dim flex-1" style="font-size:10px">{s["s"]}</span>{_tag("t-buy" if s["a"]=="BUY" else "t-sell",s["a"])}<span class="ta-r" style="min-width:45px">¥{s["p"]}</span>{_tag("t-pass" if s["st"]=="passed" else "t-block",s["st"])}</div>'for s in slist[:12])
-            parts.append(f'<div style="font-size:11px;color:var(--d);padding:4px 0;font-weight:600;border-bottom:1px solid var(--b);margin:6px 0 3px">{date} ({len(slist)}条)</div>{rows}')
-        sig_html=''.join(parts)
-
-    # 策略迷你卡片
-    colors=[('#4a9eff','#4a9eff18'),('#0ecb81','#0ecb8118'),('#a85cef','#a85cef18')]
-    mini_cards=[]
-    for i,s in enumerate(STRATS):
-        st=_tag("t-trend" if s["style"]=="trend" else "t-rev","趋势" if s["style"]=="trend" else"反转")
-        c=colors[i]
-        mini_cards.append(
-            '<div class="strat-card">'
-            f'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span class="fw">{s["n"]}</span><span class="dim">{s["p"]}</span></div>'
-            f'<div style="display:flex;gap:16px;align-items:center"><div><span style="font-size:20px;font-weight:700;color:{c[0]}">{s["ret"]}%</span><span class="dim" style="font-size:10px"> 年化</span></div>'
-            f'<div class="flex-1" style="font-size:10px">'
-            f'<div class="bar-row"><span>夏普</span><div class="bar"><div class="bar-f" style="width:{min(s["sharpe"]*100,100):.0f}%;background:{c[0]}"></div></div><span>{s["sharpe"]:.2f}</span></div>'
-            f'<div class="bar-row"><span>回撤</span><div class="bar"><div class="bar-f" style="width:{min(s["dd"],100):.0f}%;background:#f6465d"></div></div><span>{s["dd"]:.0f}%</span></div>'
-            f'<div class="bar-row"><span>胜率</span><div class="bar"><div class="bar-f" style="width:{s["win"]:.0f}%;background:#f0b90b"></div></div><span>{s["win"]}%</span></div></div></div>'
-            f'<div class="dim" style="font-size:10px;margin-top:4px">{st} {s["months"]}月交易 · {s["desc"]}</div></div>')
-    strat_mini=''.join(mini_cards)
-
-    body=f'''
-    {fresh_warn}
-    {rec_html}
-    <div style="display:flex;gap:16px;align-items:center;margin-bottom:12px;padding:8px 16px;background:var(--s1);border-radius:6px;border:1px solid var(--b)">
-      <div><span style="font-size:28px;font-weight:700" class={reg_cls}>{m["close"]:.0f}</span><div style="font-size:10px;color:var(--dd)">CSI300</div></div>
-      <div style="flex:1;font-size:11px;color:var(--d)">{reg_label} · 5日{"+" if m["r5"]>=0 else ""}{m["r5"]}% · 20日{"+" if m["r20"]>=0 else ""}{m["r20"]}% · 60日{"+" if m["r60"]>=0 else ""}{m["r60"]}% · {"偏多" if m["up"]>m["down"] else "偏空"}</div>
-      <div class="dim" style="font-size:10px">数据日期: {m["date"]}<br>{m["stocks"]}只</div>
-    </div>
-
-    <div class="grid g2">
-      <div class="panel"><div class="panel-hd">策略回测对比 {_panel_date(m["date"], daily_age>2)}<a href="strategy.html" style="color:var(--bl);font-size:10px;text-decoration:none;margin-left:8px">详情 →</a></div><div class="panel-bd">{strat_mini}{_disclaimer()}</div></div>
-      <div class="panel"><div class="panel-hd">多因子排名 Top15 {_panel_date(m["date"], daily_age>2)}<a href="factors.html" style="color:var(--bl);font-size:10px;text-decoration:none;margin-left:8px">详情 →</a></div><div class="panel-bd" style="max-height:340px;overflow-y:auto">{factor_html}</div></div>
-    </div>
-    <div class="grid g3" style="margin-top:10px">
-      <div class="panel"><div class="panel-hd">数据健康 {_panel_date(m["date"], daily_age>2)}</div><div class="panel-bd">{health}</div></div>
-      <div class="panel"><div class="panel-hd">持仓 {_panel_date(m["date"], daily_age>2)}</div><div class="panel-bd">{pos_html}</div></div>
-      <div class="panel"><div class="panel-hd">市场广度 {_panel_date(m["date"], daily_age>2)}<a href="market.html" style="color:var(--bl);font-size:10px;text-decoration:none;margin-left:8px">详情 →</a></div><div class="panel-bd">{breadth_html}</div></div>
-    </div>
-    <div class="grid g2" style="margin-top:10px">
-      <div class="panel"><div class="panel-hd">板块</div><div class="panel-bd">{sec_html}</div></div>
-      <div class="panel"><div class="panel-hd">最近信号 {_panel_date(m["date"], daily_age>2)}<a href="signals.html" style="color:var(--bl);font-size:10px;text-decoration:none;margin-left:8px">全部 →</a></div><div class="panel-bd" style="max-height:300px;overflow-y:auto">{sig_html}</div></div>
-    </div>'''
-    return _page('仪表盘','index.html',body)
-
-def page_market(m,bd,sec):
-    """市场监控页"""
+    # 市场条
+    reg_label='强势 ↑'if m['regime']=='strong'else'弱势 ↓'
     reg_cls='up'if m['regime']=='strong'else'dn'
-    reg_label='TRENDING ↑'if m['regime']=='strong'else'RANGE ↓'
+    mkt_html=f'<div class="panel"><div class="panel-bd" style="display:flex;align-items:center;gap:20px;padding:10px 16px"><span style="font-size:20px;font-weight:700">{m["close"]:.0f}</span><span style="font-size:12px;color:var(--text-muted)">CSI300</span><span class="{reg_cls}" style="font-weight:600">{reg_label}</span><span class="dim" style="font-size:11px">5日{_ud(m["r5"])}% · 20日{_ud(m["r20"])}% · 涨{m["up"]}/跌{m["down"]} {"偏多"if m["up"]>m["down"] else"偏空"}</span><span class="dim" style="font-size:10px;margin-left:auto">数据: {m["date"]}</span></div></div>'
 
-    # 市场状态建议
-    if m['regime']=='strong':
-        advice='<strong>强势趋势</strong>：趋势策略（均线、突破）优先，止损可放宽至8%。均值回归降权——趋势中"超买"可以一直持续。'
+    # 持仓
+    pos_html=''
+    if ps:
+        stops=[p for p in ps if p['now']<=p['stop']]
+        if stops:
+            pos_html='<div class="banner banner-warn">'+''.join(f'⚠️ {p["code"]} {p["name"]} 触发止损(现¥{p["now"]}≤止损¥{p["stop"]}) 建议卖出  ·  'for p in stops)+'</div>'
+        else:
+            pos_html=f'<div class="panel"><div class="panel-bd" style="padding:8px 16px;font-size:12px"><span class="dim">💼 持仓 {len(ps)}只 · 无止损触发</span></div></div>'
+
+    # 信号排名
+    sig_html=''
+    if not sigs: sig_html='<div class="empty">📭 暂无信号——策略尚未在服务器持续运行</div>'
     else:
-        advice='<strong>弱势/震荡</strong>：均值回归策略优先，趋势策略降权。止损收紧至5%。减少新开仓，优先管理现有持仓。'
+        latest_date=sigs[0]['d']
+        buys=[s for s in sigs if s['a']=='BUY'and s['st']=='passed'and s['d']==latest_date]
+        blocked=[s for s in sigs if s['st']=='blocked'and s['d']==latest_date]
+        sells=[s for s in sigs if s['a']=='SELL'and s['st']=='passed'and s['d']==latest_date]
 
-    # 广度趋势迷你柱状图（纯CSS）
-    bars=''
-    if bd:
-        max_total=max((x['adv']+x['decl'])for x in bd[-20:])if bd else 1
-        bars='<div style="display:flex;align-items:flex-end;gap:1px;height:80px;margin:8px 0">'+''.join(
-            f'<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end" title="{x["d"]}: {x["adv"]}↑{x["decl"]}↓">'
-            f'<div style="background:var(--up);height:{x["adv"]/max_total*80:.0f}px;min-height:1px;border-radius:1px 1px 0 0"></div>'
-            f'<div style="background:var(--dn);height:{x["decl"]/max_total*80:.0f}px;min-height:1px"></div></div>'
-            for x in bd[-60:])+'</div>'
+        if buys:
+            # 排名
+            ranked=[]
+            for s in buys:
+                score=s['strength']*10
+                if m['regime']=='strong'and('均线'in s['s']or'突破'in s['s']):score+=0.3
+                if m['regime']!='strong'and'回归'in s['s']:score+=0.3
+                ranked.append({**s,'score':score})
+            # 合并同股票
+            merged={}
+            for r in ranked:
+                c=r['c']
+                if c not in merged:merged[c]={**r,'strategies':[r['s']],'max_score':r['score']}
+                else:
+                    merged[c]['strategies'].append(r['s'])
+                    merged[c]['max_score']=max(merged[c]['max_score'],r['score'])
+            for c,mr in merged.items():
+                if len(mr['strategies'])>=2:mr['max_score']+=0.5;mr['cross']=True
+                else:mr['cross']=False
+            ranked_list=sorted(merged.values(),key=lambda x:-x['max_score'])
 
-    # 广度数据表
-    bd_table='<table><thead><tr><th>日期</th><th class="ta-r">上涨</th><th class="ta-r">下跌</th><th class="ta-r">ADR</th><th class="ta-r">MA20↑%</th><th class="ta-r">MA60↑%</th></tr></thead><tbody>'+''.join(
-        f'<tr><td>{x["d"]}</td><td class="ta-r up">{x["adv"]}</td><td class="ta-r dn">{x["decl"]}</td>'
-        f'<td class="ta-r {"up" if x["adv"]>x["decl"] else "dn"}">{(f"{x["adv"]/x["decl"]:.2f}" if x["decl"] else "∞")}</td>'
-        f'<td class="ta-r">{x["a20"]}%</td><td class="ta-r">{x["a60"]}%</td></tr>'
-        for x in reversed(bd[-15:]))+'</tbody></table>'if bd else'<div class="empty">暂无数据</div>'
+            rows=''
+            for i,r in enumerate(ranked_list[:20]):
+                cross='⭐⭐ 'if r.get('cross')else''
+                strats='/'.join(r['strategies'])
+                rows+=f'<div class="sig-row"><span class="sig-rank">{i+1}</span><div class="sig-meta"><span class="code">{r["c"]}</span> <span>{r["n"]}</span> <span class="dim">{cross}{strats}</span><div class="reason">{r.get("reason","")[:80]}</div></div><span class="code">¥{r["p"]:.2f}</span><span class="dim" style="min-width:40px;text-align:right">强度 {r["strength"]:.2f}</span><a href="stock_{r["c"]}.html" style="color:var(--accent);font-size:11px;text-decoration:none;margin-left:8px">详情 →</a></div>'
 
-    # 板块
-    sec_html='<div class="empty">板块数据收集中</div>'
-    if sec:
-        sec_html=f'<div class="dim" style="margin-bottom:8px">{sec["date"]}</div>'
-        sec_html+='<div class="dim" style="margin-bottom:4px">▲ 最强5板块</div>'+''.join(f'<div class="row-item"><span>{s["n"]}</span><span class="up">+{s["pct"]}%</span></div>'for s in sec['top'])
-        sec_html+='<div class="dim" style="margin:12px 0 4px">▼ 最弱5板块</div>'+''.join(f'<div class="row-item"><span>{s["n"]}</span><span class="dn">{s["pct"]}%</span></div>'for s in sec['bottom'])
+            sig_html=f'<div class="panel"><div class="panel-hd">🎯 今日信号（¥50以内） <span class="dim" style="font-size:10px;text-transform:none;letter-spacing:0">{latest_date} · {len(ranked_list)}只</span></div><div class="panel-bd">{rows}</div></div>'
+        else:
+            sig_html=f'<div class="panel"><div class="panel-hd">🎯 今日信号（¥50以内） <span class="dim" style="font-size:10px;text-transform:none;letter-spacing:0">{latest_date}</span></div><div class="panel-bd"><div class="empty">📭 今日无符合条件的买入信号<br><small class="dim">（所有买入信号均被拦截：大盘择时/价格超限/涨停/停牌）</small></div></div></div>'
+
+        # 拦截统计
+        if blocked:
+            bc={}
+            for b in blocked:
+                r=b.get('reason','其他')
+                if'跌停'in r:k='跌停'
+                elif'停牌'in r:k='停牌'
+                elif'ST'in r:k='ST'
+                elif'涨停'in r:k='涨停'
+                elif'大盘'in r or'择时'in r:k='大盘择时'
+                elif'股价'in r or'上限'in r:k='买不起(>¥50)'
+                elif'流动'in r:k='流动性'
+                else:k='其他'
+                bc[k]=bc.get(k,0)+1
+            block_items=' · '.join(f'{k}:{v}'for k,v in sorted(bc.items(),key=lambda x:-x[1]))
+            sig_html+=f'<div class="panel"><div class="panel-bd" style="padding:8px 16px;font-size:11px;color:var(--text-muted)">📋 今日拦截 {len(blocked)} 条: {block_items}</div></div>'
 
     body=f'''
-    <div class="hero"><h2>📈 市场监控</h2><p>数据日期: {m["date"]} · 覆盖 {m["stocks"]} 只股票 · CSI300 {m["close"]:.0f} <span class="{reg_cls}">{reg_label}</span></p></div>
+    {fresh_html}
+    {mkt_html}
+    {pos_html}
+    {sig_html}
+    <div style="display:flex;gap:12px;margin-top:12px;font-size:12px">
+      <a href="strategy.html" style="color:var(--accent);text-decoration:none">📈 策略分析 →</a>
+      <a href="factors.html" style="color:var(--accent);text-decoration:none">🔝 因子参考 →</a>
+      <a href="market.html" style="color:var(--accent);text-decoration:none">📊 市场监控 →</a>
+      <a href="signals.html" style="color:var(--accent);text-decoration:none">📡 信号日志 →</a>
+    </div>'''
+    return _page('信号首页','index.html',body)
 
-    <div class="grid g4" style="margin-bottom:10px">
-      <div class="panel"><div class="panel-bd"><div class="metric"><div class="l">CSI300</div><div class="v">{m["close"]:.0f}</div><div class="s {reg_cls}">{reg_label}</div></div></div></div>
-      <div class="panel"><div class="panel-bd"><div class="metric"><div class="l">5日</div><div class="v {"up" if m["r5"]>=0 else "dn"}">{"+" if m["r5"]>=0 else ""}{m["r5"]}%</div><div class="s dim">20日 {"+" if m["r20"]>=0 else ""}{m["r20"]}%</div></div></div></div>
-      <div class="panel"><div class="panel-bd"><div class="metric"><div class="l">60日</div><div class="v {"up" if m["r60"]>=0 else "dn"}">{"+" if m["r60"]>=0 else ""}{m["r60"]}%</div><div class="s dim">60日涨跌</div></div></div></div>
-      <div class="panel"><div class="panel-bd"><div class="metric"><div class="l">涨跌比 20日</div><div class="v"><span class="up">{m["up"]}</span>/<span class="dn">{m["down"]}</span></div><div class="s dim">{"偏多" if m["up"]>m["down"] else "偏空"}</div></div></div></div>
-    </div>
 
-    <div class="panel"><div class="panel-hd">市场状态建议</div><div class="panel-bd"><div class="explain">{advice}</div></div></div>
+def page_stock(conn, code):
+    """股票详情页"""
+    d=_stock_detail(conn,code)
+    if not d:return _page(f'{code}','',f'<div class="empty">无数据: {code}</div>')
 
-    <div class="grid g2">
-      <div class="panel"><div class="panel-hd">涨跌家数趋势（近60交易日，绿涨红跌）</div><div class="panel-bd">{bars}</div></div>
-      <div class="panel"><div class="panel-hd">板块热度</div><div class="panel-bd">{sec_html}</div></div>
-    </div>
+    df=_q(conn,"SELECT date,open,close,high,low,volume FROM daily_kline WHERE code=? AND date>=date('now','-200 days') ORDER BY date",(code,))
+    closes=df['close'].values
+    ma20_s=pd.Series(closes).rolling(20).mean()
+    ma60_s=pd.Series(closes).rolling(60).mean()
+    svg=_render_svg_kline(df,ma20_s,ma60_s)
 
-    <div class="panel"><div class="panel-hd">市场广度历史（近15个交易日）</div><div class="panel-bd">{bd_table}</div></div>
-    '''
-    return _page('市场监控','market.html',body)
+    pe_str=f'PE: {d["pe"]}'if d['pe']else'PE: —'
+    pb_str=f'PB: {d["pb"]}'if d['pb']else'PB: —'
+
+    body=f'''
+    <div style="margin-bottom:12px"><a href="index.html" style="color:var(--accent);text-decoration:none;font-size:12px">← 返回信号列表</a></div>
+
+    <div class="panel"><div class="panel-bd">
+      <div class="stock-header">
+        <div><div class="code" style="font-size:14px">{d['code']}</div><div style="font-size:11px;color:var(--text-muted)">{d['name']}</div></div>
+        <div><span class="price">{d['last']:.2f}</span><span class="chg {("up"if d["chg"]>=0 else"dn")}">{("+"if d["chg"]>=0 else"")}{d["chg"]:.1f}%</span></div>
+        <div class="info"><table><tr><td class="dim">{pe_str}</td><td class="dim">{pb_str}</td></tr></table></div>
+      </div>
+
+      <div class="chart-box">{svg}</div>
+
+      <div class="grid g2" style="margin-top:8px">
+        <div class="panel"><div class="panel-hd">技术指标</div><div class="panel-bd" style="font-size:12px">
+          <div class="kv"><span class="dim">MA20</span><span class="code">{d["ma20"]:.2f}</span></div>
+          <div class="kv"><span class="dim">MA60</span><span class="code">{d["ma60"]:.2f}</span></div>
+          <div class="kv"><span class="dim">BB上轨</span><span class="code">{d["bb_upper"]:.2f}</span></div>
+          <div class="kv"><span class="dim">BB下轨</span><span class="code">{d["bb_lower"]:.2f}</span></div>
+          <div class="kv"><span class="dim">20日最高</span><span class="code">{d["high20"]:.2f}</span></div>
+          <div class="kv"><span class="dim">20日最低</span><span class="code">{d["low20"]:.2f}</span></div>
+        </div></div>
+        <div class="panel"><div class="panel-hd">历史信号</div><div class="panel-bd">{d["sig_rows"]if d["sig_rows"]else'<div class="empty">暂无历史信号</div>'}</div></div>
+      </div>
+    </div></div>'''
+    return _page(f'{d["code"]} {d["name"]}','',body)
+
 
 def page_strategy(sigs):
     """策略分析页"""
-    # 为每个策略填充最近信号示例
-    for s in STRATS:
-        name_map={'ma':'双均线','mb':'动量突破','mr':'均值回归'}
-        s['signals']=_signal_for_strategy(conn,name_map[s['key']])
-
+    colors=[('#4a9eff','#4a9eff14'),('#059669','#05966914'),('#7c3aed','#7c3aed14')]
     cards=''
-    colors=[('#4a9eff','#4a9eff14'),('#0ecb81','#0ecb8114'),('#a85cef','#a85cef14')]
-    bench=_benchmark_ret(max(s['months'] for s in STRATS))
-    bench_str=f'<span class="dim">（同期CSI300: {bench:+.1f}%）</span>' if bench else ''
-
     for i,s in enumerate(STRATS):
-        sig_part='<div class="dim" style="font-size:10px">暂无最近信号 · 策略尚未在服务器持续运行</div>'
-        if s['signals']:
-            sig_part='<div style="font-size:10px;margin-top:4px"><span class="dim">最近信号: </span>'+''.join(
-                f'{_tag("t-buy" if sig["a"]=="BUY" else "t-sell",sig["a"])} {sig["c"]} {sig["n"]} ¥{sig["p"]} <span class="dim">({sig["d"]})</span> '
-                for sig in s['signals'][:3])+'</div>'
+        # 最近信号
+        sig_part='<div class="dim" style="font-size:11px;margin-top:6px">暂无最近信号</div>'
+        strat_sigs=[x for x in sigs if s['key']=='ma'and'均线'in x['s']or s['key']=='mb'and'突破'in x['s']or s['key']=='mr'and'回归'in x['s']]
+        if strat_sigs:
+            sig_part='<div style="font-size:10px;margin-top:6px"><span class="dim">最近信号: </span>'+''.join(
+                f'{_tag("t-buy"if x["a"]=="BUY"else"t-sell",x["a"])} {x["c"]} {x["n"]} ¥{x["p"]:.2f} <span class="dim">({x["d"]})</span> '
+                for x in strat_sigs[:3])+'</div>'
 
-        wf_rows=''.join(f'<tr><td>{r[0]}</td><td class="ta-r">{r[1]}</td><td class="ta-r">{r[2]}</td><td class="ta-r">{r[3]}</td><td class="ta-r">{r[4]}</td></tr>'for r in s['wf'])
+        cards+=f'''<div class="panel" style="border-left:3px solid {colors[i][0]}"><div class="panel-bd">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><span style="font-size:15px;font-weight:700">{s["n"]}</span><span>{_tag("t-trend"if s["style"]=="trend"else"t-rev","趋势"if s["style"]=="trend"else"反转")} <span class="dim">{s["p"]}</span></span></div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.6"><strong>原理：</strong>{s["principle"]}</div>
+        <div style="font-size:12px;margin-top:4px"><strong>适合：</strong><span class="up">{s["good"]}</span> · <strong>不适合：</strong><span class="dn">{s["bad"]}</span></div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px"><strong>为什么选这个参数：</strong>{s["why"]}</div>
+        <div style="display:flex;gap:24px;align-items:center;margin-top:12px"><span style="font-size:24px;font-weight:700;color:{colors[i][0]}">{s["ret"]}%</span><span class="dim" style="font-size:11px">年化 · 夏普{s["sharpe"]:.2f} · 回撤{s["dd"]:.0f}% · 胜率{s["win"]}% · {s["months"]}月</span></div>
+        {sig_part}</div></div>'''
 
-        cards+=f'''<div class="strat-card" style="border-left:3px solid {colors[i][0]}">
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
-      <span style="font-size:15px;font-weight:700">{s['n']}</span>
-      <span>{_tag("t-trend" if s["style"]=="trend" else "t-rev","趋势" if s["style"]=="trend" else"反转")} <span class="dim">{s['p']}</span></span></div>
+    disclaimer='''
+    <div class="panel" style="margin-top:12px"><div class="panel-bd" style="background:#d9770608;font-size:11px;color:var(--warn)">
+    <strong>⚠️ 回测收益 ≠ 实盘收益。</strong>本地数据源(AKShare)存在约+3~6pp系统性偏差。止损模拟假设精确执行(实盘有滑点)。未考虑最低佣金(5元/笔)对小资金的放大效应。<strong>保守估计: 实盘收益 ≈ 回测收益 × 0.6~0.8。三策略使用硬阈值信号（非排名），本地回测方向可信。</strong></div></div>'''
 
-    <div class="explain"><strong>原理：</strong>{s['principle']}</div>
-    <div class="explain" style="margin-top:6px"><strong>适合：</strong><span class="up">{s['good_for']}</span></div>
-    <div class="explain"><strong>不适合：</strong><span class="dn">{s['bad_for']}</span></div>
-    <div class="explain" style="margin-top:6px"><strong>为什么选这个参数：</strong>{s['why_params']}</div>
-
-    <div style="display:flex;gap:20px;align-items:center;margin:12px 0;padding:10px;background:var(--s2);border-radius:6px">
-      <div><span style="font-size:22px;font-weight:700;color:{colors[i][0]}">{s['ret']}%</span><span class="dim" style="font-size:10px;margin-left:3px">年化</span><div style="font-size:10px;color:var(--dd);margin-top:2px">{bench_str}</div></div>
-      <div class="flex-1" style="font-size:10px">
-      <div class="bar-row"><span>夏普</span><div class="bar"><div class="bar-f" style="width:{min(s['sharpe']*100,100):.0f}%;background:{colors[i][0]}"></div></div><span>{s['sharpe']:.2f}</span></div>
-      <div class="bar-row"><span>回撤</span><div class="bar"><div class="bar-f" style="width:{min(s['dd'],100):.0f}%;background:#f6465d"></div></div><span>{s['dd']:.0f}%</span></div>
-      <div class="bar-row"><span>胜率</span><div class="bar"><div class="bar-f" style="width:{s['win']:.0f}%;background:#f0b90b"></div></div><span>{s['win']}%</span></div>
-      </div></div>
-
-    <div style="margin-top:10px"><span class="dim" style="font-size:10px;text-transform:uppercase;letter-spacing:.3px">Walk-Forward 验证</span>
-    <table style="margin-top:4px"><thead><tr><th>周期</th><th class="ta-r">年化</th><th class="ta-r">夏普</th><th class="ta-r">回撤</th><th class="ta-r">交易</th></tr></thead><tbody>{wf_rows}</tbody></table></div>
-    <div class="dim" style="font-size:10px;margin-top:4px">训练集用于探索参数，验证集评估效果，测试集最终确认。2023-2024验证集表现差→策略在震荡市中失效。趋势策略只在趋势市中有效。</div>
-    {sig_part}
-    </div>'''
-
-    # 加免责声明
-    cards+=_disclaimer()
-
-    # 对比表
-    compare='<table><thead><tr><th>维度</th><th>双均线</th><th>动量突破</th><th>均值回归</th></tr></thead><tbody>'+''.join(
-        f'<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td></tr>'for r in[
-        ('信号逻辑','均线交叉','价格突破','超卖反弹'),('信号频率','低（月1-2次）','中','中'),
-        ('适合市场','<span class="up">趋势</span>','<span class="up">强势趋势</span>','<span class="up">震荡</span>'),
-        ('回撤特征','中等(-32%)','<span class="dn">高(-61%)</span>','较低(-40%)'),
-        ('最大弱点','滞后——入场晚','假突破频繁','趋势中逆势')]
-    )+'</tbody></table>'
-
-    body=f'''
-    <div class="hero"><h2>📋 策略分析</h2><p>三个策略的完整讲解——每个策略做什么、为什么选这个参数、在不同市场环境下表现如何。</p></div>
-    {cards}
-    <div class="panel"><div class="panel-hd">策略对比总览</div><div class="panel-bd">{compare}</div></div>
-    '''
+    body=f'<div class="hero"><h2>📋 策略分析</h2><p>三个策略的完整讲解——原理、参数选择、适用环境</p></div>{cards}{disclaimer}'
     return _page('策略分析','strategy.html',body)
 
+
+def page_market(m):
+    """市场监控——简化版"""
+    reg_label='强势 ↑'if m['regime']=='strong'else'弱势 ↓'
+    reg_cls='up'if m['regime']=='strong'else'dn'
+    body=f'''
+    <div class="hero"><h2>📊 市场监控</h2><p>数据日期: {m["date"]} · 覆盖 {m["stocks"]} 只</p></div>
+    <div class="grid g3">
+      <div class="panel"><div class="panel-bd" style="text-align:center"><div style="font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.3px">CSI300</div><div style="font-size:24px;font-weight:700">{m["close"]:.0f}</div><div class="{reg_cls}" style="font-size:11px">{reg_label}</div></div></div>
+      <div class="panel"><div class="panel-bd" style="text-align:center"><div style="font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.3px">5日</div><div class="up" style="font-size:24px;font-weight:700">{m["r5"]:+.1f}%</div><div class="dim" style="font-size:11px">20日 {m["r20"]:+.1f}%</div></div></div>
+      <div class="panel"><div class="panel-bd" style="text-align:center"><div style="font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.3px">涨跌比</div><div style="font-size:24px;font-weight:700"><span class="up">{m["up"]}</span>/<span class="dn">{m["down"]}</span></div><div class="dim" style="font-size:11px">{"偏多"if m["up"]>m["down"]else"偏空"}</div></div></div>
+    </div>
+    <div class="panel"><div class="panel-bd"><div class="empty" style="padding:16px">板块分析将在数据积累 ≥5 天后上线<br><small class="dim">当前 sector_history 数据不足，需要 report.py 每日运行至少 5 天</small></div></div></div>'''
+    return _page('市场监控','market.html',body)
+
+
+def page_factors(fs, sigs):
+    """因子参考——辅助"""
+    if not fs: return _page('因子参考','factors.html','<div class="hero"><h2>🔝 因子参考</h2></div><div class="empty">暂无数据</div>')
+
+    # 交叉标签
+    latest_date=sigs[0]['d'] if sigs else''
+    buy_codes=set(s['c']for s in sigs if s['a']=='BUY'and s['st']=='passed'and s['d']==latest_date)
+
+    rows=''.join(f'<tr><td>{f["r"]}</td><td class="code">{f["code"]}</td><td>{f["name"]}</td><td class="ta-r code">¥{f["price"]:.2f}</td><td class="ta-r"><span class="ac fw">{f["score"]:.1f}</span></td><td class="ta-r {("up"if f["mom"]>=0 else"dn")}">{f["mom"]:+.1f}</td><td>{"🟢 策略信号"if f["code"] in buy_codes else""}</td></tr>'for f in fs)
+
+    body=f'''<div class="hero"><h2>🔝 因子参考（辅助）</h2><p>≤¥50已过滤 · 7因子加权 · ROE 120天滞后防泄露 · 本地数据排名仅供参考</p></div>
+    <div class="panel"><div class="panel-hd">排名 Top 15</div><div class="panel-bd"><table><thead><tr><th>#</th><th>代码</th><th>名称</th><th class="ta-r">现价</th><th class="ta-r">得分</th><th class="ta-r">动量</th><th>标签</th></tr></thead><tbody>{rows}</tbody></table></div></div>
+    <div class="panel" style="margin-top:12px"><div class="panel-bd" style="background:#d9770608;font-size:11px;color:var(--warn)"><strong>⚠️ 因子排名基于本地数据(AKShare)，与聚宽排名存在差异。</strong>多因子仅为辅助参考，选股决策以三策略信号为主。</div></div>'''
+    return _page('因子参考','factors.html',body)
+
+
 def page_signals(sigs):
-    """信号日志页"""
-    if not sigs:
-        body='<div class="hero"><h2>📡 信号日志</h2><p>暂无信号记录</p></div><div class="empty">信号历史为空——系统尚未产生过交易信号</div>'
-        return _page('信号日志','signals.html',body)
+    """信号日志"""
+    if not sigs: return _page('信号日志','signals.html','<div class="hero"><h2>📡 信号日志</h2></div><div class="empty">暂无信号</div>')
 
     gb={}
     for s in sigs:
         if s['d']not in gb:gb[s['d']]=[]
         gb[s['d']].append(s)
-
-    buy_count=sum(1 for s in sigs if s['a']=='BUY')
-    sell_count=sum(1 for s in sigs if s['a']=='SELL')
-    passed=sum(1 for s in sigs if s['st']=='passed')
-    blocked=sum(1 for s in sigs if s['st']=='blocked')
-
     rows=''
     for date,slist in sorted(gb.items(),reverse=True):
-        rows+=f'<div style="font-size:11px;color:var(--d);padding:6px 0;font-weight:600;border-bottom:1px solid var(--b);margin:8px 0 4px;position:sticky;top:0;background:var(--s1)">{date} <span class="dim">({len(slist)}条)</span></div>'
-        for s in slist:
-            rows+=f'<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">{s["c"]}</span><span class="dim" style="font-size:10px;min-width:40px">{s["n"]}</span><span class="dim flex-1" style="font-size:10px">{s["s"]}</span>{_tag("t-buy" if s["a"]=="BUY" else "t-sell",s["a"])}<span class="ta-r" style="min-width:48px">¥{s["p"]}</span>{_tag("t-pass" if s["st"]=="passed" else "t-block",s["st"])}<span class="dim" style="font-size:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{s["reason"]}">{s["reason"]}</span></div>'
+        rows+=f'<div style="font-size:12px;color:var(--text-muted);padding:6px 0;font-weight:600;border-bottom:1px solid var(--border);margin:8px 0 4px">{date} ({len(slist)}条)</div>'
+        for s in slist[:20]:
+            rows+=f'<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">{s["c"]}</span><span class="dim">{s["n"]}</span><span class="dim" style="flex:1;font-size:10px">{s["s"]}</span>{_tag("t-buy"if s["a"]=="BUY"else"t-sell",s["a"])}<span class="code">¥{s["p"]:.2f}</span>{_tag("t-pass"if s["st"]=="passed"else"t-block",s["st"])}<span class="dim" style="font-size:10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{s.get("reason","")}</span></div>'
 
-    body=f'''
-    <div class="hero"><h2>📡 信号日志</h2><p>共 {len(sigs)} 条信号 · 买入 {buy_count} · 卖出 {sell_count} · 通过 {passed} · 拦截 {blocked}</p></div>
+    buy=sum(1 for s in sigs if s['a']=='BUY');sell=sum(1 for s in sigs if s['a']=='SELL')
+    passed=sum(1 for s in sigs if s['st']=='passed');blocked=sum(1 for s in sigs if s['st']=='blocked')
+
+    body=f'''<div class="hero"><h2>📡 信号日志</h2><p>共{len(sigs)}条 · 买入{buy} · 卖出{sell} · 通过{passed} · 拦截{blocked}</p></div>
     <div class="panel"><div class="panel-bd" style="max-height:70vh;overflow-y:auto">{rows}</div></div>'''
     return _page('信号日志','signals.html',body)
 
 
-def page_factors(fs):
-    """因子引擎页"""
-    header='<div class="hero"><h2>🔝 多因子引擎</h2><p>7因子 Z-score 标准化后加权合成。权重 v2.1: 动量30% + 低波20% + 反转15% + 换手10% + PE10% + PB0% + ROE15%。ROE 数据已做 120 天未来数据泄露防护。</p></div>'
-
-    if not fs:
-        return _page('因子引擎','factors.html',header+'<div class="empty">暂无因子数据</div>')
-
-    table='<table><thead><tr><th>#</th><th>代码</th><th>名称</th><th class="ta-r">现价</th><th class="ta-r">得分</th><th class="ta-r">动量</th><th class="ta-r">波动</th></tr></thead><tbody>'+''.join(
-        f'<tr><td>{f["r"]}</td><td class="code">{f["code"]}</td><td>{f["name"]}</td><td class="ta-r">¥{f["price"]:.2f}</td>'
-        f'<td class="ta-r"><span class="bl fw">{f["score"]:.1f}</span></td>'
-        f'<td class="ta-r {"up" if f["mom"]>=0 else "dn"}">{"+" if f["mom"]>=0 else ""}{f["mom"]}</td>'
-        f'<td class="ta-r">{f["vol"]}</td></tr>'
-        for f in fs)+'</tbody></table>'
-
-    weights='''
-    <div class="panel" style="margin-top:10px"><div class="panel-hd">因子权重说明 (v2.1)</div><div class="panel-bd">
-    <table><thead><tr><th>因子</th><th>权重</th><th>方向</th><th>含义</th><th>一句话</th></tr></thead><tbody>
-    <tr><td>momentum</td><td class="ta-r fw">30%</td><td class="up">正向</td><td>12-1月动量</td><td class="dim">"过去11个月涨得多的股票"</td></tr>
-    <tr><td>volatility</td><td class="ta-r fw">20%</td><td class="dn">负向</td><td>60日波动率</td><td class="dim">"波动小的股票更稳"</td></tr>
-    <tr><td>reversal</td><td class="ta-r fw">15%</td><td class="up">正向</td><td>5日反转</td><td class="dim">"最近跌多了该反弹了"</td></tr>
-    <tr><td>turnover</td><td class="ta-r fw">10%</td><td class="dn">负向</td><td>成交量比 v20/v60</td><td class="dim">"缩量的股票在蓄力"</td></tr>
-    <tr><td>pe</td><td class="ta-r fw">10%</td><td class="dn">负向</td><td>市盈率</td><td class="dim">"便宜的股票安全边际高"</td></tr>
-    <tr><td>pb</td><td class="ta-r fw" style="color:var(--dd)">0%</td><td>—</td><td>市净率（已砍）</td><td class="dim">"单因子回测负收益 -0.74%，不用了"</td></tr>
-    <tr><td>roe</td><td class="ta-r fw">15%</td><td class="up">正向</td><td>净资产收益率</td><td class="dim">"赚钱能力强的公司"</td></tr>
-    </tbody></table></div></div>'''
-
-    return _page('因子引擎','factors.html',header+f'<div class="panel"><div class="panel-bd" style="max-height:60vh;overflow-y:auto">{table}</div></div>'+weights)
+def page_health(h):
+    """运维页"""
+    body=f'''<div class="hero"><h2>🩺 数据健康</h2><p>运维数据——平时不需要看</p></div>
+    <div class="grid g2">
+      <div class="panel"><div class="panel-hd">数据库概览</div><div class="panel-bd">
+        <div class="kv"><span class="dim">daily_kline</span><span>{h["daily_total"]:,}行 · {h["daily_date"]} · {h["daily_stocks"]}只</span></div>
+        <div class="kv"><span class="dim">PE覆盖率</span><span>{_tag("t-pass"if h["pe_ok"]else"t-warn",f'{h["pe_pct"]}%')}</span></div>
+        <div class="kv"><span class="dim">PB覆盖率</span><span>{_tag("t-pass"if h["pb_ok"]else"t-warn",f'{h["pb_pct"]}%')}</span></div>
+        <div class="kv"><span class="dim">ROE</span><span>{h["roe_stocks"]}只 · {h["roe_date"]}</span></div>
+        <div class="kv"><span class="dim">DB大小</span><span>{h["db"]} MB</span></div>
+      </div></div>
+      <div class="panel"><div class="panel-hd">数据校验</div><div class="panel-bd">
+        <div class="kv"><span class="dim">日线NULL</span><span>{h["daily_nulls"]}</span></div>
+        <div class="kv"><span class="dim">日线股票数</span><span>{_tag("t-pass"if h["daily_ok"]else"t-warn","达标"if h["daily_ok"]else"不足")}</span></div>
+      </div></div>
+    </div>'''
+    return _page('运维','',body)
 
 
 # ═══════════════ MAIN ═══════════════
 
 def build():
-    global conn
     conn=sqlite3.connect(DB)
-    ts=datetime.now().strftime('%Y-%m-%d %H:%M')
+    ts=datetime.now().strftime('%H:%M')
 
-    m=_market(conn);h=_health(conn);bd=_breadth(conn)
-    ps=_positions(conn);fs=_factors(conn);sigs=_signals(conn);sec=_sectors(conn)
+    m=_market(conn);h=_health(conn);sigs=_signals_all(conn)
+    fs=_factors_all(conn);ps=_positions(conn)
 
     os.makedirs('dashboard',exist_ok=True)
 
     pages=[
-        ('index.html',page_index(m,h,bd,ps,fs,sigs,sec)),
-        ('market.html',page_market(m,bd,sec)),
+        ('index.html',page_index(conn,m,h,sigs,fs,ps)),
         ('strategy.html',page_strategy(sigs)),
+        ('market.html',page_market(m)),
+        ('factors.html',page_factors(fs,sigs)),
         ('signals.html',page_signals(sigs)),
-        ('factors.html',page_factors(fs)),
+        ('health.html',page_health(h)),
     ]
 
+    # 股票详情页：为所有出现在买入信号中的股票生成
+    buy_codes=set()
+    if sigs:
+        latest=sigs[0]['d']
+        buy_codes=set(s['c']for s in sigs if s['a']=='BUY'and s['st']=='passed'and s['d']==latest)
+    for code in buy_codes:
+        pages.append((f'stock_{code}.html',page_stock(conn,code)))
+
     for fn,html in pages:
-        path=f'dashboard/{fn}'
-        with open(path,'w',encoding='utf-8')as f:f.write(html)
-        print(f'✅ {path} ({len(html):,} bytes)')
+        with open(f'dashboard/{fn}','w',encoding='utf-8')as f:f.write(html)
+        print(f'✅ dashboard/{fn} ({len(html):,} bytes)')
 
     conn.close()
     print(f'   → 打开 dashboard/index.html · {ts}')
