@@ -1,0 +1,886 @@
+{
+  "generated_at": "2026-07-05T18:30:17.687467",
+  "market": {
+    "date": "2026-07-03",
+    "stocks": 287,
+    "regime": "strong",
+    "regime_label": "🟢 强势",
+    "index_close": 70.1,
+    "ret_20d": 8.1,
+    "index_trend": [
+      {
+        "date": "2026-04-07",
+        "close": 55.1
+      },
+      {
+        "date": "2026-04-08",
+        "close": 57.6
+      },
+      {
+        "date": "2026-04-09",
+        "close": 57.4
+      },
+      {
+        "date": "2026-04-10",
+        "close": 58.5
+      },
+      {
+        "date": "2026-04-13",
+        "close": 58.7
+      },
+      {
+        "date": "2026-04-14",
+        "close": 59.7
+      },
+      {
+        "date": "2026-04-15",
+        "close": 59.3
+      },
+      {
+        "date": "2026-04-16",
+        "close": 60.1
+      },
+      {
+        "date": "2026-04-17",
+        "close": 60.2
+      },
+      {
+        "date": "2026-04-20",
+        "close": 61.0
+      },
+      {
+        "date": "2026-04-21",
+        "close": 60.7
+      },
+      {
+        "date": "2026-04-22",
+        "close": 61.6
+      },
+      {
+        "date": "2026-04-23",
+        "close": 61.2
+      },
+      {
+        "date": "2026-04-24",
+        "close": 61.1
+      },
+      {
+        "date": "2026-04-27",
+        "close": 61.5
+      },
+      {
+        "date": "2026-04-28",
+        "close": 60.9
+      },
+      {
+        "date": "2026-04-29",
+        "close": 61.7
+      },
+      {
+        "date": "2026-04-30",
+        "close": 62.6
+      },
+      {
+        "date": "2026-05-06",
+        "close": 64.2
+      },
+      {
+        "date": "2026-05-07",
+        "close": 64.7
+      },
+      {
+        "date": "2026-05-08",
+        "close": 64.0
+      },
+      {
+        "date": "2026-05-11",
+        "close": 65.8
+      },
+      {
+        "date": "2026-05-12",
+        "close": 65.9
+      },
+      {
+        "date": "2026-05-13",
+        "close": 67.1
+      },
+      {
+        "date": "2026-05-14",
+        "close": 65.6
+      },
+      {
+        "date": "2026-05-15",
+        "close": 65.0
+      },
+      {
+        "date": "2026-05-18",
+        "close": 65.0
+      },
+      {
+        "date": "2026-05-19",
+        "close": 65.7
+      },
+      {
+        "date": "2026-05-20",
+        "close": 66.5
+      },
+      {
+        "date": "2026-05-21",
+        "close": 65.2
+      },
+      {
+        "date": "2026-05-22",
+        "close": 66.2
+      },
+      {
+        "date": "2026-05-25",
+        "close": 68.3
+      },
+      {
+        "date": "2026-05-26",
+        "close": 68.5
+      },
+      {
+        "date": "2026-05-27",
+        "close": 67.5
+      },
+      {
+        "date": "2026-05-28",
+        "close": 67.9
+      },
+      {
+        "date": "2026-05-29",
+        "close": 66.7
+      },
+      {
+        "date": "2026-06-01",
+        "close": 65.0
+      },
+      {
+        "date": "2026-06-02",
+        "close": 66.1
+      },
+      {
+        "date": "2026-06-03",
+        "close": 67.0
+      },
+      {
+        "date": "2026-06-04",
+        "close": 67.0
+      },
+      {
+        "date": "2026-06-05",
+        "close": 64.9
+      },
+      {
+        "date": "2026-06-08",
+        "close": 62.9
+      },
+      {
+        "date": "2026-06-09",
+        "close": 64.7
+      },
+      {
+        "date": "2026-06-10",
+        "close": 63.8
+      },
+      {
+        "date": "2026-06-11",
+        "close": 63.8
+      },
+      {
+        "date": "2026-06-12",
+        "close": 64.4
+      },
+      {
+        "date": "2026-06-15",
+        "close": 70.3
+      },
+      {
+        "date": "2026-06-16",
+        "close": 70.4
+      },
+      {
+        "date": "2026-06-17",
+        "close": 72.2
+      },
+      {
+        "date": "2026-06-18",
+        "close": 73.7
+      },
+      {
+        "date": "2026-06-22",
+        "close": 75.1
+      },
+      {
+        "date": "2026-06-23",
+        "close": 73.0
+      },
+      {
+        "date": "2026-06-24",
+        "close": 74.1
+      },
+      {
+        "date": "2026-06-25",
+        "close": 76.2
+      },
+      {
+        "date": "2026-06-26",
+        "close": 74.1
+      },
+      {
+        "date": "2026-06-29",
+        "close": 72.9
+      },
+      {
+        "date": "2026-06-30",
+        "close": 74.4
+      },
+      {
+        "date": "2026-07-01",
+        "close": 73.4
+      },
+      {
+        "date": "2026-07-02",
+        "close": 69.8
+      },
+      {
+        "date": "2026-07-03",
+        "close": 70.1
+      }
+    ]
+  },
+  "data_health": {
+    "daily": {
+      "date": "2026-07-03",
+      "stocks": 287,
+      "nulls": 0,
+      "status": "ok"
+    },
+    "pe": {
+      "coverage": 92,
+      "status": "ok"
+    },
+    "pb": {
+      "coverage": 99,
+      "status": "ok"
+    },
+    "roe": {
+      "date": "2026-03-31",
+      "stocks": 300,
+      "status": "ok"
+    },
+    "db_size_mb": 134.0
+  },
+  "strategies": [
+    {
+      "name": "双均线 MA(20,60)",
+      "style": "trend",
+      "ann_ret": 14.5,
+      "sharpe": 0.57,
+      "max_dd": -31.6,
+      "description": "慢均线减少假信号，捕获中期趋势"
+    },
+    {
+      "name": "动量突破 (10,2%,10)",
+      "style": "trend",
+      "ann_ret": 10.7,
+      "sharpe": 0.39,
+      "max_dd": -60.9,
+      "description": "10日突破更及时，需止损保护"
+    },
+    {
+      "name": "均值回归 BB(10,2.0)",
+      "style": "reversion",
+      "ann_ret": 18.9,
+      "sharpe": 0.65,
+      "max_dd": -39.9,
+      "description": "短周期布林带，捕捉短期超卖"
+    }
+  ],
+  "signals": [
+    {
+      "date": "2026-06-12",
+      "code": "601658",
+      "name": "邮储银行",
+      "strategy": "双均线趋势跟踪",
+      "action": "BUY",
+      "price": 5.2,
+      "status": "blocked",
+      "reason": "大盘择时拦截: 🟠 弱势"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "601688",
+      "name": "华泰证券",
+      "strategy": "双均线趋势跟踪",
+      "action": "BUY",
+      "price": 19.97,
+      "status": "blocked",
+      "reason": "大盘择时拦截: 🟠 弱势"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "601211",
+      "name": "国泰海通",
+      "strategy": "动量突破",
+      "action": "BUY",
+      "price": 17.68,
+      "status": "blocked",
+      "reason": "大盘择时拦截: 🟠 弱势"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "601328",
+      "name": "交通银行",
+      "strategy": "动量突破",
+      "action": "BUY",
+      "price": 7.14,
+      "status": "blocked",
+      "reason": "大盘择时拦截: 🟠 弱势"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "600066",
+      "name": "宇通客车",
+      "strategy": "均值回归",
+      "action": "BUY",
+      "price": 28.85,
+      "status": "blocked",
+      "reason": "大盘择时拦截: 🟠 弱势"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "000001",
+      "name": "平安银行",
+      "strategy": "动量突破",
+      "action": "BUY",
+      "price": 11.24,
+      "status": "blocked",
+      "reason": "大盘择时拦截: 🟠 弱势"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "601688",
+      "name": "华泰证券",
+      "strategy": "动量突破",
+      "action": "BUY",
+      "price": 19.97,
+      "status": "blocked",
+      "reason": "大盘择时拦截: 🟠 弱势"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "601628",
+      "name": "中国人寿",
+      "strategy": "均值回归",
+      "action": "SELL",
+      "price": 35.81,
+      "status": "blocked",
+      "reason": "股价36元，超过上限30元（1手需3581元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "300628",
+      "name": "亿联网络",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 34.1,
+      "status": "blocked",
+      "reason": "股价34元，超过上限30元（1手需3410元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "002475",
+      "name": "立讯精密",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 63.76,
+      "status": "blocked",
+      "reason": "股价64元，超过上限30元（1手需6376元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "600938",
+      "name": "中国海油",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 33.36,
+      "status": "blocked",
+      "reason": "股价33元，超过上限30元（1手需3336元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "600160",
+      "name": "巨化股份",
+      "strategy": "均值回归",
+      "action": "SELL",
+      "price": 42.39,
+      "status": "blocked",
+      "reason": "股价42元，超过上限30元（1手需4239元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "300124",
+      "name": "汇川技术",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 67.16,
+      "status": "blocked",
+      "reason": "股价67元，超过上限30元（1手需6716元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "688082",
+      "name": "盛美上海",
+      "strategy": "均值回归",
+      "action": "SELL",
+      "price": 304.66,
+      "status": "blocked",
+      "reason": "股价305元，超过上限30元（1手需30466元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "603260",
+      "name": "合盛硅业",
+      "strategy": "动量突破",
+      "action": "BUY",
+      "price": 43.36,
+      "status": "blocked",
+      "reason": "股价43元，超过上限30元（1手需4336元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "600160",
+      "name": "巨化股份",
+      "strategy": "动量突破",
+      "action": "BUY",
+      "price": 42.39,
+      "status": "blocked",
+      "reason": "股价42元，超过上限30元（1手需4239元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "300124",
+      "name": "汇川技术",
+      "strategy": "均值回归",
+      "action": "BUY",
+      "price": 67.16,
+      "status": "blocked",
+      "reason": "股价67元，超过上限30元（1手需6716元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "688082",
+      "name": "盛美上海",
+      "strategy": "动量突破",
+      "action": "BUY",
+      "price": 304.66,
+      "status": "blocked",
+      "reason": "股价305元，超过上限30元（1手需30466元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "601328",
+      "name": "交通银行",
+      "strategy": "均值回归",
+      "action": "SELL",
+      "price": 7.14,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "601838",
+      "name": "成都银行",
+      "strategy": "均值回归",
+      "action": "SELL",
+      "price": 20.07,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "000001",
+      "name": "平安银行",
+      "strategy": "均值回归",
+      "action": "SELL",
+      "price": 11.24,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "601398",
+      "name": "工商银行",
+      "strategy": "均值回归",
+      "action": "SELL",
+      "price": 7.78,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "601009",
+      "name": "南京银行",
+      "strategy": "均值回归",
+      "action": "SELL",
+      "price": 11.83,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "601688",
+      "name": "华泰证券",
+      "strategy": "均值回归",
+      "action": "SELL",
+      "price": 19.97,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "601211",
+      "name": "国泰海通",
+      "strategy": "均值回归",
+      "action": "SELL",
+      "price": 17.68,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "600066",
+      "name": "宇通客车",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 28.85,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "605499",
+      "name": "东鹏饮料",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 131.84,
+      "status": "blocked",
+      "reason": "股价132元，超过上限30元（1手需13184元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "601689",
+      "name": "拓普集团",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 60.62,
+      "status": "blocked",
+      "reason": "股价61元，超过上限30元（1手需6062元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "600482",
+      "name": "中国动力",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 31.22,
+      "status": "blocked",
+      "reason": "股价31元，超过上限30元（1手需3122元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "300782",
+      "name": "卓胜微",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 89.76,
+      "status": "blocked",
+      "reason": "股价90元，超过上限30元（1手需8976元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "300442",
+      "name": "润泽科技",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 73.53,
+      "status": "blocked",
+      "reason": "股价74元，超过上限30元（1手需7353元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "002230",
+      "name": "科大讯飞",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 40.39,
+      "status": "blocked",
+      "reason": "股价40元，超过上限30元（1手需4039元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "001979",
+      "name": "招商蛇口",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 8.16,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "000938",
+      "name": "紫光股份",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 25.15,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "000876",
+      "name": "新 希 望",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 6.54,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "601229",
+      "name": "上海银行",
+      "strategy": "双均线趋势跟踪",
+      "action": "BUY",
+      "price": 9.36,
+      "status": "blocked",
+      "reason": "大盘择时拦截: 🟠 弱势"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "000338",
+      "name": "潍柴动力",
+      "strategy": "均值回归",
+      "action": "BUY",
+      "price": 27.57,
+      "status": "blocked",
+      "reason": "大盘择时拦截: 🟠 弱势"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "002028",
+      "name": "思源电气",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 172.0,
+      "status": "blocked",
+      "reason": "股价172元，超过上限30元（1手需17200元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "000977",
+      "name": "浪潮信息",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 57.84,
+      "status": "blocked",
+      "reason": "股价58元，超过上限30元（1手需5784元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "000661",
+      "name": "长春高新",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 64.32,
+      "status": "blocked",
+      "reason": "股价64元，超过上限30元（1手需6432元）"
+    },
+    {
+      "date": "2026-06-12",
+      "code": "002241",
+      "name": "歌尔股份",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 22.72,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "002236",
+      "name": "大华股份",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 15.84,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "002074",
+      "name": "国轩高科",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 28.35,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "001391",
+      "name": "国货航",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 4.64,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "000786",
+      "name": "北新建材",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 20.37,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "000625",
+      "name": "长安汽车",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 7.44,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "000617",
+      "name": "中油资本",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 7.12,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "000425",
+      "name": "徐工机械",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 8.85,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-12",
+      "code": "000338",
+      "name": "潍柴动力",
+      "strategy": "动量突破",
+      "action": "SELL",
+      "price": 27.57,
+      "status": "passed",
+      "reason": NaN
+    },
+    {
+      "date": "2026-06-09",
+      "code": "600919",
+      "name": "江苏银行",
+      "strategy": "双均线趋势跟踪",
+      "action": "BUY",
+      "price": 11.38,
+      "status": "blocked",
+      "reason": "大盘择时拦截: 🟠 弱势"
+    }
+  ],
+  "positions": [],
+  "factors": [
+    {
+      "rank": 1,
+      "code": "300308",
+      "name": "中际旭创",
+      "score": 2.56,
+      "momentum": 8.91,
+      "volatility": 0.63
+    },
+    {
+      "rank": 2,
+      "code": "300502",
+      "name": "新易盛",
+      "score": 1.95,
+      "momentum": 6.05,
+      "volatility": 0.83
+    },
+    {
+      "rank": 3,
+      "code": "300394",
+      "name": "天孚通信",
+      "score": 1.44,
+      "momentum": 5.48,
+      "volatility": 0.85
+    },
+    {
+      "rank": 4,
+      "code": "301308",
+      "name": "江波龙",
+      "score": 1.32,
+      "momentum": 6.12,
+      "volatility": 0.87
+    },
+    {
+      "rank": 5,
+      "code": "000657",
+      "name": "中钨高新",
+      "score": 1.19,
+      "momentum": 5.44,
+      "volatility": 0.79
+    },
+    {
+      "rank": 6,
+      "code": "600183",
+      "name": "生益科技",
+      "score": 0.85,
+      "momentum": 4.02,
+      "volatility": 0.71
+    },
+    {
+      "rank": 7,
+      "code": "002384",
+      "name": "东山精密",
+      "score": 0.63,
+      "momentum": 5.55,
+      "volatility": 0.84
+    },
+    {
+      "rank": 8,
+      "code": "601138",
+      "name": "工业富联",
+      "score": 0.61,
+      "momentum": 2.91,
+      "volatility": 0.66
+    },
+    {
+      "rank": 9,
+      "code": "600221",
+      "name": "海航控股",
+      "score": 0.59,
+      "momentum": 0.14,
+      "volatility": 0.29
+    },
+    {
+      "rank": 10,
+      "code": "605117",
+      "name": "德业股份",
+      "score": 0.59,
+      "momentum": 2.17,
+      "volatility": 0.61
+    }
+  ]
+}
