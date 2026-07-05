@@ -155,42 +155,57 @@ def _get_strategy_style_map() -> dict[str, str]:
 
 def filter_by_regime(signals: list[dict], regime: dict) -> tuple[list[dict], list[dict]]:
     """
-    根据大盘状态过滤信号 + 策略权重调节
+    根据大盘状态调节策略权重（不再拦截买入信号）
 
     策略-市场匹配（基于策略 style 属性）：
       🟢 强势 → trend 策略增强 +20%，reversion 降权至 50%
       🟡 震荡 → reversion 策略增强 +20%，trend 降权至 30%
-      🟠 弱势 → 所有买入信号拦截
-      🔴 极弱 → 所有买入拦截 + 卖出建议增强
+      🟠 弱势 → 所有策略降权（趋势 × 0.3，回归 × 0.5）
+      🔴 极弱 → 所有策略大幅降权（趋势 × 0.1，回归 × 0.2）
+
+    注意：大盘择时信息仅作为参考标注在信号上，不再拦截。
     """
     style_map = _get_strategy_style_map()
     passed = []
     blocked = []
 
     for sig in signals:
-        if sig['action'] == 'BUY' and not regime['can_buy']:
-            sig['block_reason'] = f'大盘择时拦截: {regime["label"]}'
-            blocked.append(sig)
-        else:
-            # 根据市场状态 + 策略类型 调节信号强度
-            if sig['action'] == 'BUY':
-                strategy_name = sig.get('strategy', '')
-                style = style_map.get(strategy_name, '')
-                if regime['regime'] == 'shaky':
-                    if style == 'trend':
-                        sig['strength'] = round(sig['strength'] * 0.3, 3)
-                        sig['regime_note'] = '震荡市趋势策略降权'
-                    elif style == 'reversion':
-                        sig['strength'] = round(min(sig['strength'] * 1.2, 1.0), 3)
-                        sig['regime_note'] = '震荡市均值回归增强'
-                elif regime['regime'] == 'strong':
-                    if style == 'trend':
-                        sig['strength'] = round(min(sig['strength'] * 1.2, 1.0), 3)
-                        sig['regime_note'] = '强势市趋势策略增强'
-                    elif style == 'reversion':
-                        sig['strength'] = round(sig['strength'] * 0.5, 3)
-                        sig['regime_note'] = '强势市回归策略降权'
-            passed.append(sig)
+        if sig['action'] == 'BUY':
+            strategy_name = sig.get('strategy', '')
+            style = style_map.get(strategy_name, '')
+
+            # 根据市场状态调节策略权重
+            if regime['regime'] == 'shaky':
+                if style == 'trend':
+                    sig['strength'] = round(sig['strength'] * 0.3, 3)
+                    sig['regime_note'] = '震荡市趋势策略降权'
+                elif style == 'reversion':
+                    sig['strength'] = round(min(sig['strength'] * 1.2, 1.0), 3)
+                    sig['regime_note'] = '震荡市均值回归增强'
+            elif regime['regime'] == 'strong':
+                if style == 'trend':
+                    sig['strength'] = round(min(sig['strength'] * 1.2, 1.0), 3)
+                    sig['regime_note'] = '强势市趋势策略增强'
+                elif style == 'reversion':
+                    sig['strength'] = round(sig['strength'] * 0.5, 3)
+                    sig['regime_note'] = '强势市回归策略降权'
+            elif regime['regime'] == 'weak':
+                if style == 'trend':
+                    sig['strength'] = round(sig['strength'] * 0.3, 3)
+                elif style == 'reversion':
+                    sig['strength'] = round(sig['strength'] * 0.5, 3)
+                sig['regime_note'] = f'弱势市({regime["label"]})参考——信号保留,强度降权'
+            elif regime['regime'] == 'crash':
+                if style == 'trend':
+                    sig['strength'] = round(sig['strength'] * 0.1, 3)
+                elif style == 'reversion':
+                    sig['strength'] = round(sig['strength'] * 0.2, 3)
+                sig['regime_note'] = f'极弱市({regime["label"]})参考——信号保留,强度大幅降权'
+
+            # 标注大盘状态（所有信号都带上，不拦截）
+            sig['market_regime'] = regime['regime']
+
+        passed.append(sig)
 
     return passed, blocked
 
