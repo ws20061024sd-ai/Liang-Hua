@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-**Primary reference**: `docs/项目完整方案.md` — read this first for complete project understanding.
+**Primary reference**: `docs/核心/项目完整方案.md` — read this first for complete project understanding.
 
 ## Project Overview
 
@@ -26,6 +26,7 @@ python scripts/data_check.py           # Data health check (report only)
 python scripts/data_check.py --block   # Data health check (fail on block)
 python analysis/report.py  # Generate + push daily market report
 python -m engine.factor_engine  # Multi-factor scoring (monthly stock ranking)
+python web/generate.py        # Generate dashboard static HTML (web/output/)
 
 # Testing
 python -m pytest tests/ -v  # Run all tests (26 cases)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 仪表盘生成器 v5 —— 博客设计系统 + SVG K线 + 信号首页
-用法: PYTHONPATH=. python scripts/generate_dashboard_data.py
+用法: PYTHONPATH=. python web/generate.py
 """
 import sqlite3, os, sys
 from datetime import datetime, timedelta
@@ -209,7 +209,7 @@ def _health(conn):
 
 # ═══════════════ 历史快照系统 ═══════════════
 
-HISTORY_DIR = 'dashboard/history'
+HISTORY_DIR = 'web/output/history'
 
 def _save_snapshot(m, sigs):
     """每日快照：保存市场数据 + 信号摘要到 JSON"""
@@ -733,7 +733,7 @@ def page_history(history):
     if not history:
         return _page('历史对比','history.html',
             '<div class="hero"><h2>📅 历史对比</h2><p>暂无历史快照——每次生成仪表盘自动存档</p></div>'
-            '<div class="panel"><div class="panel-bd"><div class="empty">数据积累中<br><small class="dim">运行 generate_dashboard_data.py 后自动保存每日快照到 dashboard/history/</small></div></div></div>')
+            '<div class="panel"><div class="panel-bd"><div class="empty">数据积累中<br><small class="dim">运行 web/generate.py 后自动保存每日快照到 web/output/history/</small></div></div></div>')
 
     # ── 市场宽度趋势表 ──
     mkt_rows = ''
@@ -793,7 +793,7 @@ def page_history(history):
     {spark}
     {mkt_table}
     {sig_table}
-    <div class="dim" style="font-size:10px;text-align:center;margin-top:12px">历史数据来自 dashboard/history/ 目录 · 每次运行仪表盘生成自动存档</div>'''
+    <div class="dim" style="font-size:10px;text-align:center;margin-top:12px">历史数据来自 web/output/history/ 目录 · 每次运行仪表盘生成自动存档</div>'''
     return _page('历史对比','history.html', body)
 
 
@@ -811,7 +811,7 @@ def build():
     _save_snapshot(m, sigs)
     history = _load_history(30)
 
-    os.makedirs('dashboard',exist_ok=True)
+    os.makedirs('web/output',exist_ok=True)
 
     pages=[
         ('index.html',page_index(conn,m,h,sigs,fs,ps)),
@@ -832,11 +832,11 @@ def build():
         pages.append((f'stock_{code}.html',page_stock(conn,code)))
 
     for fn,html in pages:
-        with open(f'dashboard/{fn}','w',encoding='utf-8')as f:f.write(html)
-        print(f'✅ dashboard/{fn} ({len(html):,} bytes)')
+        with open(f'web/output/{fn}','w',encoding='utf-8')as f:f.write(html)
+        print(f'✅ web/output/{fn} ({len(html):,} bytes)')
 
     conn.close()
-    print(f'   → 打开 dashboard/index.html · {ts}')
+    print(f'   → 打开 web/output/index.html · {ts}')
 
 if __name__=='__main__':
     build()
