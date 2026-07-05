@@ -1,5 +1,6 @@
 """
 策略运行器 —— 遍历所有启用的策略，对每只股票运行，收集信号
+v2: 集成止损检查，当前持仓触发移动止损时自动生成 STOP_LOSS 信号
 """
 import pandas as pd
 from typing import Type
@@ -98,4 +99,55 @@ def run_strategies(verbose: bool = False) -> list[dict]:
     # 限制卖出信号数量（多策略时卖出信号会很多）
     sell_signals = sell_signals[:settings.SELL_SIGNAL_LIMIT]
 
-    return buy_signals + sell_signals
+    # ---- 止损检查：当前持仓触发移动止损 → 强制卖出 ----
+    stop_signals = _generate_stop_signals(batch_data)
+    if stop_signals:
+        print(f"\n   ⚠️  移动止损触发: {len(stop_signals)}只")
+        for s in stop_signals:
+            print(f"      {s['code']} {s['name']}: {s['reason']}")
+
+    # 止损信号优先级最高，放在卖出列表最前面
+    return buy_signals + stop_signals + sell_signals
+
+
+def _generate_stop_signals(batch_data: dict) -> list[dict]:
+    """
+    检查当前持仓是否触发移动止损
+
+    batch_data: {code: DataFrame} 批量加载的日线数据
+    返回: STOP_LOSS 信号列表
+    """
+    try:
+        from engine.position_tracker import get_positions, check_stop_loss
+    except ImportError:
+        return []
+
+    positions = get_positions()
+    if not positions:
+        return []
+
+    # 从已加载的数据中提取最新价格（避免重复查库）
+    price_map = {}
+    for code in [p['code'] for p in positions]:
+        if code in batch_data:
+            df = batch_data[code]
+            if not df.empty:
+                price_map[code] = float(df.iloc[-1]['close'])
+
+    stops = check_stop_loss(positions, price_map=price_map)
+    if not stops:
+        return []
+
+    # 转换为信号格式
+    signals = []
+    for s in stops:
+        signals.append({
+            'stock_code': s['code'],
+            'stock_name': s['name'],
+            'action': 'SELL',
+            'strength': 1.0,  # 止损信号最高强度
+            'reason': s['reason'],
+            'price': s['current'],
+            'strategy': '移动止损',
+        })
+    return signals

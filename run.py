@@ -222,6 +222,20 @@ def main():
     else:
         print("⏩ 跳过数据更新\n")
 
+    # 数据校验（阻断模式：不通过则不推信号，改推告警）
+    if not args.no_update:
+        import subprocess
+        result = subprocess.run(
+            [sys.executable, 'scripts/data_check.py', '--block'],
+            capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            log.error("数据校验未通过，跳过信号生成")
+            print(result.stdout[-500:] if len(result.stdout) > 500 else result.stdout)
+            from notifier.dingtalk import send
+            send(f"## ⚠️ 数据校验未通过\n\n{result.stdout[-300:]}")
+            return
+
     # 2. 大盘择时（防线一）
     from engine.market_timing import get_market_regime, filter_by_regime
     regime = get_market_regime()

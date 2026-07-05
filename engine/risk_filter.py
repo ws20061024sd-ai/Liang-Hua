@@ -45,6 +45,21 @@ def filter_signals(
             rejected.append(sig)
             continue
 
+        # 止损信号豁免：只拦物理上无法交易的情况（跌停/停牌）
+        is_stop_loss = sig.get('strategy') == '移动止损'
+        if is_stop_loss:
+            pct = snap.get('pct_change', 0) or 0
+            if pct <= -9.8:
+                sig['reject_reason'] = '跌停，止损信号无法执行'
+                rejected.append(sig)
+                continue
+            if snap.get('volume', 0) is None or snap.get('volume', 0) == 0:
+                sig['reject_reason'] = '疑似停牌，止损信号无法执行'
+                rejected.append(sig)
+                continue
+            passed.append(sig)
+            continue
+
         # 规则1: ST 过滤
         if snap.get('is_st', 0):
             sig['reject_reason'] = 'ST股票'

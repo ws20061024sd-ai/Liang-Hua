@@ -27,7 +27,7 @@ class MeanReversionStrategy(BaseStrategy):
 
     name = "均值回归"
     description = "布林带下轨超卖买入，上轨超买卖出"
-    version = "1.0"
+    version = "2.0"
     style = "reversion"
 
     def __init__(self, period: int = None, std_dev: float = None):
