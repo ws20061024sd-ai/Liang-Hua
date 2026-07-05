@@ -21,7 +21,7 @@ CSS = '''<style>
   --accent: #2563eb; --accent-hover: #1d4ed8; --accent-soft: #eff6ff;
   --accent-2: #7c3aed; --accent-3: #059669; --code-bg: #f3f3f0;
   --amber: #d97706; --amber-soft: rgba(217,119,6,0.08);
-  --up: #059669; --down: #dc2626; --warn: #d97706; --danger: #dc2626;
+  --up: #dc2626; --down: #059669; --warn: #d97706; --danger: #dc2626;
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
   --shadow: 0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 6px rgba(0,0,0,0.04),0 2px 4px rgba(0,0,0,0.04);
@@ -34,7 +34,7 @@ CSS = '''<style>
   --accent: #60a5fa; --accent-hover: #93bbfd; --accent-soft: #1e2a3a;
   --accent-2: #a78bfa; --accent-3: #34d399; --code-bg: #1e1e1a;
   --amber: #fbbf24; --amber-soft: rgba(251,191,36,0.08);
-  --up: #34d399; --down: #f87171; --warn: #fbbf24; --danger: #f87171;
+  --up: #f87171; --down: #34d399; --warn: #fbbf24; --danger: #f87171;
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
   --shadow: 0 1px 3px rgba(0,0,0,0.3),0 1px 2px rgba(0,0,0,0.2);
   --shadow-md: 0 4px 6px rgba(0,0,0,0.3),0 2px 4px rgba(0,0,0,0.2);
@@ -95,7 +95,7 @@ th{text-align:left;color:var(--text-soft);font-weight:500;padding:5px 8px;border
 td{padding:5px 8px;border-bottom:1px solid var(--border-light)}
 tr:hover td{background:var(--bg-hover)}
 .tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600}
-.t-buy{background:#05966915;color:var(--up)}.t-sell{background:#dc262615;color:var(--down)}
+.t-buy{background:#dc262615;color:var(--up)}.t-sell{background:#05966915;color:var(--down)}
 .t-pass{background:#2563eb12;color:var(--accent)}.t-block{background:#6b6b6b12;color:var(--text-muted)}
 .t-trend{background:#2563eb10;color:var(--accent)}.t-rev{background:#7c3aed10;color:var(--accent-2)}
 .t-warn{background:#d9770615;color:var(--warn)}.t-danger{background:#dc262615;color:var(--danger)}
@@ -648,12 +648,25 @@ def page_strategy(sigs):
     return _page('策略分析','strategy.html',body)
 
 
-def page_market(m,sec,sec_days):
+def page_market(m,sec,sec_days,conn=None):
     """市场监控"""
     reg_label='强势 ↑'if m['regime']=='strong'else'弱势 ↓'
     reg_cls='up'if m['regime']=='strong'else'dn'
     b_label='偏多' if m['breadth']>50 else ('偏空' if m['breadth']<-50 else '中性')
     b_cls='up' if m['breadth']>50 else ('dn' if m['breadth']<-50 else 'dim')
+
+    # ── 沪深300 K线图 ──
+    kline_html = ''
+    if conn:
+        idx_df = _q(conn,
+            "SELECT date, open, close, high, low FROM index_daily ORDER BY date DESC LIMIT 120")
+        if len(idx_df) >= 5:
+            idx_df = idx_df.sort_values('date')  # 渲染器需要时间升序
+            closes = idx_df['close'].values
+            ma20_s = pd.Series(closes).rolling(20).mean()
+            ma60_s = pd.Series(closes).rolling(60).mean()
+            svg = _render_svg_kline(idx_df, ma20_s, ma60_s)
+            kline_html = f'''<div class="panel"><div class="panel-hd">📈 沪深300 K线（120天）</div><div class="panel-bd" style="padding:4px">{svg}</div></div>'''
 
     # 市场宽度详情
     width_html=f'''<div class="panel"><div class="panel-hd">📊 市场宽度（{m["date"]}）</div><div class="panel-bd">
@@ -689,6 +702,7 @@ def page_market(m,sec,sec_days):
 
     body=f'''
     <div class="hero"><h2>📊 市场监控</h2><p>数据: {m["date"]} · {m["total"]}只股票 · 沪深300 {m["idx_close"]:.0f}点 <span class="{("up"if m.get("idx_pct",0)>=0 else"dn")}" style="font-weight:500">{_ud(m.get("idx_pct",0))}%</span> · <span class="{reg_cls}" style="font-weight:500">{reg_label}</span> · 成交{m.get("turnover",0)/1e8:.0f}亿</p></div>
+    {kline_html}
     {width_html}
     {sec_html}'''
     return _page('市场监控','market.html',body)
@@ -838,7 +852,7 @@ def build():
 
     pages=[
         ('index.html',page_index(conn,m,h,sigs,fs,ps)),
-        ('market.html',page_market(m,sec,sec_days)),
+        ('market.html',page_market(m,sec,sec_days,conn)),
         ('history.html',page_history(history)),
         ('strategy.html',page_strategy(sigs)),
         ('factors.html',page_factors(fs,sigs)),
