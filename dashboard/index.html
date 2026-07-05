@@ -1,258 +1,84 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>量化交易仪表盘</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>仪表盘 · 量化交易</title>
 <style>
-  :root {
-    --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a;
-    --text: #e1e4ed; --dim: #8b8fa3; --green: #26a69a; --red: #ef5350;
-    --blue: #42a5f5; --orange: #ffa726; --purple: #ab47bc;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px; min-height: 100vh; }
-  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-  .header h1 { font-size: 24px; font-weight: 600; }
-  .header .updated { color: var(--dim); font-size: 13px; }
-  .grid { display: grid; gap: 16px; }
-  .grid-2 { grid-template-columns: 1fr 1fr; }
-  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
-  .card h3 { font-size: 14px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
-  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
-  .stat-row:last-child { border-bottom: none; }
-  .stat-value { font-weight: 600; font-variant-numeric: tabular-nums; }
-  .green { color: var(--green); } .red { color: var(--red); } .blue { color: var(--blue); } .orange { color: var(--orange); }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-  .badge-ok { background: #1b3a2d; color: var(--green); }
-  .badge-warn { background: #3a2d1b; color: var(--orange); }
-  .badge-buy { background: #1b3a2d; color: var(--green); }
-  .badge-sell { background: #3a1b1b; color: var(--red); }
-  .badge-passed { background: #1b2d3a; color: var(--blue); }
-  .badge-blocked { background: #2d2d1b; color: var(--orange); }
-  .badge-trend { background: #1b2d3a; color: var(--blue); }
-  .badge-reversion { background: #2d1b3a; color: var(--purple); }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; color: var(--dim); font-weight: 500; padding: 8px 6px; border-bottom: 1px solid var(--border); }
-  td { padding: 7px 6px; border-bottom: 1px solid var(--border); }
-  tr:hover { background: rgba(255,255,255,0.03); }
-  .chart-wrap { position: relative; height: 250px; }
-  .chart-wrap-sm { height: 200px; }
-  .empty { color: var(--dim); text-align: center; padding: 32px; font-size: 14px; }
-  .position-card { display: flex; gap: 12px; align-items: center; padding: 12px; background: var(--bg); border-radius: 8px; margin-bottom: 8px; }
-  .position-card .code { font-weight: 700; font-size: 16px; }
-  .position-card .pnl { font-size: 20px; font-weight: 700; }
-  @media (max-width: 768px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+:root{--bg:#0b0e11;--s1:#1e2329;--s2:#252a30;--b:#2b3139;--t:#eaecef;--d:#848e9c;--dd:#5e6673;--up:#0ecb81;--dn:#f6465d;--bl:#4a9eff;--am:#f0b90b;--pu:#a85cef}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--t);font:13px/1.45 -apple-system,BlinkMacSystemFont,'SF Mono','Segoe UI',monospace;padding:0;-webkit-font-smoothing:antialiased}
+nav{background:var(--s1);border-bottom:1px solid var(--b);padding:0 20px;display:flex;align-items:center;gap:0;position:sticky;top:0;z-index:10}
+nav a{color:var(--d);text-decoration:none;padding:12px 16px;font-size:12px;border-bottom:2px solid transparent;transition:all .15s}
+nav a:hover{color:var(--t);background:var(--s2)}
+nav a.active{color:var(--bl);border-bottom-color:var(--bl)}
+nav .brand{font-weight:700;color:var(--t);margin-right:16px;font-size:13px;letter-spacing:-.2px}
+main{padding:16px 20px;max-width:1280px;margin:0 auto}
+.grid{display:grid;gap:10px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:1fr 1fr 1fr 1fr}
+.g13{grid-template-columns:1fr 3fr}.g31{grid-template-columns:3fr 1fr}
+.panel{background:var(--s1);border:1px solid var(--b);border-radius:6px;overflow:hidden;margin-bottom:10px}
+.panel-hd{padding:8px 14px;border-bottom:1px solid var(--b);font-size:11px;color:var(--d);text-transform:uppercase;letter-spacing:.5px;font-weight:500;display:flex;justify-content:space-between;align-items:center}
+.panel-bd{padding:12px 14px}
+.up{color:var(--up)}.dn{color:var(--dn)}.bl{color:var(--bl)}.dim{color:var(--dd)}.fw{font-weight:600}
+.code{font-weight:600;font-size:12px}.ta-r{text-align:right}.ta-c{text-align:center}
+.metric{text-align:center;padding:6px 4px}
+.metric .l{font-size:10px;color:var(--dd);text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
+.metric .v{font-size:18px;font-weight:600;line-height:1.1}
+.metric .s{font-size:10px;margin-top:1px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{text-align:left;color:var(--dd);font-weight:500;padding:5px 8px;border-bottom:1px solid var(--b);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+td{padding:4px 8px;border-bottom:1px solid rgba(43,49,57,0.5)}tr:hover td{background:rgba(255,255,255,0.02)}
+.tag{display:inline-block;padding:1px 5px;border-radius:2px;font-size:10px;font-weight:600}
+.t-up{background:#0ecb8118;color:var(--up)}.t-dn{background:#f6465d18;color:var(--dn)}
+.t-bl{background:#4a9eff18;color:var(--bl)}.t-pass{background:#0ecb8114;color:var(--up)}.t-block{background:#848e9c14;color:var(--d)}
+.t-trend{background:#4a9eff12;color:var(--bl)}.t-rev{background:#a85cef12;color:var(--pu)}
+.t-buy{background:#0ecb8118;color:var(--up)}.t-sell{background:#f6465d18;color:var(--dn)}
+.empty{color:var(--dd);text-align:center;padding:28px;font-size:12px}
+.bar-row{display:flex;align-items:center;gap:6px;margin:2px 0}
+.bar-row span:first-child{color:var(--d);width:28px;font-size:10px}
+.bar-row span:last-child{width:32px;text-align:right;font-size:10px;color:var(--d)}
+.bar{flex:1;height:3px;background:var(--s2);border-radius:2px;overflow:hidden}
+.bar-f{height:100%;border-radius:2px}
+.pos-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--b)}
+.pos-item:last-child{border-bottom:none}
+.pos-code{font-weight:600;font-size:13px;min-width:50px}
+.pos-meta{flex:1;font-size:10px;color:var(--d);line-height:1.4}
+.pos-pnl{font-size:16px;font-weight:600}
+.strat-card{border:1px solid var(--b);border-radius:8px;padding:16px;margin-bottom:10px}
+.hero{background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:20px 24px;margin-bottom:14px}
+.hero h2{font-size:16px;margin-bottom:6px}
+.hero p{color:var(--d);font-size:12px;line-height:1.6;max-width:700px}
+.explain{font-size:12px;color:var(--d);line-height:1.7}
+.explain strong{color:var(--t)}
+.row-item{display:flex;justify-content:space-between;padding:3px 0;font-size:11px}
+@media(max-width:900px){.g2,.g3,.g4,.g13,.g31{grid-template-columns:1fr}nav{flex-wrap:wrap}}
 </style>
 </head>
 <body>
+<nav><span class="brand">量化交易</span><a href="index.html" class=active>仪表盘</a><a href="market.html">市场监控</a><a href="strategy.html">策略分析</a><a href="signals.html">信号日志</a><a href="factors.html">因子引擎</a></nav>
+<main>
 
-<div class="header">
-  <h1>📊 量化交易仪表盘</h1>
-  <span class="updated" id="updated">加载中...</span>
-</div>
-
-<!-- 市场 + 数据健康 -->
-<div class="grid grid-2" style="margin-bottom:16px">
-  <div class="card">
-    <h3>📈 市场状态</h3>
-    <div class="stat-row"><span>数据日期</span><span class="stat-value" id="mkt-date">--</span></div>
-    <div class="stat-row"><span>覆盖股票</span><span class="stat-value" id="mkt-stocks">--</span></div>
-    <div class="stat-row"><span>市场状态</span><span class="stat-value" id="mkt-regime">--</span></div>
-    <div class="stat-row"><span>20日涨跌</span><span class="stat-value" id="mkt-ret20d">--</span></div>
-    <div class="chart-wrap-sm"><canvas id="chart-index"></canvas></div>
-  </div>
-  <div class="card">
-    <h3>🩺 数据健康</h3>
-    <div class="stat-row"><span>日线数据</span><span id="health-daily">--</span></div>
-    <div class="stat-row"><span>PE 覆盖率</span><span id="health-pe">--</span></div>
-    <div class="stat-row"><span>PB 覆盖率</span><span id="health-pb">--</span></div>
-    <div class="stat-row"><span>ROE 覆盖率</span><span id="health-roe">--</span></div>
-    <div class="stat-row"><span>数据库大小</span><span class="stat-value" id="health-size">--</span></div>
-    <div style="margin-top:16px">
-      <span class="badge badge-ok" id="health-overall">等待数据</span>
+    <div class="grid g4" style="margin-bottom:10px">
+      <div class="panel"><div class="panel-bd"><div class="metric"><div class="l">CSI300</div><div class="v">70</div><div class="s up">TRENDING ↑</div></div></div></div>
+      <div class="panel"><div class="panel-bd"><div class="metric"><div class="l">5日</div><div class="v dn">-3.85%</div><div class="s dim">20日 +8.05%</div></div></div></div>
+      <div class="panel"><div class="panel-bd"><div class="metric"><div class="l">60日</div><div class="v up">+27.27%</div><div class="s dim">287只 · 2026-07-03</div></div></div></div>
+      <div class="panel"><div class="panel-bd"><div class="metric"><div class="l">涨跌比 20日</div><div class="v"><span class="up">11</span>/<span class="dn">9</span></div><div class="s dim">偏多</div></div></div></div>
     </div>
-  </div>
-</div>
-
-<!-- 策略表现 + 因子Top10 -->
-<div class="grid grid-2" style="margin-bottom:16px">
-  <div class="card">
-    <h3>📋 三策略回测表现</h3>
-    <div class="chart-wrap"><canvas id="chart-strategies"></canvas></div>
-  </div>
-  <div class="card">
-    <h3>🔝 多因子引擎 Top 10</h3>
-    <div id="factors-container"></div>
-  </div>
-</div>
-
-<!-- 持仓 + 信号 -->
-<div class="grid grid-2" style="margin-bottom:16px">
-  <div class="card">
-    <h3>💼 当前持仓</h3>
-    <div id="positions-container"></div>
-  </div>
-  <div class="card">
-    <h3>📡 最近信号</h3>
-    <div id="signals-container" style="max-height:400px;overflow-y:auto"></div>
-  </div>
-</div>
-
-<script>
-fetch('data.json')
-  .then(r => r.json())
-  .then(data => {
-    document.getElementById('updated').textContent = '更新于 ' + new Date(data.generated_at).toLocaleString('zh-CN');
-    renderMarket(data.market);
-    renderHealth(data.data_health);
-    renderStrategies(data.strategies);
-    renderFactors(data.factors);
-    renderPositions(data.positions);
-    renderSignals(data.signals);
-    renderIndexChart(data.market.index_trend);
-  })
-  .catch(e => {
-    document.getElementById('updated').textContent = '数据加载失败: ' + e.message;
-    document.querySelectorAll('.card').forEach(c => c.style.opacity = '0.5');
-  });
-
-function renderMarket(m) {
-  document.getElementById('mkt-date').textContent = m.date;
-  document.getElementById('mkt-stocks').textContent = m.stocks + ' 只';
-  document.getElementById('mkt-regime').innerHTML = m.regime_label;
-  const ret = m.ret_20d;
-  const el = document.getElementById('mkt-ret20d');
-  el.textContent = (ret > 0 ? '+' : '') + ret + '%';
-  el.className = 'stat-value ' + (ret >= 0 ? 'green' : 'red');
-}
-
-function renderHealth(h) {
-  const ok = (v) => v === 'ok';
-  document.getElementById('health-daily').innerHTML =
-    `<span class="badge ${ok(h.daily.status)?'badge-ok':'badge-warn'}">${h.daily.stocks}只 | NULL:${h.daily.nulls}</span>`;
-  document.getElementById('health-pe').innerHTML =
-    `<span class="badge ${ok(h.pe.status)?'badge-ok':'badge-warn'}">${h.pe.coverage}%</span>`;
-  document.getElementById('health-pb').innerHTML =
-    `<span class="badge ${ok(h.pb.status)?'badge-ok':'badge-warn'}">${h.pb.coverage}%</span>`;
-  document.getElementById('health-roe').innerHTML =
-    `<span class="badge ${ok(h.roe.status)?'badge-ok':'badge-warn'}">${h.roe.stocks}只 (${h.roe.date})</span>`;
-  document.getElementById('health-size').textContent = h.db_size_mb + ' MB';
-  const allOk = ok(h.daily.status) && ok(h.pe.status) && ok(h.pb.status) && ok(h.roe.status);
-  const overall = document.getElementById('health-overall');
-  overall.textContent = allOk ? '✅ 全部健康' : '⚠️ 部分异常';
-  overall.className = 'badge ' + (allOk ? 'badge-ok' : 'badge-warn');
-}
-
-function renderStrategies(strats) {
-  new Chart(document.getElementById('chart-strategies'), {
-    type: 'bar',
-    data: {
-      labels: strats.map(s => s.name),
-      datasets: [
-        { label: '年化收益 %', data: strats.map(s => s.ann_ret), backgroundColor: '#26a69a80', borderColor: '#26a69a', borderWidth: 1 },
-        { label: '最大回撤 %', data: strats.map(s => -s.max_dd), backgroundColor: '#ef535080', borderColor: '#ef5350', borderWidth: 1 },
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#8b8fa3' } } },
-      scales: {
-        x: { ticks: { color: '#8b8fa3', maxRotation: 30 } },
-        y: { ticks: { color: '#8b8fa3', callback: v => v + '%' }, grid: { color: '#2a2d3a' } }
-      }
-    }
-  });
-}
-
-function renderFactors(factors) {
-  const c = document.getElementById('factors-container');
-  if (!factors || factors.length === 0 || factors[0].error) {
-    c.innerHTML = '<div class="empty">暂无因子数据</div>'; return;
-  }
-  c.innerHTML = `<table><thead><tr><th>#</th><th>代码</th><th>名称</th><th>得分</th><th>动量</th><th>波动</th></tr></thead><tbody>${
-    factors.map(f => `<tr>
-      <td>${f.rank}</td><td style="font-weight:600">${f.code}</td><td>${f.name}</td>
-      <td class="stat-value">${f.score}</td>
-      <td>${f.momentum ?? '--'}</td><td>${f.volatility ?? '--'}</td>
-    </tr>`).join('')
-  }</tbody></table>`;
-}
-
-function renderPositions(positions) {
-  const c = document.getElementById('positions-container');
-  if (!positions || positions.length === 0) {
-    c.innerHTML = '<div class="empty">📭 当前无持仓</div>'; return;
-  }
-  c.innerHTML = positions.map(p => `
-    <div class="position-card">
-      <div style="flex:1">
-        <div class="code">${p.code} <span style="font-size:13px;color:var(--dim)">${p.name}</span></div>
-        <div style="font-size:12px;color:var(--dim)">买入: ${p.buy_date} @ ¥${p.buy_price}</div>
-        <div style="font-size:11px;color:var(--dim)">止损线: ¥${p.stop_level} (最高 ¥${p.peak})</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:14px">现价 ¥${p.current}</div>
-        <div class="pnl ${p.pnl_pct >= 0 ? 'green' : 'red'}">${p.pnl_pct >= 0 ? '+' : ''}${p.pnl_pct}%</div>
-      </div>
+    <div class="grid g2">
+      <div class="panel"><div class="panel-hd">策略回测对比 <a href="strategy.html" style="color:var(--bl);font-size:10px;text-decoration:none">详情 →</a></div><div class="panel-bd"><div class="strat-card"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span class="fw">双均线趋势跟踪</span><span class="dim">MA(20,60)</span></div><div style="display:flex;gap:16px;align-items:center"><div><span style="font-size:20px;font-weight:700;color:#4a9eff">14.5%</span><span class="dim" style="font-size:10px"> 年化</span></div><div class="flex-1" style="font-size:10px"><div class="bar-row"><span>夏普</span><div class="bar"><div class="bar-f" style="width:57%;background:#4a9eff"></div></div><span>0.57</span></div><div class="bar-row"><span>回撤</span><div class="bar"><div class="bar-f" style="width:32%;background:#f6465d"></div></div><span>32%</span></div><div class="bar-row"><span>胜率</span><div class="bar"><div class="bar-f" style="width:52%;background:#f0b90b"></div></div><span>52%</span></div></div></div><div class="dim" style="font-size:10px;margin-top:4px"><span class="tag t-trend">趋势</span> 61月交易 · 快线(MA20)上穿慢线(MA60)买入，下穿卖出。慢均线减少震荡市假信号，捕获中期趋势。</div></div><div class="strat-card"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span class="fw">动量突破</span><span class="dim">DK(10,2%,10)</span></div><div style="display:flex;gap:16px;align-items:center"><div><span style="font-size:20px;font-weight:700;color:#0ecb81">10.7%</span><span class="dim" style="font-size:10px"> 年化</span></div><div class="flex-1" style="font-size:10px"><div class="bar-row"><span>夏普</span><div class="bar"><div class="bar-f" style="width:39%;background:#0ecb81"></div></div><span>0.39</span></div><div class="bar-row"><span>回撤</span><div class="bar"><div class="bar-f" style="width:61%;background:#f6465d"></div></div><span>61%</span></div><div class="bar-row"><span>胜率</span><div class="bar"><div class="bar-f" style="width:51%;background:#f0b90b"></div></div><span>51%</span></div></div></div><div class="dim" style="font-size:10px;margin-top:4px"><span class="tag t-trend">趋势</span> 77月交易 · 收盘价突破过去10日最高价×(1+2%缓冲)买入，跌破10日最低价卖出。快速识别突破行情。</div></div><div class="strat-card"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span class="fw">均值回归</span><span class="dim">BB(10,2.0)</span></div><div style="display:flex;gap:16px;align-items:center"><div><span style="font-size:20px;font-weight:700;color:#a85cef">18.9%</span><span class="dim" style="font-size:10px"> 年化</span></div><div class="flex-1" style="font-size:10px"><div class="bar-row"><span>夏普</span><div class="bar"><div class="bar-f" style="width:65%;background:#a85cef"></div></div><span>0.65</span></div><div class="bar-row"><span>回撤</span><div class="bar"><div class="bar-f" style="width:40%;background:#f6465d"></div></div><span>40%</span></div><div class="bar-row"><span>胜率</span><div class="bar"><div class="bar-f" style="width:54%;background:#f0b90b"></div></div><span>54%</span></div></div></div><div class="dim" style="font-size:10px;margin-top:4px"><span class="tag t-rev">反转</span> 56月交易 · 布林带(10,2.0)下轨超卖+MA60向上时买入，上轨超买卖出。捕捉短期过度反应后的回归。</div></div></div></div>
+      <div class="panel"><div class="panel-hd">多因子排名 Top15</div><div class="panel-bd" style="max-height:340px;overflow-y:auto"><table><thead><tr><th>#</th><th>代码</th><th>名称</th><th class="ta-r">得分</th><th class="ta-r">动量</th></tr></thead><tbody><tr><td>1</td><td class="code">300308</td><td>中际旭创</td><td class="ta-r"><span class="bl fw">2.6</span></td><td class="ta-r up">+8.9</td></tr><tr><td>2</td><td class="code">300502</td><td>新易盛</td><td class="ta-r"><span class="bl fw">1.9</span></td><td class="ta-r up">+6.1</td></tr><tr><td>3</td><td class="code">300394</td><td>天孚通信</td><td class="ta-r"><span class="bl fw">1.4</span></td><td class="ta-r up">+5.5</td></tr><tr><td>4</td><td class="code">301308</td><td>江波龙</td><td class="ta-r"><span class="bl fw">1.3</span></td><td class="ta-r up">+6.1</td></tr><tr><td>5</td><td class="code">000657</td><td>中钨高新</td><td class="ta-r"><span class="bl fw">1.2</span></td><td class="ta-r up">+5.4</td></tr><tr><td>6</td><td class="code">600183</td><td>生益科技</td><td class="ta-r"><span class="bl fw">0.8</span></td><td class="ta-r up">+4.0</td></tr><tr><td>7</td><td class="code">002384</td><td>东山精密</td><td class="ta-r"><span class="bl fw">0.6</span></td><td class="ta-r up">+5.6</td></tr><tr><td>8</td><td class="code">601138</td><td>工业富联</td><td class="ta-r"><span class="bl fw">0.6</span></td><td class="ta-r up">+2.9</td></tr><tr><td>9</td><td class="code">600221</td><td>海航控股</td><td class="ta-r"><span class="bl fw">0.6</span></td><td class="ta-r up">+0.1</td></tr><tr><td>10</td><td class="code">605117</td><td>德业股份</td><td class="ta-r"><span class="bl fw">0.6</span></td><td class="ta-r up">+2.2</td></tr><tr><td>11</td><td class="code">300408</td><td>三环集团</td><td class="ta-r"><span class="bl fw">0.6</span></td><td class="ta-r up">+3.4</td></tr><tr><td>12</td><td class="code">600549</td><td>厦门钨业</td><td class="ta-r"><span class="bl fw">0.6</span></td><td class="ta-r up">+2.2</td></tr><tr><td>13</td><td class="code">002837</td><td>英维克</td><td class="ta-r"><span class="bl fw">0.5</span></td><td class="ta-r up">+2.2</td></tr><tr><td>14</td><td class="code">002353</td><td>杰瑞股份</td><td class="ta-r"><span class="bl fw">0.5</span></td><td class="ta-r up">+3.4</td></tr><tr><td>15</td><td class="code">002463</td><td>沪电股份</td><td class="ta-r"><span class="bl fw">0.5</span></td><td class="ta-r up">+2.3</td></tr></tbody></table></div></div>
     </div>
-  `).join('');
-}
-
-function renderSignals(signals) {
-  const c = document.getElementById('signals-container');
-  if (!signals || signals.length === 0) {
-    c.innerHTML = '<div class="empty">暂无信号记录</div>'; return;
-  }
-  // 按日期分组
-  const grouped = {};
-  signals.forEach(s => {
-    if (!grouped[s.date]) grouped[s.date] = [];
-    grouped[s.date].push(s);
-  });
-  let html = '';
-  for (const [date, sigs] of Object.entries(grouped).slice(0, 5)) {
-    html += `<div style="font-size:12px;color:var(--dim);padding:4px 0;font-weight:600">${date} (${sigs.length}条)</div>`;
-    sigs.slice(0, 8).forEach(s => {
-      const actionBadge = s.action === 'BUY' ? 'badge-buy' : 'badge-sell';
-      const statusBadge = s.status === 'passed' ? 'badge-passed' : 'badge-blocked';
-      html += `<div class="stat-row" style="font-size:12px">
-        <span>${s.code} ${s.name}</span>
-        <span style="font-size:11px;color:var(--dim)">${s.strategy}</span>
-        <span class="badge ${actionBadge}">${s.action}</span>
-        <span>¥${s.price}</span>
-        <span class="badge ${statusBadge}">${s.status}</span>
-      </div>`;
-    });
-  }
-  c.innerHTML = html;
-}
-
-function renderIndexChart(trend) {
-  if (!trend || trend.length < 5) return;
-  const labels = trend.map(t => t.date);
-  const closes = trend.map(t => t.close);
-  new Chart(document.getElementById('chart-index'), {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'CSI300', data: closes,
-        borderColor: '#42a5f5', borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.3
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: '#8b8fa3', maxTicksLimit: 6, maxRotation: 0 }, grid: { display: false } },
-        y: { ticks: { color: '#8b8fa3' }, grid: { color: '#2a2d3a' } }
-      }
-    }
-  });
-}
-</script>
+    <div class="grid g3" style="margin-top:10px">
+      <div class="panel"><div class="panel-hd">数据健康</div><div class="panel-bd"><div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b);font-size:11px"><span class="dim">日线</span><span><span class="tag t-up">287只</span><span class="dim"> 2026-07-03 NULL:0 542,110行</span></span></div><div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b);font-size:11px"><span class="dim">PE</span><span><span class="tag t-up">92%</span></span></div><div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b);font-size:11px"><span class="dim">PB</span><span><span class="tag t-up">99%</span></span></div><div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b);font-size:11px"><span class="dim">ROE</span><span><span class="tag t-up">300只</span><span class="dim"> 2026-03-31</span></span></div><div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b);font-size:11px"><span class="dim">DB</span><span><span class="tag t-up">134.0 MB</span></span></div></div></div>
+      <div class="panel"><div class="panel-hd">持仓</div><div class="panel-bd"><div class="empty">无持仓</div></div></div>
+      <div class="panel"><div class="panel-hd">市场广度 <a href="market.html" style="color:var(--bl);font-size:10px;text-decoration:none">详情 →</a></div><div class="panel-bd"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center">
+        <div class="metric"><div class="l">上涨/下跌</div><div class="v"><span class="up">196</span>/<span class="dn">84</span></div></div>
+        <div class="metric"><div class="l">ADR</div><div class="v up">2.33</div></div>
+        <div class="metric"><div class="l">MA20以上</div><div class="v">16%</div></div>
+        <div class="metric"><div class="l">MA60以上</div><div class="v">30%</div></div></div></div></div>
+    </div>
+    <div class="grid g2" style="margin-top:10px">
+      <div class="panel"><div class="panel-hd">板块</div><div class="panel-bd"><div class="dim" style="margin-bottom:8px">2026-06-09</div><div class="dim" style="margin-bottom:4px">▲ 最强</div><div class="row-item"><span>电子化学品</span><span class="up">+7.0%</span></div><div class="row-item"><span>半导体</span><span class="up">+6.4%</span></div><div class="row-item"><span>元件</span><span class="up">+5.5%</span></div><div class="row-item"><span>其他电子</span><span class="up">+5.2%</span></div><div class="row-item"><span>能源金属</span><span class="up">+4.9%</span></div><div class="dim" style="margin:10px 0 4px">▼ 最弱</div><div class="row-item"><span>油气开采及服务</span><span class="dn">-4.2%</span></div><div class="row-item"><span>煤炭开采加工</span><span class="dn">-2.8%</span></div><div class="row-item"><span>白酒</span><span class="dn">-2.5%</span></div><div class="row-item"><span>贸易</span><span class="dn">-1.0%</span></div><div class="row-item"><span>零售</span><span class="dn">-1.0%</span></div></div></div>
+      <div class="panel"><div class="panel-hd">最近信号 <a href="signals.html" style="color:var(--bl);font-size:10px;text-decoration:none">全部 →</a></div><div class="panel-bd" style="max-height:300px;overflow-y:auto"><div style="font-size:11px;color:var(--d);padding:4px 0;font-weight:600;border-bottom:1px solid var(--b);margin:6px 0 3px">2026-06-12 (49条)</div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">601658</span><span class="dim" style="font-size:10px;min-width:36px">邮储银行</span><span class="dim flex-1" style="font-size:10px">双均线趋势跟踪</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥5.2</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">601688</span><span class="dim" style="font-size:10px;min-width:36px">华泰证券</span><span class="dim flex-1" style="font-size:10px">双均线趋势跟踪</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥19.97</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">601211</span><span class="dim" style="font-size:10px;min-width:36px">国泰海通</span><span class="dim flex-1" style="font-size:10px">动量突破</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥17.68</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">601328</span><span class="dim" style="font-size:10px;min-width:36px">交通银行</span><span class="dim flex-1" style="font-size:10px">动量突破</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥7.14</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">600066</span><span class="dim" style="font-size:10px;min-width:36px">宇通客车</span><span class="dim flex-1" style="font-size:10px">均值回归</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥28.85</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">000001</span><span class="dim" style="font-size:10px;min-width:36px">平安银行</span><span class="dim flex-1" style="font-size:10px">动量突破</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥11.24</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">601688</span><span class="dim" style="font-size:10px;min-width:36px">华泰证券</span><span class="dim flex-1" style="font-size:10px">动量突破</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥19.97</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">601628</span><span class="dim" style="font-size:10px;min-width:36px">中国人寿</span><span class="dim flex-1" style="font-size:10px">均值回归</span><span class="tag t-sell">SELL</span><span class="ta-r" style="min-width:45px">¥35.81</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">300628</span><span class="dim" style="font-size:10px;min-width:36px">亿联网络</span><span class="dim flex-1" style="font-size:10px">动量突破</span><span class="tag t-sell">SELL</span><span class="ta-r" style="min-width:45px">¥34.1</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">002475</span><span class="dim" style="font-size:10px;min-width:36px">立讯精密</span><span class="dim flex-1" style="font-size:10px">动量突破</span><span class="tag t-sell">SELL</span><span class="ta-r" style="min-width:45px">¥63.76</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">600938</span><span class="dim" style="font-size:10px;min-width:36px">中国海油</span><span class="dim flex-1" style="font-size:10px">动量突破</span><span class="tag t-sell">SELL</span><span class="ta-r" style="min-width:45px">¥33.36</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">600160</span><span class="dim" style="font-size:10px;min-width:36px">巨化股份</span><span class="dim flex-1" style="font-size:10px">均值回归</span><span class="tag t-sell">SELL</span><span class="ta-r" style="min-width:45px">¥42.39</span><span class="tag t-block">blocked</span></div><div style="font-size:11px;color:var(--d);padding:4px 0;font-weight:600;border-bottom:1px solid var(--b);margin:6px 0 3px">2026-06-09 (51条)</div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">600919</span><span class="dim" style="font-size:10px;min-width:36px">江苏银行</span><span class="dim flex-1" style="font-size:10px">双均线趋势跟踪</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥11.38</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">000338</span><span class="dim" style="font-size:10px;min-width:36px">潍柴动力</span><span class="dim flex-1" style="font-size:10px">均值回归</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥29.98</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">002241</span><span class="dim" style="font-size:10px;min-width:36px">歌尔股份</span><span class="dim flex-1" style="font-size:10px">均值回归</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥23.1</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">000661</span><span class="dim" style="font-size:10px;min-width:36px">长春高新</span><span class="dim flex-1" style="font-size:10px">动量突破</span><span class="tag t-sell">SELL</span><span class="ta-r" style="min-width:45px">¥66.13</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">000596</span><span class="dim" style="font-size:10px;min-width:36px">古井贡酒</span><span class="dim flex-1" style="font-size:10px">动量突破</span><span class="tag t-sell">SELL</span><span class="ta-r" style="min-width:45px">¥86.45</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">000568</span><span class="dim" style="font-size:10px;min-width:36px">泸州老窖</span><span class="dim flex-1" style="font-size:10px">动量突破</span><span class="tag t-sell">SELL</span><span class="ta-r" style="min-width:45px">¥84.56</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">000408</span><span class="dim" style="font-size:10px;min-width:36px">藏格矿业</span><span class="dim flex-1" style="font-size:10px">动量突破</span><span class="tag t-sell">SELL</span><span class="ta-r" style="min-width:45px">¥73.05</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">300750</span><span class="dim" style="font-size:10px;min-width:36px">宁德时代</span><span class="dim flex-1" style="font-size:10px">均值回归</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥393.02</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">002475</span><span class="dim" style="font-size:10px;min-width:36px">立讯精密</span><span class="dim flex-1" style="font-size:10px">均值回归</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥66.14</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">002049</span><span class="dim" style="font-size:10px;min-width:36px">紫光国微</span><span class="dim flex-1" style="font-size:10px">均值回归</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥69.98</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">300866</span><span class="dim" style="font-size:10px;min-width:36px">安克创新</span><span class="dim flex-1" style="font-size:10px">均值回归</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥107.28</span><span class="tag t-block">blocked</span></div><div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11px"><span class="code">000977</span><span class="dim" style="font-size:10px;min-width:36px">浪潮信息</span><span class="dim flex-1" style="font-size:10px">均值回归</span><span class="tag t-buy">BUY</span><span class="ta-r" style="min-width:45px">¥57.89</span><span class="tag t-block">blocked</span></div></div></div>
+    </div>
+</main>
 </body>
 </html>

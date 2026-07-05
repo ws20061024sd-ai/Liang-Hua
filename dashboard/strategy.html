@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>策略分析 · 量化交易</title>
+<style>
+:root{--bg:#0b0e11;--s1:#1e2329;--s2:#252a30;--b:#2b3139;--t:#eaecef;--d:#848e9c;--dd:#5e6673;--up:#0ecb81;--dn:#f6465d;--bl:#4a9eff;--am:#f0b90b;--pu:#a85cef}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--t);font:13px/1.45 -apple-system,BlinkMacSystemFont,'SF Mono','Segoe UI',monospace;padding:0;-webkit-font-smoothing:antialiased}
+nav{background:var(--s1);border-bottom:1px solid var(--b);padding:0 20px;display:flex;align-items:center;gap:0;position:sticky;top:0;z-index:10}
+nav a{color:var(--d);text-decoration:none;padding:12px 16px;font-size:12px;border-bottom:2px solid transparent;transition:all .15s}
+nav a:hover{color:var(--t);background:var(--s2)}
+nav a.active{color:var(--bl);border-bottom-color:var(--bl)}
+nav .brand{font-weight:700;color:var(--t);margin-right:16px;font-size:13px;letter-spacing:-.2px}
+main{padding:16px 20px;max-width:1280px;margin:0 auto}
+.grid{display:grid;gap:10px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:1fr 1fr 1fr 1fr}
+.g13{grid-template-columns:1fr 3fr}.g31{grid-template-columns:3fr 1fr}
+.panel{background:var(--s1);border:1px solid var(--b);border-radius:6px;overflow:hidden;margin-bottom:10px}
+.panel-hd{padding:8px 14px;border-bottom:1px solid var(--b);font-size:11px;color:var(--d);text-transform:uppercase;letter-spacing:.5px;font-weight:500;display:flex;justify-content:space-between;align-items:center}
+.panel-bd{padding:12px 14px}
+.up{color:var(--up)}.dn{color:var(--dn)}.bl{color:var(--bl)}.dim{color:var(--dd)}.fw{font-weight:600}
+.code{font-weight:600;font-size:12px}.ta-r{text-align:right}.ta-c{text-align:center}
+.metric{text-align:center;padding:6px 4px}
+.metric .l{font-size:10px;color:var(--dd);text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px}
+.metric .v{font-size:18px;font-weight:600;line-height:1.1}
+.metric .s{font-size:10px;margin-top:1px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{text-align:left;color:var(--dd);font-weight:500;padding:5px 8px;border-bottom:1px solid var(--b);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+td{padding:4px 8px;border-bottom:1px solid rgba(43,49,57,0.5)}tr:hover td{background:rgba(255,255,255,0.02)}
+.tag{display:inline-block;padding:1px 5px;border-radius:2px;font-size:10px;font-weight:600}
+.t-up{background:#0ecb8118;color:var(--up)}.t-dn{background:#f6465d18;color:var(--dn)}
+.t-bl{background:#4a9eff18;color:var(--bl)}.t-pass{background:#0ecb8114;color:var(--up)}.t-block{background:#848e9c14;color:var(--d)}
+.t-trend{background:#4a9eff12;color:var(--bl)}.t-rev{background:#a85cef12;color:var(--pu)}
+.t-buy{background:#0ecb8118;color:var(--up)}.t-sell{background:#f6465d18;color:var(--dn)}
+.empty{color:var(--dd);text-align:center;padding:28px;font-size:12px}
+.bar-row{display:flex;align-items:center;gap:6px;margin:2px 0}
+.bar-row span:first-child{color:var(--d);width:28px;font-size:10px}
+.bar-row span:last-child{width:32px;text-align:right;font-size:10px;color:var(--d)}
+.bar{flex:1;height:3px;background:var(--s2);border-radius:2px;overflow:hidden}
+.bar-f{height:100%;border-radius:2px}
+.pos-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--b)}
+.pos-item:last-child{border-bottom:none}
+.pos-code{font-weight:600;font-size:13px;min-width:50px}
+.pos-meta{flex:1;font-size:10px;color:var(--d);line-height:1.4}
+.pos-pnl{font-size:16px;font-weight:600}
+.strat-card{border:1px solid var(--b);border-radius:8px;padding:16px;margin-bottom:10px}
+.hero{background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:20px 24px;margin-bottom:14px}
+.hero h2{font-size:16px;margin-bottom:6px}
+.hero p{color:var(--d);font-size:12px;line-height:1.6;max-width:700px}
+.explain{font-size:12px;color:var(--d);line-height:1.7}
+.explain strong{color:var(--t)}
+.row-item{display:flex;justify-content:space-between;padding:3px 0;font-size:11px}
+@media(max-width:900px){.g2,.g3,.g4,.g13,.g31{grid-template-columns:1fr}nav{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<nav><span class="brand">量化交易</span><a href="index.html">仪表盘</a><a href="market.html">市场监控</a><a href="strategy.html" class=active>策略分析</a><a href="signals.html">信号日志</a><a href="factors.html">因子引擎</a></nav>
+<main>
+
+    <div class="hero"><h2>📋 策略分析</h2><p>三个策略的完整讲解——每个策略做什么、为什么选这个参数、在不同市场环境下表现如何。</p></div>
+    <div class="strat-card" style="border-left:3px solid #4a9eff">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <span style="font-size:15px;font-weight:700">双均线趋势跟踪</span>
+      <span><span class="tag t-trend">趋势</span> <span class="dim">MA(20,60)</span></span></div>
+
+    <div class="explain"><strong>原理：</strong>两条移动平均线——快线(MA20)代表短期趋势，慢线(MA60)代表中期趋势。当短期趋势向上穿越中期趋势时（金叉），说明上涨动能确立，买入。反过来（死叉）卖出。其余时间不操作。</div>
+    <div class="explain" style="margin-top:6px"><strong>适合：</strong><span class="up">强势趋势市场——有明显的方向性行情，均线呈多头排列。</span></div>
+    <div class="explain"><strong>不适合：</strong><span class="dn">震荡市——价格反复穿越均线，产生大量假信号（反复买卖都被打脸）。</span></div>
+    <div class="explain" style="margin-top:6px"><strong>为什么选这个参数：</strong>MA(10,30)→MA(20,60)。更慢的均线减少了40%的假信号，交易次数从295次降到179次，回撤从-62%降到-32%。代价是入场更晚——在快速趋势中可能错过前半段。</div>
+
+    <div style="display:flex;gap:20px;align-items:center;margin:12px 0;padding:10px;background:var(--s2);border-radius:6px">
+      <div><span style="font-size:22px;font-weight:700;color:#4a9eff">14.5%</span><span class="dim" style="font-size:10px;margin-left:3px">年化</span></div>
+      <div class="flex-1" style="font-size:10px">
+      <div class="bar-row"><span>夏普</span><div class="bar"><div class="bar-f" style="width:57%;background:#4a9eff"></div></div><span>0.57</span></div>
+      <div class="bar-row"><span>回撤</span><div class="bar"><div class="bar-f" style="width:32%;background:#f6465d"></div></div><span>32%</span></div>
+      <div class="bar-row"><span>胜率</span><div class="bar"><div class="bar-f" style="width:52%;background:#f0b90b"></div></div><span>52%</span></div>
+      <div class="bar-row"><span>交易</span><div class="bar"><div class="bar-f" style="width:61%;background:var(--d)"></div></div><span>61月</span></div>
+      </div></div>
+
+    <div style="margin-top:10px"><span class="dim" style="font-size:10px;text-transform:uppercase;letter-spacing:.3px">Walk-Forward 验证</span>
+    <table style="margin-top:4px"><thead><tr><th>周期</th><th class="ta-r">年化</th><th class="ta-r">夏普</th><th class="ta-r">回撤</th><th class="ta-r">交易</th></tr></thead><tbody><tr><td>训练集 19-22</td><td class="ta-r">24.5%</td><td class="ta-r">0.87</td><td class="ta-r">-21.7%</td><td class="ta-r">79次</td></tr><tr><td>验证集 23-24</td><td class="ta-r">0.3%</td><td class="ta-r">0.09</td><td class="ta-r">-31.6%</td><td class="ta-r">42次</td></tr><tr><td>测试集 25-26</td><td class="ta-r">6.7%</td><td class="ta-r">0.33</td><td class="ta-r">-14.4%</td><td class="ta-r">48次</td></tr></tbody></table></div>
+    <div style="font-size:10px;margin-top:4px"><span class="dim">最近信号: </span><span class="tag t-sell">SELL</span> 002600 领益智造 ¥14.34 <span class="dim">(2026-06-09)</span> </div>
+    </div><div class="strat-card" style="border-left:3px solid #0ecb81">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <span style="font-size:15px;font-weight:700">动量突破</span>
+      <span><span class="tag t-trend">趋势</span> <span class="dim">DK(10,2%,10)</span></span></div>
+
+    <div class="explain"><strong>原理：</strong>当股价突破近期高点时，说明买方力量压倒卖方，趋势可能启动。2%的缓冲区过滤掉假突破（小幅刺穿后回落）。卖出用10日最低价——跌破近期支撑说明趋势反转。</div>
+    <div class="explain" style="margin-top:6px"><strong>适合：</strong><span class="up">强势单边行情——突破后持续上涨，涨幅远超2%缓冲。</span></div>
+    <div class="explain"><strong>不适合：</strong><span class="dn">假突破频繁的震荡市——突破后立刻回落，反复止损。2023-2024验证集年化-18%就是这个原因。</span></div>
+    <div class="explain" style="margin-top:6px"><strong>为什么选这个参数：</strong>回看周期20→10天。10天突破比20天更及时，年化从2.5%提升到10.7%。但回撤仍然大(-61%)，必须配合止损使用。</div>
+
+    <div style="display:flex;gap:20px;align-items:center;margin:12px 0;padding:10px;background:var(--s2);border-radius:6px">
+      <div><span style="font-size:22px;font-weight:700;color:#0ecb81">10.7%</span><span class="dim" style="font-size:10px;margin-left:3px">年化</span></div>
+      <div class="flex-1" style="font-size:10px">
+      <div class="bar-row"><span>夏普</span><div class="bar"><div class="bar-f" style="width:39%;background:#0ecb81"></div></div><span>0.39</span></div>
+      <div class="bar-row"><span>回撤</span><div class="bar"><div class="bar-f" style="width:61%;background:#f6465d"></div></div><span>61%</span></div>
+      <div class="bar-row"><span>胜率</span><div class="bar"><div class="bar-f" style="width:51%;background:#f0b90b"></div></div><span>51%</span></div>
+      <div class="bar-row"><span>交易</span><div class="bar"><div class="bar-f" style="width:77%;background:var(--d)"></div></div><span>77月</span></div>
+      </div></div>
+
+    <div style="margin-top:10px"><span class="dim" style="font-size:10px;text-transform:uppercase;letter-spacing:.3px">Walk-Forward 验证</span>
+    <table style="margin-top:4px"><thead><tr><th>周期</th><th class="ta-r">年化</th><th class="ta-r">夏普</th><th class="ta-r">回撤</th><th class="ta-r">交易</th></tr></thead><tbody><tr><td>训练集 19-22</td><td class="ta-r">31.6%</td><td class="ta-r">0.81</td><td class="ta-r">-34.8%</td><td class="ta-r">157次</td></tr><tr><td>验证集 23-24</td><td class="ta-r">-18.0%</td><td class="ta-r">-0.55</td><td class="ta-r">-53.6%</td><td class="ta-r">100次</td></tr><tr><td>测试集 25-26</td><td class="ta-r">40.6%</td><td class="ta-r">1.01</td><td class="ta-r">-14.4%</td><td class="ta-r">80次</td></tr></tbody></table></div>
+    <div style="font-size:10px;margin-top:4px"><span class="dim">最近信号: </span><span class="tag t-sell">SELL</span> 600066 宇通客车 ¥28.85 <span class="dim">(2026-06-12)</span> <span class="tag t-sell">SELL</span> 001979 招商蛇口 ¥8.16 <span class="dim">(2026-06-12)</span> <span class="tag t-sell">SELL</span> 000938 紫光股份 ¥25.15 <span class="dim">(2026-06-12)</span> </div>
+    </div><div class="strat-card" style="border-left:3px solid #a85cef">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <span style="font-size:15px;font-weight:700">均值回归</span>
+      <span><span class="tag t-rev">反转</span> <span class="dim">BB(10,2.0)</span></span></div>
+
+    <div class="explain"><strong>原理：</strong>布林带是MA20±2倍标准差构成的通道。统计学上，价格在通道内的概率约95%。当价格跌破下轨时（超卖），大概率会回归中轨。MA60向上的过滤条件确保不在下跌趋势中接飞刀。首次下穿触发避免连续多天重复发信号。</div>
+    <div class="explain" style="margin-top:6px"><strong>适合：</strong><span class="up">震荡市——价格有明确的上下边界，反复在通道内波动。2023-2024验证集年化+40%正得益于此。</span></div>
+    <div class="explain"><strong>不适合：</strong><span class="dn">强趋势市——价格可以一直贴着上轨涨或下轨跌，布林带不断扩张，"超卖"之后还有"更超卖"。</span></div>
+    <div class="explain" style="margin-top:6px"><strong>为什么选这个参数：</strong>BB(20,2.0)→BB(10,2.0)。更短的周期让布林带更敏感地捕捉到短期超卖——10日均线比20日均线反应更快。标准差保持2.0——太窄(1.5)假信号多，太宽(2.5)信号太少。</div>
+
+    <div style="display:flex;gap:20px;align-items:center;margin:12px 0;padding:10px;background:var(--s2);border-radius:6px">
+      <div><span style="font-size:22px;font-weight:700;color:#a85cef">18.9%</span><span class="dim" style="font-size:10px;margin-left:3px">年化</span></div>
+      <div class="flex-1" style="font-size:10px">
+      <div class="bar-row"><span>夏普</span><div class="bar"><div class="bar-f" style="width:65%;background:#a85cef"></div></div><span>0.65</span></div>
+      <div class="bar-row"><span>回撤</span><div class="bar"><div class="bar-f" style="width:40%;background:#f6465d"></div></div><span>40%</span></div>
+      <div class="bar-row"><span>胜率</span><div class="bar"><div class="bar-f" style="width:54%;background:#f0b90b"></div></div><span>54%</span></div>
+      <div class="bar-row"><span>交易</span><div class="bar"><div class="bar-f" style="width:56%;background:var(--d)"></div></div><span>56月</span></div>
+      </div></div>
+
+    <div style="margin-top:10px"><span class="dim" style="font-size:10px;text-transform:uppercase;letter-spacing:.3px">Walk-Forward 验证</span>
+    <table style="margin-top:4px"><thead><tr><th>周期</th><th class="ta-r">年化</th><th class="ta-r">夏普</th><th class="ta-r">回撤</th><th class="ta-r">交易</th></tr></thead><tbody><tr><td>训练集 19-22</td><td class="ta-r">-4.2%</td><td class="ta-r">0.00</td><td class="ta-r">-39.9%</td><td class="ta-r">72次</td></tr><tr><td>验证集 23-24</td><td class="ta-r">40.7%</td><td class="ta-r">1.41</td><td class="ta-r">-6.9%</td><td class="ta-r">46次</td></tr><tr><td>测试集 25-26</td><td class="ta-r">52.3%</td><td class="ta-r">1.60</td><td class="ta-r">-14.7%</td><td class="ta-r">49次</td></tr></tbody></table></div>
+    <div style="font-size:10px;margin-top:4px"><span class="dim">最近信号: </span><span class="tag t-sell">SELL</span> 601328 交通银行 ¥7.14 <span class="dim">(2026-06-12)</span> <span class="tag t-sell">SELL</span> 601838 成都银行 ¥20.07 <span class="dim">(2026-06-12)</span> <span class="tag t-sell">SELL</span> 000001 平安银行 ¥11.24 <span class="dim">(2026-06-12)</span> </div>
+    </div>
+    <div class="panel"><div class="panel-hd">策略对比总览</div><div class="panel-bd"><table><thead><tr><th>维度</th><th>双均线</th><th>动量突破</th><th>均值回归</th></tr></thead><tbody><tr><td>信号逻辑</td><td>均线交叉</td><td>价格突破</td><td>超卖反弹</td></tr><tr><td>信号频率</td><td>低（月1-2次）</td><td>中</td><td>中</td></tr><tr><td>适合市场</td><td><span class="up">趋势</span></td><td><span class="up">强势趋势</span></td><td><span class="up">震荡</span></td></tr><tr><td>回撤特征</td><td>中等(-32%)</td><td><span class="dn">高(-61%)</span></td><td>较低(-40%)</td></tr><tr><td>最大弱点</td><td>滞后——入场晚</td><td>假突破频繁</td><td>趋势中逆势</td></tr></tbody></table></div></div>
+    
+</main>
+</body>
+</html>
