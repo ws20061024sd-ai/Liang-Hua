@@ -68,16 +68,16 @@ td{padding:4px 8px;border-bottom:1px solid rgba(43,49,57,0.5)}tr:hover td{backgr
     <div class="explain" style="margin-top:6px"><strong>为什么选这个参数：</strong>MA(10,30)→MA(20,60)。更慢的均线减少了40%的假信号，交易次数从295次降到179次，回撤从-62%降到-32%。代价是入场更晚——在快速趋势中可能错过前半段。</div>
 
     <div style="display:flex;gap:20px;align-items:center;margin:12px 0;padding:10px;background:var(--s2);border-radius:6px">
-      <div><span style="font-size:22px;font-weight:700;color:#4a9eff">14.5%</span><span class="dim" style="font-size:10px;margin-left:3px">年化</span></div>
+      <div><span style="font-size:22px;font-weight:700;color:#4a9eff">14.5%</span><span class="dim" style="font-size:10px;margin-left:3px">年化</span><div style="font-size:10px;color:var(--dd);margin-top:2px"><span class="dim">（同期CSI300: +3.0%）</span></div></div>
       <div class="flex-1" style="font-size:10px">
       <div class="bar-row"><span>夏普</span><div class="bar"><div class="bar-f" style="width:57%;background:#4a9eff"></div></div><span>0.57</span></div>
       <div class="bar-row"><span>回撤</span><div class="bar"><div class="bar-f" style="width:32%;background:#f6465d"></div></div><span>32%</span></div>
       <div class="bar-row"><span>胜率</span><div class="bar"><div class="bar-f" style="width:52%;background:#f0b90b"></div></div><span>52%</span></div>
-      <div class="bar-row"><span>交易</span><div class="bar"><div class="bar-f" style="width:61%;background:var(--d)"></div></div><span>61月</span></div>
       </div></div>
 
     <div style="margin-top:10px"><span class="dim" style="font-size:10px;text-transform:uppercase;letter-spacing:.3px">Walk-Forward 验证</span>
     <table style="margin-top:4px"><thead><tr><th>周期</th><th class="ta-r">年化</th><th class="ta-r">夏普</th><th class="ta-r">回撤</th><th class="ta-r">交易</th></tr></thead><tbody><tr><td>训练集 19-22</td><td class="ta-r">24.5%</td><td class="ta-r">0.87</td><td class="ta-r">-21.7%</td><td class="ta-r">79次</td></tr><tr><td>验证集 23-24</td><td class="ta-r">0.3%</td><td class="ta-r">0.09</td><td class="ta-r">-31.6%</td><td class="ta-r">42次</td></tr><tr><td>测试集 25-26</td><td class="ta-r">6.7%</td><td class="ta-r">0.33</td><td class="ta-r">-14.4%</td><td class="ta-r">48次</td></tr></tbody></table></div>
+    <div class="dim" style="font-size:10px;margin-top:4px">训练集用于探索参数，验证集评估效果，测试集最终确认。2023-2024验证集表现差→策略在震荡市中失效。趋势策略只在趋势市中有效。</div>
     <div style="font-size:10px;margin-top:4px"><span class="dim">最近信号: </span><span class="tag t-sell">SELL</span> 002600 领益智造 ¥14.34 <span class="dim">(2026-06-09)</span> </div>
     </div><div class="strat-card" style="border-left:3px solid #0ecb81">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
@@ -90,16 +90,16 @@ td{padding:4px 8px;border-bottom:1px solid rgba(43,49,57,0.5)}tr:hover td{backgr
     <div class="explain" style="margin-top:6px"><strong>为什么选这个参数：</strong>回看周期20→10天。10天突破比20天更及时，年化从2.5%提升到10.7%。但回撤仍然大(-61%)，必须配合止损使用。</div>
 
     <div style="display:flex;gap:20px;align-items:center;margin:12px 0;padding:10px;background:var(--s2);border-radius:6px">
-      <div><span style="font-size:22px;font-weight:700;color:#0ecb81">10.7%</span><span class="dim" style="font-size:10px;margin-left:3px">年化</span></div>
+      <div><span style="font-size:22px;font-weight:700;color:#0ecb81">10.7%</span><span class="dim" style="font-size:10px;margin-left:3px">年化</span><div style="font-size:10px;color:var(--dd);margin-top:2px"><span class="dim">（同期CSI300: +3.0%）</span></div></div>
       <div class="flex-1" style="font-size:10px">
       <div class="bar-row"><span>夏普</span><div class="bar"><div class="bar-f" style="width:39%;background:#0ecb81"></div></div><span>0.39</span></div>
       <div class="bar-row"><span>回撤</span><div class="bar"><div class="bar-f" style="width:61%;background:#f6465d"></div></div><span>61%</span></div>
       <div class="bar-row"><span>胜率</span><div class="bar"><div class="bar-f" style="width:51%;background:#f0b90b"></div></div><span>51%</span></div>
-      <div class="bar-row"><span>交易</span><div class="bar"><div class="bar-f" style="width:77%;background:var(--d)"></div></div><span>77月</span></div>
       </div></div>
 
     <div style="margin-top:10px"><span class="dim" style="font-size:10px;text-transform:uppercase;letter-spacing:.3px">Walk-Forward 验证</span>
     <table style="margin-top:4px"><thead><tr><th>周期</th><th class="ta-r">年化</th><th class="ta-r">夏普</th><th class="ta-r">回撤</th><th class="ta-r">交易</th></tr></thead><tbody><tr><td>训练集 19-22</td><td class="ta-r">31.6%</td><td class="ta-r">0.81</td><td class="ta-r">-34.8%</td><td class="ta-r">157次</td></tr><tr><td>验证集 23-24</td><td class="ta-r">-18.0%</td><td class="ta-r">-0.55</td><td class="ta-r">-53.6%</td><td class="ta-r">100次</td></tr><tr><td>测试集 25-26</td><td class="ta-r">40.6%</td><td class="ta-r">1.01</td><td class="ta-r">-14.4%</td><td class="ta-r">80次</td></tr></tbody></table></div>
+    <div class="dim" style="font-size:10px;margin-top:4px">训练集用于探索参数，验证集评估效果，测试集最终确认。2023-2024验证集表现差→策略在震荡市中失效。趋势策略只在趋势市中有效。</div>
     <div style="font-size:10px;margin-top:4px"><span class="dim">最近信号: </span><span class="tag t-sell">SELL</span> 600066 宇通客车 ¥28.85 <span class="dim">(2026-06-12)</span> <span class="tag t-sell">SELL</span> 001979 招商蛇口 ¥8.16 <span class="dim">(2026-06-12)</span> <span class="tag t-sell">SELL</span> 000938 紫光股份 ¥25.15 <span class="dim">(2026-06-12)</span> </div>
     </div><div class="strat-card" style="border-left:3px solid #a85cef">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
@@ -112,18 +112,19 @@ td{padding:4px 8px;border-bottom:1px solid rgba(43,49,57,0.5)}tr:hover td{backgr
     <div class="explain" style="margin-top:6px"><strong>为什么选这个参数：</strong>BB(20,2.0)→BB(10,2.0)。更短的周期让布林带更敏感地捕捉到短期超卖——10日均线比20日均线反应更快。标准差保持2.0——太窄(1.5)假信号多，太宽(2.5)信号太少。</div>
 
     <div style="display:flex;gap:20px;align-items:center;margin:12px 0;padding:10px;background:var(--s2);border-radius:6px">
-      <div><span style="font-size:22px;font-weight:700;color:#a85cef">18.9%</span><span class="dim" style="font-size:10px;margin-left:3px">年化</span></div>
+      <div><span style="font-size:22px;font-weight:700;color:#a85cef">18.9%</span><span class="dim" style="font-size:10px;margin-left:3px">年化</span><div style="font-size:10px;color:var(--dd);margin-top:2px"><span class="dim">（同期CSI300: +3.0%）</span></div></div>
       <div class="flex-1" style="font-size:10px">
       <div class="bar-row"><span>夏普</span><div class="bar"><div class="bar-f" style="width:65%;background:#a85cef"></div></div><span>0.65</span></div>
       <div class="bar-row"><span>回撤</span><div class="bar"><div class="bar-f" style="width:40%;background:#f6465d"></div></div><span>40%</span></div>
       <div class="bar-row"><span>胜率</span><div class="bar"><div class="bar-f" style="width:54%;background:#f0b90b"></div></div><span>54%</span></div>
-      <div class="bar-row"><span>交易</span><div class="bar"><div class="bar-f" style="width:56%;background:var(--d)"></div></div><span>56月</span></div>
       </div></div>
 
     <div style="margin-top:10px"><span class="dim" style="font-size:10px;text-transform:uppercase;letter-spacing:.3px">Walk-Forward 验证</span>
     <table style="margin-top:4px"><thead><tr><th>周期</th><th class="ta-r">年化</th><th class="ta-r">夏普</th><th class="ta-r">回撤</th><th class="ta-r">交易</th></tr></thead><tbody><tr><td>训练集 19-22</td><td class="ta-r">-4.2%</td><td class="ta-r">0.00</td><td class="ta-r">-39.9%</td><td class="ta-r">72次</td></tr><tr><td>验证集 23-24</td><td class="ta-r">40.7%</td><td class="ta-r">1.41</td><td class="ta-r">-6.9%</td><td class="ta-r">46次</td></tr><tr><td>测试集 25-26</td><td class="ta-r">52.3%</td><td class="ta-r">1.60</td><td class="ta-r">-14.7%</td><td class="ta-r">49次</td></tr></tbody></table></div>
+    <div class="dim" style="font-size:10px;margin-top:4px">训练集用于探索参数，验证集评估效果，测试集最终确认。2023-2024验证集表现差→策略在震荡市中失效。趋势策略只在趋势市中有效。</div>
     <div style="font-size:10px;margin-top:4px"><span class="dim">最近信号: </span><span class="tag t-sell">SELL</span> 601328 交通银行 ¥7.14 <span class="dim">(2026-06-12)</span> <span class="tag t-sell">SELL</span> 601838 成都银行 ¥20.07 <span class="dim">(2026-06-12)</span> <span class="tag t-sell">SELL</span> 000001 平安银行 ¥11.24 <span class="dim">(2026-06-12)</span> </div>
-    </div>
+    </div><div style="background:#f0b90b10;border:1px solid #f0b90b33;border-radius:6px;padding:10px 14px;margin-top:12px;font-size:11px;color:var(--am)">
+<strong>⚠️ 回测收益 ≠ 实盘收益。</strong>以下因素导致回测数字偏高：本地数据源(AKShare)与实盘价格存在差异(~3-6pp)、止损模拟假设精确执行(实盘有滑点)、未考虑最低佣金(5元/笔)对小资金的影响。<strong>保守估计: 实盘收益 ≈ 回测收益 × 0.6~0.8。</strong></div>
     <div class="panel"><div class="panel-hd">策略对比总览</div><div class="panel-bd"><table><thead><tr><th>维度</th><th>双均线</th><th>动量突破</th><th>均值回归</th></tr></thead><tbody><tr><td>信号逻辑</td><td>均线交叉</td><td>价格突破</td><td>超卖反弹</td></tr><tr><td>信号频率</td><td>低（月1-2次）</td><td>中</td><td>中</td></tr><tr><td>适合市场</td><td><span class="up">趋势</span></td><td><span class="up">强势趋势</span></td><td><span class="up">震荡</span></td></tr><tr><td>回撤特征</td><td>中等(-32%)</td><td><span class="dn">高(-61%)</span></td><td>较低(-40%)</td></tr><tr><td>最大弱点</td><td>滞后——入场晚</td><td>假突破频繁</td><td>趋势中逆势</td></tr></tbody></table></div></div>
     
 </main>

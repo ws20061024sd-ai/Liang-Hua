@@ -220,6 +220,56 @@ def _signal_for_strategy(conn, strat_name):
     df=_q(conn,"SELECT date,code,name,action,price,reason FROM signal_history WHERE strategy LIKE ? AND status='passed' ORDER BY date DESC LIMIT 3",(f'%{strat_name}%',))
     return[{'d':str(r['date']),'c':r['code'],'n':r['name'],'a':r['action'],'p':round(float(r['price']),2)if r['price']else 0,'reason':r['reason']or''}for _,r in df.iterrows()]
 
+def _cross_signals(fs, sigs):
+    """交叉信号检测：因子排名+策略买入信号的重合股票"""
+    if not fs or not sigs: return None, [], [], {}
+
+    factor_codes = {f['code']: f['name'] for f in fs[:20]}
+    # 最近一天通过的买入信号
+    latest_date = sigs[0]['d'] if sigs else ''
+    buy_sigs = [s for s in sigs if s['a'] == 'BUY' and s['st'] == 'passed' and s['d'] == latest_date]
+    buy_codes = {s['c']: s for s in buy_sigs}
+
+    # 双确认：因子Top20 且 策略买入
+    double = []
+    for c in factor_codes:
+        if c in buy_codes:
+            s = buy_codes[c]
+            factor_rank = next((f['r'] for f in fs if f['code'] == c), '?')
+            double.append({'code': c, 'name': factor_codes[c], 'rank': factor_rank,
+                'strategy': s['s'], 'price': s['p'], 'signal_date': s['d']})
+
+    # 单因子确认（仅因子Top10但无策略信号）
+    single_factor = []
+    for c in list(factor_codes.keys())[:10]:
+        if c not in buy_codes:
+            f = next(x for x in fs if x['code'] == c)
+            single_factor.append({'code': c, 'name': factor_codes[c], 'rank': f['r'], 'score': f['score']})
+
+    # 单策略确认（仅策略买入但不在因子Top20）
+    single_strat = []
+    for c, s in buy_codes.items():
+        if c not in factor_codes:
+            single_strat.append({'code': c, 'name': s['n'], 'strategy': s['s'], 'price': s['p']})
+
+    # 阻塞统计
+    blocked_sigs = [s for s in sigs if s['st'] == 'blocked' and s['d'] == latest_date]
+    block_stats = {}
+    for s in blocked_sigs:
+        reason = s.get('reason', '未知原因')
+        # 简化分类
+        if '跌停' in reason: k = '跌停'
+        elif '停牌' in reason: k = '停牌'
+        elif 'ST' in reason: k = 'ST'
+        elif '涨停' in reason: k = '涨停'
+        elif '大盘' in reason or '择时' in reason: k = '大盘择时'
+        elif '股价' in reason or '上限' in reason: k = '股价超限'
+        elif '流动性' in reason: k = '流动性不足'
+        else: k = '其他'
+        block_stats[k] = block_stats.get(k, 0) + 1
+
+    return latest_date, double, single_factor, single_strat, block_stats, len(buy_sigs), len(blocked_sigs)
+
 # ═══════════════ SHARED COMPONENTS ═══════════════
 
 def _page(title,active,body):
@@ -290,12 +340,32 @@ def page_index(m,h,bd,ps,fs,sigs,sec):
     reg_label='TRENDING ↑'if m['regime']=='strong'else'RANGE ↓'
     fresh_warn=_freshness_banner(m,h)
 
-    # 计算数据新鲜度标记
+    # 计算数据新鲜度
     today=datetime.now()
     try:daily_age=(today-datetime.strptime(m['date'],'%Y-%m-%d')).days
     except:daily_age=99
-    try:fin_age=(today-datetime.strptime(h['daily_date'],'%Y-%m-%d')).days
-    except:fin_age=99
+
+    # 交叉信号
+    sig_date, double, single_f, single_s, block_stats, n_buy, n_block = _cross_signals(fs, sigs)
+
+    # 综合推荐面板
+    rec_html=''
+    if double or single_f or single_s:
+        rec_parts=[]
+        if double:
+            items=''.join(f'<tr><td>⭐⭐</td><td class="code">{d["code"]}</td><td>{d["name"]}</td><td class="dim">因子#{d["rank"]}</td><td>{d["strategy"]}</td><td class="ta-r">¥{d["price"]}</td></tr>'for d in double)
+            rec_parts.append(f'<div style="margin-bottom:8px"><span class="up" style="font-weight:600">双信号确认</span><span class="dim" style="font-size:10px">（因子Top20 且 策略买入）</span><table style="margin-top:4px"><thead><tr><th></th><th>代码</th><th>名称</th><th>因子</th><th>策略</th><th class="ta-r">现价</th></tr></thead><tbody>{items}</tbody></table></div>')
+        if single_f:
+            items=''.join(f'<span style="margin:2px 6px;display:inline-block"><span class="code">{f["code"]}</span> {f["name"]}<span class="dim">#{f["rank"]}</span></span>'for f in single_f[:8])
+            rec_parts.append(f'<div style="margin-bottom:4px;font-size:11px"><span class="bl" style="font-weight:600">因子关注</span><span class="dim" style="font-size:10px">（因子Top10但无策略信号）</span><br>{items}</div>')
+        if single_s:
+            items=''.join(f'<span style="margin:2px 6px;display:inline-block"><span class="code">{s["code"]}</span> {s["name"]}<span class="dim">{s["strategy"]}</span></span>'for s in single_s[:6])
+            rec_parts.append(f'<div style="margin-bottom:4px;font-size:11px"><span class="am" style="font-weight:600">策略信号</span><span class="dim" style="font-size:10px">（策略买入但不在因子Top20）</span><br>{items}</div>')
+        if block_stats:
+            block_items=' · '.join(f'{k}:{v}条' for k,v in sorted(block_stats.items(), key=lambda x:-x[1]))
+            rec_parts.append(f'<div style="font-size:10px;color:var(--dd);margin-top:6px">📋 今日拦截 {n_block} 条: {block_items} | 通过 {n_buy} 条</div>')
+
+        rec_html=f'<div class="panel" style="border-left:3px solid var(--bl)"><div class="panel-hd">🎯 今日综合推荐 {_panel_date(sig_date or m["date"], daily_age>2)}</div><div class="panel-bd">{"".join(rec_parts)}</div></div>'
 
     health=''.join(f'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--b);font-size:11px"><span class="dim">{k}</span><span>{_tag("t-up"if ok else"t-dn",v)}{extra}</span></div>'
         for k,v,ok,extra in[('日线',f'{h["daily_stocks"]}只',h['daily_ok'],f'<span class="dim"> {h["daily_date"]} NULL:{h["daily_nulls"]} {h["daily_total"]:,}行</span>'),
@@ -351,7 +421,12 @@ def page_index(m,h,bd,ps,fs,sigs,sec):
 
     body=f'''
     {fresh_warn}
-    <div class="hero" style="border-left:3px solid {"var(--up)" if m["regime"]=="strong" else "var(--dn)"}"><h2>{reg_label}</h2><p>CSI300 {m["close"]:.0f} · 5日{"+" if m["r5"]>=0 else ""}{m["r5"]}% · 20日{"+" if m["r20"]>=0 else ""}{m["r20"]}% · {m["stocks"]}只 · 数据日期 {m["date"]}</p></div>
+    {rec_html}
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:12px;padding:8px 16px;background:var(--s1);border-radius:6px;border:1px solid var(--b)">
+      <div><span style="font-size:28px;font-weight:700" class={reg_cls}>{m["close"]:.0f}</span><div style="font-size:10px;color:var(--dd)">CSI300</div></div>
+      <div style="flex:1;font-size:11px;color:var(--d)">{reg_label} · 5日{"+" if m["r5"]>=0 else ""}{m["r5"]}% · 20日{"+" if m["r20"]>=0 else ""}{m["r20"]}% · 60日{"+" if m["r60"]>=0 else ""}{m["r60"]}% · {"偏多" if m["up"]>m["down"] else "偏空"}</div>
+      <div class="dim" style="font-size:10px">数据日期: {m["date"]}<br>{m["stocks"]}只</div>
+    </div>
 
     <div class="grid g2">
       <div class="panel"><div class="panel-hd">策略回测对比 {_panel_date(m["date"], daily_age>2)}<a href="strategy.html" style="color:var(--bl);font-size:10px;text-decoration:none;margin-left:8px">详情 →</a></div><div class="panel-bd">{strat_mini}{_disclaimer()}</div></div>
