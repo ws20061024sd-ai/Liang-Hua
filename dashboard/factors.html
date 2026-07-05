@@ -6,74 +6,75 @@
   --bg: #fafaf8; --bg-card: #ffffff; --bg-hover: #f5f5f2;
   --text: #1a1a1a; --text-muted: #6b6b6b; --text-soft: #94948c;
   --border: #e8e8e4; --border-light: #f0f0ec;
-  --accent: #2563eb; --accent-2: #7c3aed; --accent-3: #059669;
+  --accent: #2563eb; --accent-soft: #eff6ff;
+  --accent-2: #7c3aed; --accent-3: #059669;
   --up: #059669; --down: #dc2626; --warn: #d97706;
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
   --shadow: 0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
-  --radius: 8px;
-  --font: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  --font-mono: 'SF Mono','Cascadia Code','JetBrains Mono',monospace;
 }
 [data-theme="dark"] {
   --bg: #111110; --bg-card: #1a1a19; --bg-hover: #22221e;
   --text: #e4e4e0; --text-muted: #8b8b85; --text-soft: #6b6b65;
   --border: #2a2a25; --border-light: #22221e;
-  --accent: #60a5fa; --accent-2: #a78bfa; --accent-3: #34d399;
+  --accent: #60a5fa; --accent-soft: #1e2a3a;
+  --accent-2: #a78bfa; --accent-3: #34d399;
   --up: #34d399; --down: #f87171; --warn: #fbbf24;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow: 0 1px 3px rgba(0,0,0,0.3),0 1px 2px rgba(0,0,0,0.2);
 }
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:var(--bg); color:var(--text); font:13px/1.5 var(--font); -webkit-font-smoothing:antialiased; }
-nav { background:var(--bg-card); border-bottom:1px solid var(--border); padding:0 20px; display:flex; align-items:center; position:sticky; top:0; z-index:10; backdrop-filter:blur(8px); }
-nav a { color:var(--text-muted); text-decoration:none; padding:10px 14px; font-size:12px; border-bottom:2px solid transparent; transition:all .15s; }
-nav a:hover { color:var(--text); }
-nav a.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:500; }
-nav .brand { font-weight:700; color:var(--text); margin-right:20px; font-size:14px; letter-spacing:-.3px; }
-main { max-width:1280px; margin:0 auto; padding:20px 24px; }
-.panel { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-sm); margin-bottom:12px; overflow:hidden; }
-.panel-hd { display:flex; justify-content:space-between; align-items:center; padding:9px 16px; border-bottom:1px solid var(--border-light); font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; font-weight:500; }
-.panel-bd { padding:14px 16px; }
-.up { color:var(--up); } .dn { color:var(--down); } .ac { color:var(--accent); } .dim { color:var(--text-soft); } .muted { color:var(--text-muted); } .fw { font-weight:600; }
-.code { font-family:var(--font-mono); font-weight:600; font-size:12px; }
-.ta-r { text-align:right; }.ta-c { text-align:center; }
-table { width:100%; border-collapse:collapse; font-size:12px; }
-th { text-align:left; color:var(--text-soft); font-weight:500; padding:5px 8px; border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; letter-spacing:.3px; }
-td { padding:5px 8px; border-bottom:1px solid var(--border-light); }
-tr:hover td { background:var(--bg-hover); }
-.tag { display:inline-block; padding:1px 6px; border-radius:3px; font-size:10px; font-weight:600; }
-.t-buy { background:#05966915; color:var(--up); } .t-sell { background:#dc262615; color:var(--down); }
-.t-pass { background:#2563eb12; color:var(--accent); } .t-block { background:#6b6b6b12; color:var(--text-muted); }
-.t-trend { background:#2563eb10; color:var(--accent); } .t-rev { background:#7c3aed10; color:var(--accent-2); }
-.t-warn { background:#d9770615; color:var(--warn); }
-.banner { padding:10px 16px; border-radius:var(--radius); margin-bottom:12px; font-size:12px; }
-.banner-ok { background:#05966908; border:1px solid #05966922; color:var(--accent-3); }
-.banner-warn { background:#d9770608; border:1px solid #d9770622; color:var(--warn); }
-.grid { display:grid; gap:10px; }
-.g2 { grid-template-columns:1fr 1fr; } .g3 { grid-template-columns:1fr 1fr 1fr; }
-.hero { padding:16px 20px; margin-bottom:12px; }
-.hero h2 { font-size:18px; font-weight:700; margin-bottom:4px; }
-.hero p { color:var(--text-muted); font-size:12px; }
-.sig-row { display:flex; align-items:center; gap:12px; padding:6px 0; border-bottom:1px solid var(--border-light); font-size:12px; }
-.sig-row:hover { background:var(--bg-hover); }
-.sig-rank { font-size:16px; font-weight:700; color:var(--text-soft); min-width:28px; }
-.sig-meta { flex:1; min-width:0; }
-.sig-meta .reason { font-size:11px; color:var(--text-muted); margin-top:1px; }
-.progress { display:flex; align-items:center; gap:6px; }
-.progress-bar { flex:1; height:3px; background:var(--border-light); border-radius:2px; overflow:hidden; }
-.progress-fill { height:100%; border-radius:2px; }
-.empty { color:var(--text-soft); text-align:center; padding:32px; font-size:13px; }
-.kv { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--border-light); font-size:12px; }
-.kv:last-child { border-bottom:none; }
-.stock-header { display:flex; gap:24px; align-items:flex-start; margin-bottom:16px; }
-.stock-header .price { font-size:28px; font-weight:700; }
-.stock-header .chg { font-size:14px; margin-left:6px; }
-.stock-header .info { flex:1; }
-.stock-header .info td { padding:2px 12px 2px 0; border:none; font-size:12px; }
-.chart-box { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:8px; margin-bottom:12px; overflow-x:auto; }
-@media(max-width:900px) { .g2,.g3 { grid-template-columns:1fr; } nav { flex-wrap:wrap; } }
+*,::before,::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+nav{background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+nav .inner{max-width:768px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px}
+nav .brand{font-weight:600;font-size:15px;letter-spacing:-.3px;color:var(--text);text-decoration:none}
+nav .links{display:flex;align-items:center;gap:2px}
+nav .links a{color:var(--text-muted);text-decoration:none;padding:6px 10px;font-size:13px;border-radius:6px;transition:all .15s}
+nav .links a:hover{color:var(--text);background:var(--bg-hover)}
+nav .links a.active{color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{max-width:768px;margin:0 auto;padding:24px 16px 48px}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-sm);margin-bottom:12px;overflow:hidden}
+.panel-hd{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border-light);font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.4px;font-weight:500}
+.panel-bd{padding:12px 16px}
+.up{color:var(--up)}.dn{color:var(--down)}.ac{color:var(--accent)}.dim{color:var(--text-soft)}.muted{color:var(--text-muted)}.fw{font-weight:600}
+.code{font-family:'SF Mono','Cascadia Code','JetBrains Mono',monospace;font-weight:600;font-size:13px}
+.ta-r{text-align:right}.ta-c{text-align:center}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--text-soft);font-weight:500;padding:5px 8px;border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+td{padding:5px 8px;border-bottom:1px solid var(--border-light)}
+tr:hover td{background:var(--bg-hover)}
+.tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600}
+.t-buy{background:#05966915;color:var(--up)}.t-sell{background:#dc262615;color:var(--down)}
+.t-pass{background:#2563eb12;color:var(--accent)}.t-block{background:#6b6b6b12;color:var(--text-muted)}
+.t-trend{background:#2563eb10;color:var(--accent)}.t-rev{background:#7c3aed10;color:var(--accent-2)}
+.t-warn{background:#d9770615;color:var(--warn)}
+.banner{padding:9px 14px;border-radius:8px;margin-bottom:12px;font-size:12px}
+.banner-ok{background:#05966908;border:1px solid #05966918;color:var(--accent-3)}
+.banner-warn{background:#d9770608;border:1px solid #d9770618;color:var(--warn)}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
+.hero{padding:16px 0 12px}
+.hero h2{font-size:16px;font-weight:600;margin-bottom:2px;letter-spacing:-.3px}
+.hero p{color:var(--text-muted);font-size:13px}
+.sig-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-light);font-size:13px}
+.sig-row:hover{background:var(--bg-hover)}
+.sig-rank{font-size:15px;font-weight:700;color:var(--text-soft);min-width:24px}
+.sig-meta{flex:1;min-width:0}
+.sig-meta .reason{font-size:11px;color:var(--text-muted);margin-top:1px}
+.empty{color:var(--text-soft);text-align:center;padding:32px 16px;font-size:13px}
+.kv{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:13px}
+.kv:last-child{border-bottom:none}
+.stock-header{display:flex;gap:20px;align-items:flex-start;margin-bottom:12px}
+.stock-header .price{font-size:24px;font-weight:700}
+.stock-header .chg{font-size:13px;margin-left:4px}
+.stock-header .info td{padding:2px 8px 2px 0;border:none;font-size:12px}
+.chart-box{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:12px;overflow-x:auto}
+.card-hover{transition:all .15s}
+.card-hover:hover{border-color:var(--accent);box-shadow:var(--shadow)}
+@media(max-width:640px){.g2,.g3{grid-template-columns:1fr}nav .links{flex-wrap:wrap}}
 </style>
 </head>
 <body>
-<nav><span class="brand">量化交易</span><a href="index.html">信号首页</a><a href="strategy.html">策略分析</a><a href="market.html">市场监控</a><a href="factors.html" class=active>因子参考</a><a href="signals.html">信号日志</a></nav>
+<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links"><a href="index.html">信号</a><a href="strategy.html">策略</a><a href="market.html">市场</a><a href="factors.html" class=active>因子</a><a href="signals.html">日志</a></div></div></nav>
 <main>
 <div class="hero"><h2>🔝 因子参考（辅助）</h2><p>≤¥50已过滤 · 7因子加权 · ROE 120天滞后防泄露 · 本地数据排名仅供参考</p></div>
     <div class="panel"><div class="panel-hd">排名 Top 15</div><div class="panel-bd"><table><thead><tr><th>#</th><th>代码</th><th>名称</th><th class="ta-r">现价</th><th class="ta-r">得分</th><th class="ta-r">动量</th><th>标签</th></tr></thead><tbody><tr><td>1</td><td class="code">601872</td><td>招商轮船</td><td class="ta-r code">¥17.00</td><td class="ta-r"><span class="ac fw">1.1</span></td><td class="ta-r up">+1.3</td><td></td></tr><tr><td>2</td><td class="code">603993</td><td>洛阳钼业</td><td class="ta-r code">¥18.52</td><td class="ta-r"><span class="ac fw">0.9</span></td><td class="ta-r up">+1.5</td><td></td></tr><tr><td>3</td><td class="code">600089</td><td>特变电工</td><td class="ta-r code">¥22.01</td><td class="ta-r"><span class="ac fw">0.9</span></td><td class="ta-r up">+1.3</td><td></td></tr><tr><td>4</td><td class="code">600221</td><td>海航控股</td><td class="ta-r code">¥1.37</td><td class="ta-r"><span class="ac fw">0.8</span></td><td class="ta-r up">+0.1</td><td></td></tr><tr><td>5</td><td class="code">600188</td><td>兖矿能源</td><td class="ta-r code">¥17.80</td><td class="ta-r"><span class="ac fw">0.7</span></td><td class="ta-r up">+1.3</td><td></td></tr><tr><td>6</td><td class="code">000807</td><td>云铝股份</td><td class="ta-r code">¥22.42</td><td class="ta-r"><span class="ac fw">0.7</span></td><td class="ta-r up">+0.9</td><td></td></tr><tr><td>7</td><td class="code">000338</td><td>潍柴动力</td><td class="ta-r code">¥28.14</td><td class="ta-r"><span class="ac fw">0.7</span></td><td class="ta-r up">+1.3</td><td></td></tr><tr><td>8</td><td class="code">300450</td><td>先导智能</td><td class="ta-r code">¥39.29</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+1.1</td><td></td></tr><tr><td>9</td><td class="code">600362</td><td>江西铜业</td><td class="ta-r code">¥43.28</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+1.2</td><td></td></tr><tr><td>10</td><td class="code">002202</td><td>金风科技</td><td class="ta-r code">¥24.59</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+1.4</td><td></td></tr><tr><td>11</td><td class="code">000792</td><td>盐湖股份</td><td class="ta-r code">¥29.41</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+0.8</td><td></td></tr><tr><td>12</td><td class="code">600026</td><td>中远海能</td><td class="ta-r code">¥17.37</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+0.6</td><td></td></tr><tr><td>13</td><td class="code">601066</td><td>中信建投</td><td class="ta-r code">¥28.32</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+0.1</td><td></td></tr><tr><td>14</td><td class="code">002142</td><td>宁波银行</td><td class="ta-r code">¥30.29</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+0.2</td><td></td></tr><tr><td>15</td><td class="code">601288</td><td>农业银行</td><td class="ta-r code">¥5.90</td><td class="ta-r"><span class="ac fw">0.5</span></td><td class="ta-r up">+0.2</td><td></td></tr></tbody></table></div></div>

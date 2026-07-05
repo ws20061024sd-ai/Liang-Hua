@@ -16,79 +16,80 @@ CSS = '''<style>
   --bg: #fafaf8; --bg-card: #ffffff; --bg-hover: #f5f5f2;
   --text: #1a1a1a; --text-muted: #6b6b6b; --text-soft: #94948c;
   --border: #e8e8e4; --border-light: #f0f0ec;
-  --accent: #2563eb; --accent-2: #7c3aed; --accent-3: #059669;
+  --accent: #2563eb; --accent-soft: #eff6ff;
+  --accent-2: #7c3aed; --accent-3: #059669;
   --up: #059669; --down: #dc2626; --warn: #d97706;
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
   --shadow: 0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
-  --radius: 8px;
-  --font: system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  --font-mono: 'SF Mono','Cascadia Code','JetBrains Mono',monospace;
 }
 [data-theme="dark"] {
   --bg: #111110; --bg-card: #1a1a19; --bg-hover: #22221e;
   --text: #e4e4e0; --text-muted: #8b8b85; --text-soft: #6b6b65;
   --border: #2a2a25; --border-light: #22221e;
-  --accent: #60a5fa; --accent-2: #a78bfa; --accent-3: #34d399;
+  --accent: #60a5fa; --accent-soft: #1e2a3a;
+  --accent-2: #a78bfa; --accent-3: #34d399;
   --up: #34d399; --down: #f87171; --warn: #fbbf24;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow: 0 1px 3px rgba(0,0,0,0.3),0 1px 2px rgba(0,0,0,0.2);
 }
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:var(--bg); color:var(--text); font:13px/1.5 var(--font); -webkit-font-smoothing:antialiased; }
-nav { background:var(--bg-card); border-bottom:1px solid var(--border); padding:0 20px; display:flex; align-items:center; position:sticky; top:0; z-index:10; backdrop-filter:blur(8px); }
-nav a { color:var(--text-muted); text-decoration:none; padding:10px 14px; font-size:12px; border-bottom:2px solid transparent; transition:all .15s; }
-nav a:hover { color:var(--text); }
-nav a.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:500; }
-nav .brand { font-weight:700; color:var(--text); margin-right:20px; font-size:14px; letter-spacing:-.3px; }
-main { max-width:1280px; margin:0 auto; padding:20px 24px; }
-.panel { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-sm); margin-bottom:12px; overflow:hidden; }
-.panel-hd { display:flex; justify-content:space-between; align-items:center; padding:9px 16px; border-bottom:1px solid var(--border-light); font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.4px; font-weight:500; }
-.panel-bd { padding:14px 16px; }
-.up { color:var(--up); } .dn { color:var(--down); } .ac { color:var(--accent); } .dim { color:var(--text-soft); } .muted { color:var(--text-muted); } .fw { font-weight:600; }
-.code { font-family:var(--font-mono); font-weight:600; font-size:12px; }
-.ta-r { text-align:right; }.ta-c { text-align:center; }
-table { width:100%; border-collapse:collapse; font-size:12px; }
-th { text-align:left; color:var(--text-soft); font-weight:500; padding:5px 8px; border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; letter-spacing:.3px; }
-td { padding:5px 8px; border-bottom:1px solid var(--border-light); }
-tr:hover td { background:var(--bg-hover); }
-.tag { display:inline-block; padding:1px 6px; border-radius:3px; font-size:10px; font-weight:600; }
-.t-buy { background:#05966915; color:var(--up); } .t-sell { background:#dc262615; color:var(--down); }
-.t-pass { background:#2563eb12; color:var(--accent); } .t-block { background:#6b6b6b12; color:var(--text-muted); }
-.t-trend { background:#2563eb10; color:var(--accent); } .t-rev { background:#7c3aed10; color:var(--accent-2); }
-.t-warn { background:#d9770615; color:var(--warn); }
-.banner { padding:10px 16px; border-radius:var(--radius); margin-bottom:12px; font-size:12px; }
-.banner-ok { background:#05966908; border:1px solid #05966922; color:var(--accent-3); }
-.banner-warn { background:#d9770608; border:1px solid #d9770622; color:var(--warn); }
-.grid { display:grid; gap:10px; }
-.g2 { grid-template-columns:1fr 1fr; } .g3 { grid-template-columns:1fr 1fr 1fr; }
-.hero { padding:16px 20px; margin-bottom:12px; }
-.hero h2 { font-size:18px; font-weight:700; margin-bottom:4px; }
-.hero p { color:var(--text-muted); font-size:12px; }
-.sig-row { display:flex; align-items:center; gap:12px; padding:6px 0; border-bottom:1px solid var(--border-light); font-size:12px; }
-.sig-row:hover { background:var(--bg-hover); }
-.sig-rank { font-size:16px; font-weight:700; color:var(--text-soft); min-width:28px; }
-.sig-meta { flex:1; min-width:0; }
-.sig-meta .reason { font-size:11px; color:var(--text-muted); margin-top:1px; }
-.progress { display:flex; align-items:center; gap:6px; }
-.progress-bar { flex:1; height:3px; background:var(--border-light); border-radius:2px; overflow:hidden; }
-.progress-fill { height:100%; border-radius:2px; }
-.empty { color:var(--text-soft); text-align:center; padding:32px; font-size:13px; }
-.kv { display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--border-light); font-size:12px; }
-.kv:last-child { border-bottom:none; }
-.stock-header { display:flex; gap:24px; align-items:flex-start; margin-bottom:16px; }
-.stock-header .price { font-size:28px; font-weight:700; }
-.stock-header .chg { font-size:14px; margin-left:6px; }
-.stock-header .info { flex:1; }
-.stock-header .info td { padding:2px 12px 2px 0; border:none; font-size:12px; }
-.chart-box { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:8px; margin-bottom:12px; overflow-x:auto; }
-@media(max-width:900px) { .g2,.g3 { grid-template-columns:1fr; } nav { flex-wrap:wrap; } }
+*,::before,::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+nav{background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+nav .inner{max-width:768px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px}
+nav .brand{font-weight:600;font-size:15px;letter-spacing:-.3px;color:var(--text);text-decoration:none}
+nav .links{display:flex;align-items:center;gap:2px}
+nav .links a{color:var(--text-muted);text-decoration:none;padding:6px 10px;font-size:13px;border-radius:6px;transition:all .15s}
+nav .links a:hover{color:var(--text);background:var(--bg-hover)}
+nav .links a.active{color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{max-width:768px;margin:0 auto;padding:24px 16px 48px}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-sm);margin-bottom:12px;overflow:hidden}
+.panel-hd{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border-light);font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.4px;font-weight:500}
+.panel-bd{padding:12px 16px}
+.up{color:var(--up)}.dn{color:var(--down)}.ac{color:var(--accent)}.dim{color:var(--text-soft)}.muted{color:var(--text-muted)}.fw{font-weight:600}
+.code{font-family:'SF Mono','Cascadia Code','JetBrains Mono',monospace;font-weight:600;font-size:13px}
+.ta-r{text-align:right}.ta-c{text-align:center}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--text-soft);font-weight:500;padding:5px 8px;border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+td{padding:5px 8px;border-bottom:1px solid var(--border-light)}
+tr:hover td{background:var(--bg-hover)}
+.tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600}
+.t-buy{background:#05966915;color:var(--up)}.t-sell{background:#dc262615;color:var(--down)}
+.t-pass{background:#2563eb12;color:var(--accent)}.t-block{background:#6b6b6b12;color:var(--text-muted)}
+.t-trend{background:#2563eb10;color:var(--accent)}.t-rev{background:#7c3aed10;color:var(--accent-2)}
+.t-warn{background:#d9770615;color:var(--warn)}
+.banner{padding:9px 14px;border-radius:8px;margin-bottom:12px;font-size:12px}
+.banner-ok{background:#05966908;border:1px solid #05966918;color:var(--accent-3)}
+.banner-warn{background:#d9770608;border:1px solid #d9770618;color:var(--warn)}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
+.hero{padding:16px 0 12px}
+.hero h2{font-size:16px;font-weight:600;margin-bottom:2px;letter-spacing:-.3px}
+.hero p{color:var(--text-muted);font-size:13px}
+.sig-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-light);font-size:13px}
+.sig-row:hover{background:var(--bg-hover)}
+.sig-rank{font-size:15px;font-weight:700;color:var(--text-soft);min-width:24px}
+.sig-meta{flex:1;min-width:0}
+.sig-meta .reason{font-size:11px;color:var(--text-muted);margin-top:1px}
+.empty{color:var(--text-soft);text-align:center;padding:32px 16px;font-size:13px}
+.kv{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:13px}
+.kv:last-child{border-bottom:none}
+.stock-header{display:flex;gap:20px;align-items:flex-start;margin-bottom:12px}
+.stock-header .price{font-size:24px;font-weight:700}
+.stock-header .chg{font-size:13px;margin-left:4px}
+.stock-header .info td{padding:2px 8px 2px 0;border:none;font-size:12px}
+.chart-box{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:12px;overflow-x:auto}
+.card-hover{transition:all .15s}
+.card-hover:hover{border-color:var(--accent);box-shadow:var(--shadow)}
+@media(max-width:640px){.g2,.g3{grid-template-columns:1fr}nav .links{flex-wrap:wrap}}
 </style>'''
 
 # ═══════════════ SHARED ═══════════════
 
 def _nav(active=''):
-    links = [('index.html','信号首页'),('strategy.html','策略分析'),
-             ('market.html','市场监控'),('factors.html','因子参考'),('signals.html','信号日志')]
+    links = [('index.html','信号'),('strategy.html','策略'),
+             ('market.html','市场'),('factors.html','因子'),('signals.html','日志')]
     items = ''.join(f'<a href="{h}"{" class=active" if h==active else ""}>{n}</a>' for h,n in links)
-    return f'<nav><span class="brand">量化交易</span>{items}</nav>'
+    return f'<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links">{items}</div></div></nav>'
 
 def _page(title,active,body):
     return f'<!DOCTYPE html>\n<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n<title>{title} · 量化交易</title>\n{CSS}\n</head>\n<body>\n{_nav(active)}\n<main>\n{body}\n</main>\n</body>\n</html>'
@@ -131,6 +132,38 @@ def _health(conn):
     except:sz=0
     return {'daily_date':str(ld),'daily_stocks':dc,'daily_nulls':nl,'daily_total':tr,'daily_ok':dc>=280 and nl==0,
         'pe_pct':pep,'pe_ok':pep>=80,'pb_pct':pbp,'pb_ok':pbp>=90,'roe_date':str(lr or''),'roe_stocks':rc,'roe_ok':rc>=255,'db':sz}
+
+def _sectors(conn):
+    """板块历史分析——5日累计涨幅排名"""
+    df=_q(conn,"SELECT date,name,pct_change FROM sector_history ORDER BY date DESC LIMIT 900")
+    if df.empty or df['date'].nunique()<2:
+        return None,0
+    days=df['date'].nunique()
+    # 取最近5天
+    recent_dates=sorted(df['date'].unique(),reverse=True)[:5]
+    if len(recent_dates)<5:
+        return None,days
+    # 计算每个板块在5天内的累计涨幅
+    latest=df[df['date']==recent_dates[0]]
+    if latest.empty:return None,days
+    sectors={}
+    for _,r in latest.iterrows():
+        name=r['name']
+        sector_df=df[(df['name']==name)&(df['date'].isin(recent_dates))]
+        if len(sector_df)>=3:
+            cum=round(float(sector_df['pct_change'].sum()),1)
+            # 连续走强天数
+            sdf=sector_df.sort_values('date',ascending=False)
+            streak=0
+            for _,sr in sdf.iterrows():
+                if float(sr['pct_change'])>0:streak+=1
+                else:break
+            sectors[name]={'cum':cum,'streak':streak}
+    if not sectors:return None,days
+    ranked=sorted(sectors.items(),key=lambda x:-x[1]['cum'])
+    top=ranked[:5];bottom=ranked[-5:][::-1]
+    return {'date':recent_dates[0],'days':min(5,days),'top':[{'n':n,'cum':d['cum'],'streak':d['streak']}for n,d in top],
+        'bottom':[{'n':n,'cum':d['cum'],'streak':d['streak']}for n,d in bottom]},days
 
 def _signals_all(conn):
     df=_q(conn,"SELECT date,code,name,strategy,action,price,strength,status,reason FROM signal_history ORDER BY date DESC,id DESC LIMIT 200")
@@ -428,18 +461,32 @@ def page_strategy(sigs):
     return _page('策略分析','strategy.html',body)
 
 
-def page_market(m):
-    """市场监控——简化版"""
+def page_market(m,sec,sec_days):
+    """市场监控"""
     reg_label='强势 ↑'if m['regime']=='strong'else'弱势 ↓'
     reg_cls='up'if m['regime']=='strong'else'dn'
+
+    sec_html=''
+    if sec:
+        top_rows=''.join(f'<div class="kv"><span>{s["n"]}</span><span><span class="up">+{s["cum"]}%</span> <span class="dim" style="font-size:10px">{"▲"*min(s["streak"],3)}</span></span></div>'for s in sec['top'])
+        bot_rows=''.join(f'<div class="kv"><span>{s["n"]}</span><span><span class="dn">{s["cum"]}%</span> <span class="dim" style="font-size:10px">{"▼"*min(3,0)}</span></span></div>'for s in sec['bottom'])
+        sec_html=f'''
+    <div class="grid g2" style="margin-bottom:12px">
+      <div class="panel"><div class="panel-hd">▲ 强势板块（{sec["days"]}日累计）</div><div class="panel-bd">{top_rows}</div></div>
+      <div class="panel"><div class="panel-hd">▼ 走弱板块（{sec["days"]}日累计）</div><div class="panel-bd">{bot_rows}</div></div>
+    </div>'''
+    else:
+        bar_w=min(100,sec_days/5*100)
+        sec_html=f'''
+    <div class="panel" style="margin-bottom:12px"><div class="panel-bd" style="text-align:center;padding:24px">
+      <div class="dim" style="font-size:13px;margin-bottom:8px">板块数据积累中（{sec_days}/5天）</div>
+      <div style="height:4px;background:var(--border-light);border-radius:2px;overflow:hidden;max-width:200px;margin:0 auto">
+        <div style="height:100%;width:{bar_w:.0f}%;background:var(--accent);border-radius:2px;transition:width 1s"></div></div>
+      <div class="dim" style="font-size:11px;margin-top:6px">需要 report.py 每日运行积累 ≥5天数据</div></div></div>'''
+
     body=f'''
-    <div class="hero"><h2>📊 市场监控</h2><p>数据日期: {m["date"]} · 覆盖 {m["stocks"]} 只</p></div>
-    <div class="grid g3">
-      <div class="panel"><div class="panel-bd" style="text-align:center"><div style="font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.3px">CSI300</div><div style="font-size:24px;font-weight:700">{m["close"]:.0f}</div><div class="{reg_cls}" style="font-size:11px">{reg_label}</div></div></div>
-      <div class="panel"><div class="panel-bd" style="text-align:center"><div style="font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.3px">5日</div><div class="up" style="font-size:24px;font-weight:700">{m["r5"]:+.1f}%</div><div class="dim" style="font-size:11px">20日 {m["r20"]:+.1f}%</div></div></div>
-      <div class="panel"><div class="panel-bd" style="text-align:center"><div style="font-size:10px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.3px">涨跌比</div><div style="font-size:24px;font-weight:700"><span class="up">{m["up"]}</span>/<span class="dn">{m["down"]}</span></div><div class="dim" style="font-size:11px">{"偏多"if m["up"]>m["down"]else"偏空"}</div></div></div>
-    </div>
-    <div class="panel"><div class="panel-bd"><div class="empty" style="padding:16px">板块分析将在数据积累 ≥5 天后上线<br><small class="dim">当前 sector_history 数据不足，需要 report.py 每日运行至少 5 天</small></div></div></div>'''
+    <div class="hero"><h2>📊 市场监控</h2><p>数据: {m["date"]} · {m["stocks"]}只 · CSI300 {m["close"]:.0f} <span class="{reg_cls}" style="font-weight:500">{reg_label}</span> · 5日{_ud(m["r5"])}% · 20日{_ud(m["r20"])}% · 涨{m["up"]}/跌{m["down"]} {"偏多"if m["up"]>m["down"]else"偏空"}</p></div>
+    {sec_html}'''
     return _page('市场监控','market.html',body)
 
 
@@ -508,13 +555,14 @@ def build():
 
     m=_market(conn);h=_health(conn);sigs=_signals_all(conn)
     fs=_factors_all(conn);ps=_positions(conn)
+    sec,sec_days=_sectors(conn)
 
     os.makedirs('dashboard',exist_ok=True)
 
     pages=[
         ('index.html',page_index(conn,m,h,sigs,fs,ps)),
         ('strategy.html',page_strategy(sigs)),
-        ('market.html',page_market(m)),
+        ('market.html',page_market(m,sec,sec_days)),
         ('factors.html',page_factors(fs,sigs)),
         ('signals.html',page_signals(sigs)),
         ('health.html',page_health(h)),
