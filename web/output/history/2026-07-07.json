@@ -1,0 +1,27 @@
+{
+  "date": "2026-07-07",
+  "market": {
+    "idx_close": 4792.262,
+    "idx_pct": -1.03,
+    "regime": "unknown",
+    "r5": 0,
+    "r20": 0,
+    "turnover": 762617505584.0,
+    "up": 66,
+    "down": 231,
+    "flat": 2,
+    "up_pct": 22.1,
+    "down_pct": 77.3,
+    "breadth": -165,
+    "limit_up": 0,
+    "limit_down": 1
+  },
+  "signals": {
+    "buy_total": 0,
+    "buy_passed": 0,
+    "buy_blocked": 0,
+    "sell_passed": 0,
+    "block_breakdown": {},
+    "top_buys": []
+  }
+}
