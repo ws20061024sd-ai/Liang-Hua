@@ -104,7 +104,8 @@ def run_strategies(verbose: bool = False) -> list[dict]:
     if stop_signals:
         print(f"\n   ⚠️  移动止损触发: {len(stop_signals)}只")
         for s in stop_signals:
-            print(f"      {s['code']} {s['name']}: {s['reason']}")
+            n = s.get('stock_name', s.get('name', s['stock_code']))
+            print(f"      {s['stock_code']} {n}: {s['reason']}")
 
     # 止损信号优先级最高，放在卖出列表最前面
     return buy_signals + stop_signals + sell_signals

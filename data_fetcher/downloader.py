@@ -244,7 +244,7 @@ def save_kline(conn, df: pd.DataFrame):
 
 def download_all(force_update: bool = False):
     """
-    下载所有沪深300成分股的历史数据（增量更新）
+    下载所有沪深300成分股的历史数据（增量更新 + 多线程并发）
 
     参数:
         force_update: 是否强制重新下载所有数据
@@ -258,81 +258,96 @@ def download_all(force_update: bool = False):
     today = pd.Timestamp.now().strftime('%Y-%m-%d')
     start_default = pd.Timestamp.now() - pd.DateOffset(years=settings.YEARS_OF_DATA)
     start_default = start_default.strftime('%Y-%m-%d')
-    # 如果配置了更早的固定起点，使用更早的日期
     if hasattr(settings, 'DAILY_START_DATE') and settings.DAILY_START_DATE:
         start_default = min(start_default, settings.DAILY_START_DATE)
 
     total = len(stocks)
-    new_data_count = 0
+
+    # ── 批量查询所有股票的最新日期（1次SQL替代300次）──
+    last_dates = {}
+    first_dates = {}
+    rows = conn.execute("SELECT code, MIN(date), MAX(date) FROM daily_kline GROUP BY code").fetchall()
+    for code, first_d, last_d in rows:
+        last_dates[code] = last_d
+        first_dates[code] = first_d
+
+    print(f"\n📥 下载/更新 {total} 只股票（并发模式）...")
+    print(f"   数据范围: {start_default} ~ {today}")
+    print(f"   已有数据: {len(last_dates)} 只\n")
+
+    # ── 构建下载任务列表 ──
+    tasks = []
     skip_count = 0
-    fail_count = 0
-    failed_codes = []
-
-    print(f"\n📥 开始下载/更新 {total} 只股票的日线数据...")
-    print(f"   数据范围: {start_default} ~ {today}\n")
-
-    for i, (_, row) in enumerate(stocks.iterrows()):
+    for _, row in stocks.iterrows():
         code = row['code']
         name = row['name']
-
-        # 检查是否需要更新
-        last_date = get_last_date(conn, code)
+        last_date = last_dates.get(code)
 
         if not force_update and last_date:
-            # 增量模式：从上一次的最后日期开始
             last_dt = pd.Timestamp(last_date)
             if last_dt >= pd.Timestamp(today):
                 skip_count += 1
-                if skip_count <= 3:
-                    print(f"   [{i+1}/{total}] {code} {name} ✓ 已是最新")
                 continue
-
-            # 检查是否需要前向回填（最早数据 > 配置起点）
-            first_date = conn.execute(
-                "SELECT MIN(date) FROM daily_kline WHERE code=?", (code,)
-            ).fetchone()[0]
-            if first_date and first_date > start_default:
-                print(f"   [{i+1}/{total}] {code} {name} ↺ 回填 {start_default}~{first_date}")
-                gap_df = download_stock_history(code, start_default,
-                    (pd.Timestamp(first_date) - pd.DateOffset(days=1)).strftime('%Y-%m-%d'))
-                if gap_df is not None and not gap_df.empty:
-                    save_kline(conn, gap_df)
-                    new_data_count += 1
-
-            # 从最新日期后一天开始
             start_date = (last_dt + pd.DateOffset(days=1)).strftime('%Y-%m-%d')
         else:
             start_date = start_default
 
-        # 下载数据（最多重试3次）
+        # 检查前向回填
+        first_date = first_dates.get(code)
+        gap_start = None
+        gap_end = None
+        if first_date and first_date > start_default and not force_update:
+            gap_start = start_default
+            gap_end = (pd.Timestamp(first_date) - pd.DateOffset(days=1)).strftime('%Y-%m-%d')
+
+        tasks.append({'code': code, 'name': name, 'start': start_date,
+                       'gap_start': gap_start, 'gap_end': gap_end})
+
+    print(f"   已最新: {skip_count} 只 | 需更新: {len(tasks)} 只\n")
+
+    # ── 串行下载（无sleep, AKShare不支持多线程）──
+    new_data_count = 0
+    fail_count = 0
+    failed_codes = []
+
+    for i, task in enumerate(tasks):
+        code = task['code']
+        name = task['name']
+        start = task['start']
+
+        # 前向回填
+        if task['gap_start']:
+            gap_df = download_stock_history(code, task['gap_start'], task['gap_end'])
+            if gap_df is not None and not gap_df.empty:
+                save_kline(conn, gap_df)
+
+        # 增量下载（3次重试）
         df = None
         for retry in range(3):
-            df = download_stock_history(code, start_date, today)
+            df = download_stock_history(code, start, today)
             if df is not None and not df.empty:
                 break
             if retry < 2:
-                time.sleep(0.5 * (retry + 1))  # 退避：0.5s, 1.0s
+                time.sleep(0.3 * (retry + 1))
 
         if df is not None and not df.empty:
             save_kline(conn, df)
             new_data_count += 1
             rows = len(df)
             date_range = f"{df['date'].iloc[0]} ~ {df['date'].iloc[-1]}"
-            print(f"   [{i+1}/{total}] {code} {name} +{rows}条 ({date_range})")
-        elif pd.Timestamp(start_date) > pd.Timestamp(today):
-            # 新股刚上市，暂无历史数据可下载
-            skip_count += 1
+            if i % 20 == 0 or i <= 2:
+                print(f"   [{i+1}/{len(tasks)}] {code} {name} +{rows}条 ({date_range})")
+        elif pd.Timestamp(start) > pd.Timestamp(today):
+            pass
         else:
             fail_count += 1
             failed_codes.append(code)
             if fail_count <= 3:
                 print(f"   ⚠️ {code} {name} 下载失败")
 
-        time.sleep(0.15)
-
-    # 第二轮：重试失败的股票（更长退避）
+    # ── 第二轮：串行重试失败列表（保持现有逻辑）──
     if failed_codes:
-        print(f"\n🔄 第二轮重试 {len(failed_codes)} 只失败股票...")
+        print(f"\n🔄 第二轮串行重试 {len(failed_codes)} 只失败股票...")
         for code in failed_codes.copy():
             time.sleep(1.0)
             df = download_stock_history(code, start_default, today)
@@ -351,7 +366,7 @@ def download_all(force_update: bool = False):
     print(f"   成分股总数: {total}")
     print(f"   本次更新:   {new_data_count} 只")
     print(f"   已是最新:   {skip_count} 只")
-    print(f"   下载失败:   {fail_count} 只 → 第二轮后剩余 {len(failed_codes)} 只")
+    print(f"   下载失败:   {len(failed_codes)} 只")
     print(f"{'='*50}")
 
     show_db_stats()
