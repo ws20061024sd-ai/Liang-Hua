@@ -3,9 +3,9 @@
   "market": {
     "idx_close": 4755.534,
     "idx_pct": -0.77,
-    "regime": "unknown",
-    "r5": 0,
-    "r20": 0,
+    "regime": "strong",
+    "r5": -1.2,
+    "r20": 0.1,
     "turnover": 783248978287.0,
     "up": 118,
     "down": 172,
