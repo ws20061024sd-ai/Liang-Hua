@@ -162,6 +162,10 @@ def main():
     print_header()
     log.info("量化交易系统启动")
 
+    # 自动数据库迁移：缺列补列，零手工
+    from scripts.ensure_schema import ensure_schema
+    ensure_schema()
+
     # 初始化模式
     if args.init:
         print("🔧 首次初始化模式：下载全部历史数据（预计5-10分钟）...\n")
