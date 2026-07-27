@@ -526,12 +526,12 @@ def page_index(conn, m, h, sigs, fs, ps):
     if not h['roe_ok']: alerts.append(f'ROE覆盖率低({h["roe_stocks"]}/300)')
 
     if alerts:
-        alert_items = ' · '.join(f'⚠️ {a}' for a in alerts)
+        alert_items = ' · '.join(f' {a}' for a in alerts)
         fresh_html = f'<div class="banner banner-danger data-alert">{alert_items}</div>'
     elif fresh_ok:
-        fresh_html = f'<div class="banner banner-ok">✅ 数据: {m["date"]} · 股票{m["total"]}只 · NULL={h["daily_nulls"]} · PE覆盖{h["pe_pct"]}% · ROE{h["roe_stocks"]}只 · 信号可信</div>'
+        fresh_html = f'<div class="banner banner-ok"> 数据: {m["date"]} · 股票{m["total"]}只 · NULL={h["daily_nulls"]} · PE覆盖{h["pe_pct"]}% · ROE{h["roe_stocks"]}只 · 信号可信</div>'
     else:
-        fresh_html = f'<div class="banner banner-warn">⚠️ 数据: {m["date"]}({daily_age}天前) · 信号: {sig_date or "无"}({sig_age}天前) · 信号不可信</div>'
+        fresh_html = f'<div class="banner banner-warn"> 数据: {m["date"]}({daily_age}天前) · 信号: {sig_date or "无"}({sig_age}天前) · 信号不可信</div>'
 
     # ── 市场条 ──
     reg_label='强势 ↑'if m['regime']=='strong'else'弱势 ↓'
@@ -548,13 +548,13 @@ def page_index(conn, m, h, sigs, fs, ps):
     if ps:
         stops=[p for p in ps if p['now']<=p['stop']]
         if stops:
-            pos_html='<div class="banner banner-warn">'+''.join(f'⚠️ {p["code"]} {p["name"]} 触发止损(现¥{p["now"]}≤止损¥{p["stop"]}) 建议卖出  ·  'for p in stops)+'</div>'
+            pos_html='<div class="banner banner-warn">'+''.join(f' {p["code"]} {p["name"]} 触发止损(现¥{p["now"]}≤止损¥{p["stop"]}) 建议卖出  ·  'for p in stops)+'</div>'
         else:
-            pos_html=f'<div class="panel"><div class="panel-bd" style="padding:8px 16px;font-size:12px"><span class="dim">💼 持仓 {len(ps)}只 · 无止损触发</span></div></div>'
+            pos_html=f'<div class="panel"><div class="panel-bd" style="padding:8px 16px;font-size:12px"><span class="dim"> 持仓 {len(ps)}只 · 无止损触发</span></div></div>'
 
     # 信号排名
     sig_html=''
-    if not sigs: sig_html='<div class="empty">📭 暂无信号——策略尚未在服务器持续运行</div>'
+    if not sigs: sig_html='<div class="empty"> 暂无信号——策略尚未在服务器持续运行</div>'
     else:
         latest_date=sigs[0]['d']
         buys=[s for s in sigs if s['a']=='BUY'and s['st']=='passed'and s['d']==latest_date]
@@ -584,13 +584,13 @@ def page_index(conn, m, h, sigs, fs, ps):
 
             rows=''
             for i,r in enumerate(ranked_list[:20]):
-                cross='⭐⭐ 'if r.get('cross')else''
+                cross=' 'if r.get('cross')else''
                 strats='/'.join(r['strategies'])
                 rows+=f'<div class="sig-row"><span class="sig-rank">{i+1}</span><div class="sig-meta"><span class="code">{r["c"]}</span> <span>{r["n"]}</span> <span class="dim">{cross}{strats}</span><div class="reason">{r.get("reason","")[:80]}</div></div><span class="code">¥{r["p"]:.2f}</span><span class="dim" style="min-width:40px;text-align:right">强度 {r["strength"]:.2f}</span><a href="stock_{r["c"]}.html" style="color:var(--accent);font-size:11px;text-decoration:none;margin-left:8px">详情 →</a></div>'
 
-            sig_html=f'<div class="panel"><div class="panel-hd">🎯 今日信号（¥50以内） <span class="dim" style="font-size:10px;text-transform:none;letter-spacing:0">{latest_date} · {len(ranked_list)}只</span></div><div class="panel-bd">{rows}</div></div>'
+            sig_html=f'<div class="panel"><div class="panel-hd"> 今日信号（¥50以内） <span class="dim" style="font-size:10px;text-transform:none;letter-spacing:0">{latest_date} · {len(ranked_list)}只</span></div><div class="panel-bd">{rows}</div></div>'
         else:
-            sig_html=f'<div class="panel"><div class="panel-hd">🎯 今日信号（¥50以内） <span class="dim" style="font-size:10px;text-transform:none;letter-spacing:0">{latest_date}</span></div><div class="panel-bd"><div class="empty">📭 今日无符合条件的买入信号<br><small class="dim">（所有买入信号均被拦截：价格超限/涨停/停牌/ST）</small></div></div></div>'
+            sig_html=f'<div class="panel"><div class="panel-hd"> 今日信号（¥50以内） <span class="dim" style="font-size:10px;text-transform:none;letter-spacing:0">{latest_date}</span></div><div class="panel-bd"><div class="empty"> 今日无符合条件的买入信号<br><small class="dim">（所有买入信号均被拦截：价格超限/涨停/停牌/ST）</small></div></div></div>'
 
         # 拦截统计
         if blocked:
@@ -607,23 +607,23 @@ def page_index(conn, m, h, sigs, fs, ps):
                 else:k='其他'
                 bc[k]=bc.get(k,0)+1
             block_items=' · '.join(f'{k}:{v}'for k,v in sorted(bc.items(),key=lambda x:-x[1]))
-            sig_html+=f'<div class="panel"><div class="panel-bd" style="padding:8px 16px;font-size:11px;color:var(--text-muted)">📋 今日拦截 {len(blocked)} 条: {block_items}</div></div>'
+            sig_html+=f'<div class="panel"><div class="panel-bd" style="padding:8px 16px;font-size:11px;color:var(--text-muted)"> 今日拦截 {len(blocked)} 条: {block_items}</div></div>'
 
     body=f'''
     <div class="hero" style="overflow:hidden;padding:28px 0 12px">
       <div class="geo-blob" style="top:-40px;left:-30px;width:200px;height:200px;background:#bfdbfe"></div>
       <div class="geo-blob" style="top:20px;right:-20px;width:150px;height:150px;background:rgba(217,119,6,0.25)"></div>
       <div class="geo-grid-bg"></div>
-      <div style="position:relative"><h2>🎯 今日信号</h2><p>三策略买入信号排名 · 仅显示买得起(≤¥50) · 信号日期: {latest_date if sigs else m["date"]}</p></div></div>
+      <div style="position:relative"><h2> 今日信号</h2><p>三策略买入信号排名 · 仅显示买得起(≤¥50) · 信号日期: {latest_date if sigs else m["date"]}</p></div></div>
     {fresh_html}
     {mkt_html}
     {pos_html}
     {sig_html}
     <div style="display:flex;gap:12px;margin-top:12px;font-size:12px">
-      <a href="strategy.html" style="color:var(--accent);text-decoration:none">📈 策略分析 →</a>
-      <a href="factors.html" style="color:var(--accent);text-decoration:none">🔝 因子参考 →</a>
-      <a href="market.html" style="color:var(--accent);text-decoration:none">📊 市场监控 →</a>
-      <a href="history.html" style="color:var(--accent);text-decoration:none">📅 历史对比 →</a>
+      <a href="strategy.html" style="color:var(--accent);text-decoration:none"> 策略分析 →</a>
+      <a href="factors.html" style="color:var(--accent);text-decoration:none"> 因子参考 →</a>
+      <a href="market.html" style="color:var(--accent);text-decoration:none"> 市场监控 →</a>
+      <a href="history.html" style="color:var(--accent);text-decoration:none"> 历史对比 →</a>
     </div>'''
     return _page('信号首页','index.html',body)
 
@@ -689,14 +689,14 @@ def page_strategy(sigs):
         <div style="font-size:12px;color:var(--text-muted);line-height:1.6"><strong>原理：</strong>{s["principle"]}</div>
         <div style="font-size:12px;margin-top:4px"><strong>适合：</strong><span class="up">{s["good"]}</span> · <strong>不适合：</strong><span class="dn">{s["bad"]}</span></div>
         <div style="font-size:12px;color:var(--text-muted);margin-top:4px"><strong>为什么选这个参数：</strong>{s["why"]}</div>
-        <div style="display:flex;gap:24px;align-items:center;margin-top:12px"><span style="font-size:13px;color:var(--text-muted)">📊 回测数据为参数优化时快照，非实时。</span></div>
+        <div style="display:flex;gap:24px;align-items:center;margin-top:12px"><span style="font-size:13px;color:var(--text-muted)"> 回测数据为参数优化时快照，非实时。</span></div>
         {sig_part}</div></div>'''
 
     disclaimer='''
     <div class="panel" style="margin-top:12px"><div class="panel-bd" style="background:#d9770608;font-size:11px;color:var(--warn)">
-    <strong>⚠️ 回测收益 ≠ 实盘收益。</strong>本地数据源(AKShare)存在约+3~6pp系统性偏差。止损模拟假设精确执行(实盘有滑点)。未考虑最低佣金(5元/笔)对小资金的放大效应。<strong>保守估计: 实盘收益 ≈ 回测收益 × 0.6~0.8。三策略使用硬阈值信号（非排名），本地回测方向可信。</strong></div></div>'''
+    <strong> 回测收益 ≠ 实盘收益。</strong>本地数据源(AKShare)存在约+3~6pp系统性偏差。止损模拟假设精确执行(实盘有滑点)。未考虑最低佣金(5元/笔)对小资金的放大效应。<strong>保守估计: 实盘收益 ≈ 回测收益 × 0.6~0.8。三策略使用硬阈值信号（非排名），本地回测方向可信。</strong></div></div>'''
 
-    body=f'<div class="hero"><h2>📋 策略分析</h2><p>三个策略的完整讲解——原理、参数选择、适用环境</p></div>{cards}{disclaimer}'
+    body=f'<div class="hero"><h2> 策略分析</h2><p>三个策略的完整讲解——原理、参数选择、适用环境</p></div>{cards}{disclaimer}'
     return _page('策略分析','strategy.html',body)
 
 
@@ -720,10 +720,10 @@ def page_market(m,sec,sec_days,conn=None):
             ma20_s = pd.Series(closes).rolling(20).mean()
             ma60_s = pd.Series(closes).rolling(60).mean()
             svg = _render_svg_kline(idx_df, ma5_s, ma10_s, ma20_s, ma60_s)
-            kline_html = f'''<div class="panel"><div class="panel-hd">📈 沪深300 K线（120天）</div><div class="panel-bd" style="padding:4px">{svg}</div></div>'''
+            kline_html = f'''<div class="panel"><div class="panel-hd"> 沪深300 K线（120天）</div><div class="panel-bd" style="padding:4px">{svg}</div></div>'''
 
     # 市场宽度详情
-    width_html=f'''<div class="panel"><div class="panel-hd">📊 市场宽度（{m["date"]}）</div><div class="panel-bd">
+    width_html=f'''<div class="panel"><div class="panel-hd"> 市场宽度（{m["date"]}）</div><div class="panel-bd">
       <div class="grid g3" style="margin-bottom:12px">
         <div style="text-align:center"><div class="up" style="font-size:28px;font-weight:700">{m["up"]}</div><div class="dim" style="font-size:10px">上涨家数</div></div>
         <div style="text-align:center"><div class="dn" style="font-size:28px;font-weight:700">{m["down"]}</div><div class="dim" style="font-size:10px">下跌家数</div></div>
@@ -738,12 +738,12 @@ def page_market(m,sec,sec_days,conn=None):
 
     sec_html=''
     if sec:
-        top_rows=''.join(f'<div class="kv"><span>{s["n"]}</span><span><span class="up">+{s["cum"]}%</span> <span class="dim" style="font-size:10px">{"▲"*min(s["streak"],3)}</span></span></div>'for s in sec['top'])
-        bot_rows=''.join(f'<div class="kv"><span>{s["n"]}</span><span><span class="dn">{s["cum"]}%</span> <span class="dim" style="font-size:10px">{"▼"*min(3,0)}</span></span></div>'for s in sec['bottom'])
+        top_rows=''.join(f'<div class="kv"><span>{s["n"]}</span><span><span class="up">+{s["cum"]}%</span> <span class="dim" style="font-size:10px">{""*min(s["streak"],3)}</span></span></div>'for s in sec['top'])
+        bot_rows=''.join(f'<div class="kv"><span>{s["n"]}</span><span><span class="dn">{s["cum"]}%</span> <span class="dim" style="font-size:10px">{""*min(3,0)}</span></span></div>'for s in sec['bottom'])
         sec_html=f'''
     <div class="grid g2" style="margin-bottom:12px">
-      <div class="panel"><div class="panel-hd">▲ 强势板块（{sec["days"]}日累计）</div><div class="panel-bd">{top_rows}</div></div>
-      <div class="panel"><div class="panel-hd">▼ 走弱板块（{sec["days"]}日累计）</div><div class="panel-bd">{bot_rows}</div></div>
+      <div class="panel"><div class="panel-hd"> 强势板块（{sec["days"]}日累计）</div><div class="panel-bd">{top_rows}</div></div>
+      <div class="panel"><div class="panel-hd"> 走弱板块（{sec["days"]}日累计）</div><div class="panel-bd">{bot_rows}</div></div>
     </div>'''
     else:
         bar_w=min(100,sec_days/5*100)
@@ -755,7 +755,7 @@ def page_market(m,sec,sec_days,conn=None):
       <div class="dim" style="font-size:11px;margin-top:6px">需要 report.py 每日运行积累 ≥5天数据</div></div></div>'''
 
     body=f'''
-    <div class="hero"><h2>📊 市场监控</h2><p>数据: {m["date"]} · {m["total"]}只股票 · 沪深300 {m["idx_close"]:.0f}点 <span class="{("up"if m.get("idx_pct",0)>=0 else"dn")}" style="font-weight:500">{_ud(m.get("idx_pct",0))}%</span> · <span class="{reg_cls}" style="font-weight:500">{reg_label}</span> · 成交{m.get("turnover",0)/1e8:.0f}亿</p></div>
+    <div class="hero"><h2> 市场监控</h2><p>数据: {m["date"]} · {m["total"]}只股票 · 沪深300 {m["idx_close"]:.0f}点 <span class="{("up"if m.get("idx_pct",0)>=0 else"dn")}" style="font-weight:500">{_ud(m.get("idx_pct",0))}%</span> · <span class="{reg_cls}" style="font-weight:500">{reg_label}</span> · 成交{m.get("turnover",0)/1e8:.0f}亿</p></div>
     {kline_html}
     {width_html}
     {sec_html}'''
@@ -764,23 +764,23 @@ def page_market(m,sec,sec_days,conn=None):
 
 def page_factors(fs, sigs):
     """因子参考——辅助"""
-    if not fs: return _page('因子参考','factors.html','<div class="hero"><h2>🔝 因子参考</h2></div><div class="empty">暂无数据</div>')
+    if not fs: return _page('因子参考','factors.html','<div class="hero"><h2> 因子参考</h2></div><div class="empty">暂无数据</div>')
 
     # 交叉标签
     latest_date=sigs[0]['d'] if sigs else''
     buy_codes=set(s['c']for s in sigs if s['a']=='BUY'and s['st']=='passed'and s['d']==latest_date)
 
-    rows=''.join(f'<tr><td>{f["r"]}</td><td class="code">{f["code"]}</td><td>{f["name"]}</td><td class="ta-r code">¥{f["price"]:.2f}</td><td class="ta-r"><span class="ac fw">{f["score"]:.1f}</span></td><td class="ta-r {("up"if f["mom"]>=0 else"dn")}">{f["mom"]:+.1f}</td><td>{"🟢 策略信号"if f["code"] in buy_codes else""}</td></tr>'for f in fs)
+    rows=''.join(f'<tr><td>{f["r"]}</td><td class="code">{f["code"]}</td><td>{f["name"]}</td><td class="ta-r code">¥{f["price"]:.2f}</td><td class="ta-r"><span class="ac fw">{f["score"]:.1f}</span></td><td class="ta-r {("up"if f["mom"]>=0 else"dn")}">{f["mom"]:+.1f}</td><td>{" 策略信号"if f["code"] in buy_codes else""}</td></tr>'for f in fs)
 
-    body=f'''<div class="hero"><h2>🔝 因子参考（辅助）</h2><p>≤¥50已过滤 · 7因子加权 · ROE 120天滞后防泄露 · 本地数据排名仅供参考</p></div>
+    body=f'''<div class="hero"><h2> 因子参考（辅助）</h2><p>≤¥50已过滤 · 7因子加权 · ROE 120天滞后防泄露 · 本地数据排名仅供参考</p></div>
     <div class="panel"><div class="panel-hd">排名 Top 15</div><div class="panel-bd"><table><thead><tr><th>#</th><th>代码</th><th>名称</th><th class="ta-r">现价</th><th class="ta-r">得分</th><th class="ta-r">动量</th><th>标签</th></tr></thead><tbody>{rows}</tbody></table></div></div>
-    <div class="panel" style="margin-top:12px"><div class="panel-bd" style="background:#d9770608;font-size:11px;color:var(--warn)"><strong>⚠️ 因子排名基于本地数据(AKShare)，与聚宽排名存在差异。</strong>多因子仅为辅助参考，选股决策以三策略信号为主。</div></div>'''
+    <div class="panel" style="margin-top:12px"><div class="panel-bd" style="background:#d9770608;font-size:11px;color:var(--warn)"><strong> 因子排名基于本地数据(AKShare)，与聚宽排名存在差异。</strong>多因子仅为辅助参考，选股决策以三策略信号为主。</div></div>'''
     return _page('因子参考','factors.html',body)
 
 
 def page_signals(sigs):
     """信号日志"""
-    if not sigs: return _page('信号日志','signals.html','<div class="hero"><h2>📡 信号日志</h2></div><div class="empty">暂无信号</div>')
+    if not sigs: return _page('信号日志','signals.html','<div class="hero"><h2> 信号日志</h2></div><div class="empty">暂无信号</div>')
 
     gb={}
     for s in sigs:
@@ -795,14 +795,14 @@ def page_signals(sigs):
     buy=sum(1 for s in sigs if s['a']=='BUY');sell=sum(1 for s in sigs if s['a']=='SELL')
     passed=sum(1 for s in sigs if s['st']=='passed');blocked=sum(1 for s in sigs if s['st']=='blocked')
 
-    body=f'''<div class="hero"><h2>📡 信号日志</h2><p>共{len(sigs)}条 · 买入{buy} · 卖出{sell} · 通过{passed} · 拦截{blocked}</p></div>
+    body=f'''<div class="hero"><h2> 信号日志</h2><p>共{len(sigs)}条 · 买入{buy} · 卖出{sell} · 通过{passed} · 拦截{blocked}</p></div>
     <div class="panel"><div class="panel-bd" style="max-height:70vh;overflow-y:auto">{rows}</div></div>'''
     return _page('信号日志','signals.html',body)
 
 
 def page_health(h):
     """运维页"""
-    body=f'''<div class="hero"><h2>🩺 数据健康</h2><p>运维数据——平时不需要看</p></div>
+    body=f'''<div class="hero"><h2> 数据健康</h2><p>运维数据——平时不需要看</p></div>
     <div class="grid g2">
       <div class="panel"><div class="panel-hd">数据库概览</div><div class="panel-bd">
         <div class="kv"><span class="dim">daily_kline</span><span>{h["daily_total"]:,}行 · {h["daily_date"]} · {h["daily_stocks"]}只</span></div>
@@ -823,7 +823,7 @@ def page_history(history):
     """历史对比页 —— 市场脉搏 + 信号摘要"""
     if not history:
         return _page('历史对比','history.html',
-            '<div class="hero"><h2>📅 历史对比</h2><p>暂无历史快照——每次生成仪表盘自动存档</p></div>'
+            '<div class="hero"><h2> 历史对比</h2><p>暂无历史快照——每次生成仪表盘自动存档</p></div>'
             '<div class="panel"><div class="panel-bd"><div class="empty">数据积累中<br><small class="dim">运行 web/generate.py 后自动保存每日快照到 web/output/history/</small></div></div></div>')
 
     # ── 沪深300指数微走势图 ──
@@ -878,12 +878,12 @@ def page_history(history):
           <td class="ta-r"><span class="up">{m.get('limit_up',0)}</span><span class="dim">/</span><span class="dn">{m.get('limit_down',0)}</span></td>
         </tr>'''
 
-    mkt_table = f'''<div class="panel"><div class="panel-hd">📊 市场脉搏（{len(history)}天）</div><div class="panel-bd" style="overflow-x:auto">
+    mkt_table = f'''<div class="panel"><div class="panel-hd"> 市场脉搏（{len(history)}天）</div><div class="panel-bd" style="overflow-x:auto">
       <table><thead><tr>
         <th>日期</th><th class="ta-r">指数</th><th class="ta-r">较昨日</th><th class="ta-r">方向</th><th class="ta-r">5日涨跌</th><th class="ta-r">上涨/下跌</th><th class="ta-r">上涨率</th><th class="ta-r">净涨家数</th><th class="ta-r">成交额</th><th class="ta-r">涨停/跌停</th>
       </tr></thead><tbody>{mkt_rows}</tbody></table>
       <div class="dim" style="font-size:10px;margin-top:8px;line-height:1.6">
-        💡 <strong>方向</strong>：↑ = 指数在20日均线上方(中期上行) ↓ = 下方(中期下行)  ·
+         <strong>方向</strong>：↑ = 指数在20日均线上方(中期上行) ↓ = 下方(中期下行)  ·
         <strong>净涨家数</strong>：上涨家数 − 下跌家数(正数=偏多)  ·
         <strong style="color:var(--up)">红</strong>=涨/偏多 · <strong style="color:var(--down)">绿</strong>=跌/偏空
       </div></div></div>'''
@@ -912,13 +912,13 @@ def page_history(history):
           <td style="font-size:10px">{top_codes}</td>
         </tr>'''
 
-    sig_table = f'''<div class="panel"><div class="panel-hd">📡 信号摘要（{len(history)}天）</div><div class="panel-bd" style="overflow-x:auto">
+    sig_table = f'''<div class="panel"><div class="panel-hd"> 信号摘要（{len(history)}天）</div><div class="panel-bd" style="overflow-x:auto">
       <table><thead><tr><th>日期</th><th>市场</th><th class="ta-r">买入<br><span class="dim" style="font-weight:400;text-transform:none;letter-spacing:0">通过/拦截</span></th><th class="ta-r">卖出<br><span class="dim" style="font-weight:400;text-transform:none;letter-spacing:0">通过</span></th><th>拦截原因</th><th>推荐买入</th></tr></thead><tbody>{sig_rows}</tbody></table>
       <div class="dim" style="font-size:10px;margin-top:8px">
-        💡 买入列：<strong style="color:var(--up)">红</strong>=通过风控 / <strong style="color:var(--down)">绿</strong>=被拦截  ·  无信号的日期显示 —  ·  信号仅在有 run.py 运行的日期产生
+         买入列：<strong style="color:var(--up)">红</strong>=通过风控 / <strong style="color:var(--down)">绿</strong>=被拦截  ·  无信号的日期显示 —  ·  信号仅在有 run.py 运行的日期产生
       </div></div></div>'''
 
-    body = f'''<div class="hero"><h2>📅 历史对比</h2><p>每日市场脉搏 + 信号摘要 · 横向对比看趋势变化</p></div>
+    body = f'''<div class="hero"><h2> 历史对比</h2><p>每日市场脉搏 + 信号摘要 · 横向对比看趋势变化</p></div>
     {spark}
     {mkt_table}
     {sig_table}
@@ -962,7 +962,7 @@ def build():
 
     for fn,html in pages:
         with open(f'web/output/{fn}','w',encoding='utf-8')as f:f.write(html)
-        print(f'✅ web/output/{fn} ({len(html):,} bytes)')
+        print(f' web/output/{fn} ({len(html):,} bytes)')
 
     conn.close()
     print(f'   → 打开 web/output/index.html · {ts}')
