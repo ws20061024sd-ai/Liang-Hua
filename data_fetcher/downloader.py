@@ -63,32 +63,84 @@ def init_database():
     print("✅ 数据库表结构已就绪")
 
 
-def fetch_hs300_constituents() -> pd.DataFrame:
+def fetch_hs300_constituents(force_refresh: bool = False) -> pd.DataFrame:
     """
-    获取沪深300成分股列表
-    返回 DataFrame: [code, name]
+    获取沪深300成分股列表（优先本地缓存，避免每次调API）
+
+    沪深300成分股每半年调整一次（6月/12月），没必要每次运行都调API。
+    首次运行调用API成功后存入 stock_info 表，后续直接从表里读。
+
+    API调用加了30秒超时保护，超时或失败时自动降级到本地缓存。
     """
-    print("📡 获取沪深300成分股列表...")
-    try:
-        # 用中证指数官网接口
-        df = ak.index_stock_cons_csindex(symbol="000300")
-        result = pd.DataFrame({
-            'code': df['成分券代码'].astype(str).str.zfill(6),
-            'name': df['成分券名称']
-        })
-        print(f"   获取到 {len(result)} 只成分股")
-        return result
-    except Exception as e:
-        print(f"   ⚠️ 中证指数接口失败: {e}")
-        print("   尝试备用接口...")
-        # 备用：用东财接口获取沪深300成分股
+    # ── 优先读本地缓存（stock_info 表）──
+    conn = get_db_connection()
+    cached_count = conn.execute("SELECT COUNT(*) FROM stock_info").fetchone()[0]
+    conn.close()
+
+    if cached_count >= 200 and not force_refresh:
+        conn = get_db_connection()
+        df = pd.read_sql_query("SELECT code, name FROM stock_info ORDER BY code", conn)
+        conn.close()
+        print(f"📋 成分股列表：{len(df)} 只（本地缓存，跳过API）")
+        return df
+
+    # ── 缓存为空或强制刷新 → 调API ──
+    print("📡 获取沪深300成分股列表（API）...")
+
+    def _call_api():
+        """实际API调用逻辑"""
+        try:
+            df = ak.index_stock_cons_csindex(symbol="000300")
+            return pd.DataFrame({
+                'code': df['成分券代码'].astype(str).str.zfill(6),
+                'name': df['成分券名称']
+            })
+        except Exception:
+            pass
+        # 备用：东财接口
         df = ak.index_stock_cons(symbol="000300")
-        result = pd.DataFrame({
+        return pd.DataFrame({
             'code': df['品种代码'].astype(str).str.zfill(6),
             'name': df['品种名称']
         })
-        print(f"   备用接口获取到 {len(result)} 只成分股")
+
+    # 用 signal.alarm 做超时保护（Unix only，服务器和Mac都支持）
+    result = None
+    try:
+        import signal
+
+        def _on_timeout(signum, frame):
+            raise TimeoutError("API 调用超时（30秒）")
+
+        old = signal.signal(signal.SIGALRM, _on_timeout)
+        signal.alarm(30)
+        try:
+            result = _call_api()
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old)
+    except (TimeoutError, Exception) as e:
+        print(f"   ⚠️ API 调用失败: {e}")
+
+    # ── API成功 → 返回 + 更新缓存 ──
+    if result is not None and not result.empty:
+        print(f"   获取到 {len(result)} 只成分股")
         return result
+
+    # ── API失败 → 降级到本地缓存 ──
+    conn = get_db_connection()
+    cached_count = conn.execute("SELECT COUNT(*) FROM stock_info").fetchone()[0]
+    if cached_count >= 200:
+        df = pd.read_sql_query("SELECT code, name FROM stock_info ORDER BY code", conn)
+        conn.close()
+        print(f"   📋 降级使用本地缓存（{len(df)} 只）")
+        return df
+    conn.close()
+
+    raise RuntimeError(
+        "❌ 无法获取沪深300成分股：API 不可达且本地无缓存。\n"
+        "   请检查服务器网络（ping eastmoney.com），或在本地 Mac 运行一次 python run.py 生成缓存后同步 DB 到服务器。"
+    )
 
 
 def save_stock_info(conn, stocks: pd.DataFrame):
