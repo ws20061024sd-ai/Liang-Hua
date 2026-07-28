@@ -225,7 +225,7 @@ def download_stock_history(code: str, start_date: str, end_date: str) -> pd.Data
                     '换手率': 'turnover',
                 })
         except Exception as e:
-            print(f"   ⚠️ 备用数据源（东方财富）也失败: {e}")
+            pass  # 静默失败，由上层重试逻辑统一处理
 
     if df is None or df.empty:
         return None

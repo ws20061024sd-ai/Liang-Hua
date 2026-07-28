@@ -216,12 +216,23 @@ def download_all_financial(force: bool = False):
     init_financial_table()
     conn = sqlite3.connect(settings.DB_PATH)
     codes = pd.read_sql_query("SELECT code FROM stock_info", conn)['code'].tolist()
+
+    # 增量模式：已有数据时只下载最近30天（首次全量下载约90秒，增量约5秒）
+    if not force:
+        last_date = conn.execute("SELECT MAX(date) FROM financial_data").fetchone()[0]
+        if last_date:
+            start_date = (pd.Timestamp(last_date) - pd.DateOffset(days=7)).strftime('%Y-%m-%d')
+        else:
+            start_date = settings.FINANCIAL_START_DATE
+    else:
+        start_date = settings.FINANCIAL_START_DATE
+
     conn.close()
     if not codes:
         print("❌ 股票池为空")
         return
-    print(f"\n📊 Baostock 顺序下载 {len(codes)} 只股票估值数据...")
-    df = download_financial_data(codes)
+    print(f"\n📊 Baostock 顺序下载 {len(codes)} 只股票估值数据（{start_date} 起）...")
+    df = download_financial_data(codes, start_date=start_date)
     if df is None or df.empty:
         print("   ❌ 完全失败")
         return

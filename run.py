@@ -196,6 +196,24 @@ def main():
         except Exception as e:
             print(f"⚠️ 财务数据下载跳过: {e}")
 
+        # ROE数据（季度更新，仅覆盖率不足时刷新，避免每次跑154秒）
+        try:
+            import sqlite3 as _sq
+            _c = _sq.connect(settings.DB_PATH)
+            _rq = _c.execute("SELECT MAX(date) FROM financial_roe").fetchone()[0]
+            _rc = _c.execute(
+                "SELECT COUNT(DISTINCT code) FROM financial_roe WHERE date=(SELECT date FROM financial_roe GROUP BY date HAVING COUNT(DISTINCT code)>=255 ORDER BY date DESC LIMIT 1)"
+            ).fetchone()[0] if _rq else 0
+            _c.close()
+            if _rc < 255:
+                print("   📊 ROE数据覆盖率不足，开始下载...")
+                from data_fetcher.roe_downloader import download_all as download_all_roe
+                download_all_roe()
+            else:
+                print(f"   ✅ ROE数据达标（≥255只），跳过下载")
+        except Exception as e:
+            print(f"   ⚠️ ROE数据下载跳过: {e}")
+
         # 板块数据缓存（为行业轮动积累历史数据，兜底 report.py 未运行的情况）
         try:
             from analysis.sector_trend import init_sector_table, save_today_sectors

@@ -173,18 +173,35 @@ def check_financial_roe(conn: sqlite3.Connection):
         fail("financial_roe 表为空")
         return
 
-    cnt = conn.execute(
-        "SELECT COUNT(DISTINCT code) FROM financial_roe WHERE date=?", (latest_q,)
-    ).fetchone()[0]
+    # 最新季度通常覆盖率低（财报未到披露截止日），找最近一个达标季度
+    check_row = conn.execute("""
+        SELECT date, COUNT(DISTINCT code)
+        FROM financial_roe
+        GROUP BY date
+        HAVING COUNT(DISTINCT code) >= ?
+        ORDER BY date DESC LIMIT 1
+    """, (t['roe_min_stocks'],)).fetchone()
+
+    if check_row:
+        check_q, cnt = check_row
+    else:
+        check_q, cnt = latest_q, conn.execute(
+            "SELECT COUNT(DISTINCT code) FROM financial_roe WHERE date=?", (latest_q,)
+        ).fetchone()[0]
 
     total = conn.execute("SELECT COUNT(*) FROM financial_roe").fetchone()[0]
-    minr, maxr = conn.execute(
-        "SELECT MIN(roe), MAX(roe) FROM financial_roe WHERE date=?", (latest_q,)
-    ).fetchone()
+    total_codes = conn.execute("SELECT COUNT(DISTINCT code) FROM financial_roe").fetchone()[0]
 
-    months_lag = (datetime.now() - datetime.strptime(latest_q, '%Y-%m-%d')).days / 30.44
+    months_lag = (datetime.now() - datetime.strptime(check_q, '%Y-%m-%d')).days / 30.44
 
-    print(f"  最新季度: {latest_q} | 覆盖: {cnt}/300 | 总行: {total:,} | 延迟: {months_lag:.1f}月 | 范围: [{minr:.1f}%, {maxr:.1f}%]")
+    skip_note = ""
+    if check_q != latest_q:
+        latest_cnt = conn.execute(
+            "SELECT COUNT(DISTINCT code) FROM financial_roe WHERE date=?", (latest_q,)
+        ).fetchone()[0]
+        skip_note = f"（最新{latest_q}仅{latest_cnt}只，财报未到披露截止日，跳过）"
+
+    print(f"  校验季度: {check_q} | 覆盖: {cnt}/300 | 总行: {total:,} | 总股票: {total_codes} | 延迟: {months_lag:.1f}月{skip_note}")
 
     if cnt < t['roe_min_stocks']:
         fail(f"ROE覆盖 {cnt} < {t['roe_min_stocks']}")
