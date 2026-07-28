@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>因子参考 · 量化交易</title>
+<script>(function(){try{var t=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;450;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -64,6 +65,11 @@ nav .links a{color:var(--text-muted);text-decoration:none;padding:6px 12px;font-
 nav .links a:hover{color:var(--text);background:var(--border-light)}
 nav .links a.active{color:var(--accent);background:var(--accent-soft)}
 
+.theme-btn{background:none;border:none;cursor:pointer;padding:6px 8px;border-radius:6px;color:var(--text-muted);transition:all .15s;display:flex;align-items:center}
+.theme-btn:hover{color:var(--text);background:var(--border-light)}
+[data-theme="dark"] .icon-sun{display:none}
+[data-theme="light"] .icon-moon{display:none}
+
 main{max-width:768px;margin:0 auto;padding:24px 16px 48px;position:relative}
 
 /* ── 毛玻璃卡片（博客 glass-card 同款）── */
@@ -123,11 +129,12 @@ tr:hover td{background:var(--bg-hover)}
 </style>
 </head>
 <body>
-<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links"><a href="index.html">信号</a><a href="market.html">市场</a><a href="history.html">历史</a><a href="strategy.html">策略</a><a href="factors.html" class=active>因子</a><a href="signals.html">日志</a></div></div></nav>
+<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links"><a href="index.html">信号</a><a href="market.html">市场</a><a href="history.html">历史</a><a href="strategy.html">策略</a><a href="factors.html" class=active>因子</a><a href="signals.html">日志</a><button onclick="toggleTheme()" class="theme-btn" aria-label="切换主题"><svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button></div></div></nav>
 <main>
 <div class="hero"><h2> 因子参考（辅助）</h2><p>≤¥50已过滤 · 7因子加权 · ROE 120天滞后防泄露 · 本地数据排名仅供参考</p></div>
     <div class="panel"><div class="panel-hd">排名 Top 15</div><div class="panel-bd"><table><thead><tr><th>#</th><th>代码</th><th>名称</th><th class="ta-r">现价</th><th class="ta-r">得分</th><th class="ta-r">动量</th><th>标签</th></tr></thead><tbody><tr><td>1</td><td class="code">002709</td><td>天赐材料</td><td class="ta-r code">¥40.06</td><td class="ta-r"><span class="ac fw">1.4</span></td><td class="ta-r up">+1.7</td><td></td></tr><tr><td>2</td><td class="code">600522</td><td>中天科技</td><td class="ta-r code">¥45.91</td><td class="ta-r"><span class="ac fw">1.3</span></td><td class="ta-r up">+2.6</td><td></td></tr><tr><td>3</td><td class="code">603993</td><td>洛阳钼业</td><td class="ta-r code">¥17.50</td><td class="ta-r"><span class="ac fw">0.9</span></td><td class="ta-r up">+1.1</td><td></td></tr><tr><td>4</td><td class="code">000792</td><td>盐湖股份</td><td class="ta-r code">¥25.40</td><td class="ta-r"><span class="ac fw">0.9</span></td><td class="ta-r up">+0.8</td><td></td></tr><tr><td>5</td><td class="code">601872</td><td>招商轮船</td><td class="ta-r code">¥15.47</td><td class="ta-r"><span class="ac fw">0.9</span></td><td class="ta-r up">+1.3</td><td></td></tr><tr><td>6</td><td class="code">600089</td><td>特变电工</td><td class="ta-r code">¥20.06</td><td class="ta-r"><span class="ac fw">0.7</span></td><td class="ta-r up">+1.0</td><td></td></tr><tr><td>7</td><td class="code">600221</td><td>海航控股</td><td class="ta-r code">¥1.34</td><td class="ta-r"><span class="ac fw">0.7</span></td><td class="ta-r up">+0.1</td><td></td></tr><tr><td>8</td><td class="code">600426</td><td>华鲁恒升</td><td class="ta-r code">¥18.63</td><td class="ta-r"><span class="ac fw">0.7</span></td><td class="ta-r up">+0.3</td><td></td></tr><tr><td>9</td><td class="code">600066</td><td>宇通客车</td><td class="ta-r code">¥28.40</td><td class="ta-r"><span class="ac fw">0.7</span></td><td class="ta-r up">+0.3</td><td></td></tr><tr><td>10</td><td class="code">002202</td><td>金风科技</td><td class="ta-r code">¥22.36</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+1.1</td><td></td></tr><tr><td>11</td><td class="code">600111</td><td>北方稀土</td><td class="ta-r code">¥42.51</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+1.0</td><td></td></tr><tr><td>12</td><td class="code">002050</td><td>三花智控</td><td class="ta-r code">¥43.20</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+0.8</td><td></td></tr><tr><td>13</td><td class="code">600160</td><td>巨化股份</td><td class="ta-r code">¥43.42</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+0.5</td><td></td></tr><tr><td>14</td><td class="code">002466</td><td>天齐锂业</td><td class="ta-r code">¥47.80</td><td class="ta-r"><span class="ac fw">0.5</span></td><td class="ta-r up">+0.9</td><td></td></tr><tr><td>15</td><td class="code">000630</td><td>铜陵有色</td><td class="ta-r code">¥6.10</td><td class="ta-r"><span class="ac fw">0.5</span></td><td class="ta-r up">+1.0</td><td></td></tr></tbody></table></div></div>
     <div class="panel" style="margin-top:12px"><div class="panel-bd" style="background:#d9770608;font-size:11px;color:var(--warn)"><strong> 因子排名基于本地数据(AKShare)，与聚宽排名存在差异。</strong>多因子仅为辅助参考，选股决策以三策略信号为主。</div></div>
 </main>
+<script>function toggleTheme(){var d=document.documentElement;var n=d.getAttribute("data-theme")==="dark"?"light":"dark";d.setAttribute("data-theme",n);localStorage.setItem("theme",n)}</script>
 </body>
 </html>

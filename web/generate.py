@@ -233,12 +233,15 @@ def _health(conn):
         WHERE date=(SELECT MAX(date) FROM financial_data WHERE date<=?)""",(ld,))
     pep=round(int(f['pe'].iloc[0])/int(f['t'].iloc[0])*100)if int(f['t'].iloc[0])else 0
     pbp=round(int(f['pb'].iloc[0])/int(f['t'].iloc[0])*100)if int(f['t'].iloc[0])else 0
+    # ROE查达标季度（最新季度财报未到披露截止日，覆盖低是正常的）
     lr=_q(conn,"SELECT MAX(date) FROM financial_roe").iloc[0,0]
-    rc=int(_q(conn,"SELECT COUNT(DISTINCT code) FROM financial_roe WHERE date=?",(lr,)).iloc[0,0])if lr else 0
+    qr=_q(conn,"SELECT date FROM financial_roe GROUP BY date HAVING COUNT(DISTINCT code)>=200 ORDER BY date DESC LIMIT 1")
+    cq=qr.iloc[0,0]if not qr.empty else lr
+    rc=int(_q(conn,"SELECT COUNT(DISTINCT code) FROM financial_roe WHERE date=?",(cq,)).iloc[0,0])if lr else 0
     try:sz=round(os.path.getsize(DB)/1024/1024,1)
     except:sz=0
     return {'daily_date':str(ld),'daily_stocks':dc,'daily_nulls':nl,'daily_total':tr,'daily_ok':dc>=280 and nl==0,
-        'pe_pct':pep,'pe_ok':pep>=80,'pb_pct':pbp,'pb_ok':pbp>=90,'roe_date':str(lr or''),'roe_stocks':rc,'roe_ok':rc>=255,'db':sz}
+        'pe_pct':pep,'pe_ok':pep>=80,'pb_pct':pbp,'pb_ok':pbp>=90,'roe_date':str(cq or''),'roe_stocks':rc,'roe_ok':rc>=255,'db':sz}
 
 # ═══════════════ 历史快照系统 ═══════════════
 
