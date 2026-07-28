@@ -140,8 +140,8 @@ tr:hover td{background:var(--bg-hover)}
 
 # ═══════════════ SHARED ═══════════════
 
-THEME_SCRIPT = '<script>(function(){try{var t=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()</script>'
-TOGGLE_JS = '<script>function toggleTheme(){var d=document.documentElement;var n=d.getAttribute("data-theme")==="dark"?"light":"dark";d.setAttribute("data-theme",n);localStorage.setItem("theme",n)}</script>'
+THEME_SCRIPT = '<script>(function(){try{var t=localStorage.getItem("theme");t=(t==="dark"||t==="light")?t:"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()</script>'
+TOGGLE_JS = '<script>function toggleTheme(){var d=document.documentElement;var n=d.getAttribute("data-theme")==="dark"?"light":"dark";d.setAttribute("data-theme",n);try{localStorage.setItem("theme",n)}catch(e){}}</script>'
 
 def _nav(active=''):
     links = [('index.html','信号'),('market.html','市场'),
@@ -235,7 +235,7 @@ def _health(conn):
     pbp=round(int(f['pb'].iloc[0])/int(f['t'].iloc[0])*100)if int(f['t'].iloc[0])else 0
     # ROE查达标季度（最新季度财报未到披露截止日，覆盖低是正常的）
     lr=_q(conn,"SELECT MAX(date) FROM financial_roe").iloc[0,0]
-    qr=_q(conn,"SELECT date FROM financial_roe GROUP BY date HAVING COUNT(DISTINCT code)>=200 ORDER BY date DESC LIMIT 1")
+    qr=_q(conn,"SELECT date FROM financial_roe GROUP BY date HAVING COUNT(DISTINCT code)>=255 ORDER BY date DESC LIMIT 1")
     cq=qr.iloc[0,0]if not qr.empty else lr
     rc=int(_q(conn,"SELECT COUNT(DISTINCT code) FROM financial_roe WHERE date=?",(cq,)).iloc[0,0])if lr else 0
     try:sz=round(os.path.getsize(DB)/1024/1024,1)
