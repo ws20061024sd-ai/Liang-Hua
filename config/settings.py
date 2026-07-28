@@ -74,6 +74,7 @@ PB_MAX_VALID = 50                       # PB 合理上限
 ROE_MIN_VALID = -100                    # ROE 合理下限（%）
 ROE_MAX_VALID = 100                     # ROE 合理上限（%）
 FINANCIAL_MAX_NULL_PCT = 0.10          # 允许的最大 NULL 比例
+ROE_MIN_STOCKS = 255                 # ROE 最低覆盖股票数（85% of 300）
 
 # ============================================================
 # 策略运行器设置

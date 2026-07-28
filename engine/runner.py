@@ -10,6 +10,9 @@ from strategies.momentum_breakout import MomentumBreakoutStrategy
 from strategies.mean_reversion import MeanReversionStrategy
 from data_fetcher.cleaner import get_batch_stock_data, get_all_stocks
 from config import settings
+from config.logging_config import setup_logging
+
+log = setup_logging("runner")
 
 
 # 策略注册表（类名 → 类对象）
@@ -82,6 +85,7 @@ def run_strategies(verbose: bool = False) -> list[dict]:
                     else:
                         sell_count += 1
             except Exception as e:
+                log.warning(f"{code} {name} [{st.name}] 计算异常: {e}")
                 if verbose:
                     print(f"   ⚠️ {code} {name} [{st.name}] 计算异常: {e}")
 

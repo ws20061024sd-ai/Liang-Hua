@@ -194,6 +194,11 @@ def check_financial_roe(conn: sqlite3.Connection):
 
     months_lag = (datetime.now() - datetime.strptime(check_q, '%Y-%m-%d')).days / 30.44
 
+    # ROE 范围（基于校验季度）
+    minr, maxr = conn.execute(
+        "SELECT MIN(roe), MAX(roe) FROM financial_roe WHERE date=?", (check_q,)
+    ).fetchone()
+
     skip_note = ""
     if check_q != latest_q:
         latest_cnt = conn.execute(
@@ -201,7 +206,7 @@ def check_financial_roe(conn: sqlite3.Connection):
         ).fetchone()[0]
         skip_note = f"（最新{latest_q}仅{latest_cnt}只，财报未到披露截止日，跳过）"
 
-    print(f"  校验季度: {check_q} | 覆盖: {cnt}/300 | 总行: {total:,} | 总股票: {total_codes} | 延迟: {months_lag:.1f}月{skip_note}")
+    print(f"  校验季度: {check_q} | 覆盖: {cnt}/300 | 总行: {total:,} | 总股票: {total_codes} | 延迟: {months_lag:.1f}月 | 范围: [{minr:.1f}%, {maxr:.1f}%]{skip_note}")
 
     if cnt < t['roe_min_stocks']:
         fail(f"ROE覆盖 {cnt} < {t['roe_min_stocks']}")

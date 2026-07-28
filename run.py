@@ -32,7 +32,7 @@ def print_header():
     """打印系统标题"""
     print()
     print("╔══════════════════════════════════════════════╗")
-    print("║       📊 半自动化量化交易系统 v0.2.1          ║")
+    print("║       📊 半自动化量化交易系统 v0.3.0          ║")
     print("║       方案A：信号生成 → 人工确认 → 手动下单   ║")
     print("╚══════════════════════════════════════════════╝")
     print()
@@ -179,6 +179,7 @@ def main():
     max_date = None
 
     if not args.no_update:
+        from config import settings
         from data_fetcher.downloader import init_database, download_all, fix_pct_change, verify_data_quality
         init_database()
         download_all()
@@ -202,10 +203,10 @@ def main():
             _c = _sq.connect(settings.DB_PATH)
             _rq = _c.execute("SELECT MAX(date) FROM financial_roe").fetchone()[0]
             _rc = _c.execute(
-                "SELECT COUNT(DISTINCT code) FROM financial_roe WHERE date=(SELECT date FROM financial_roe GROUP BY date HAVING COUNT(DISTINCT code)>=255 ORDER BY date DESC LIMIT 1)"
+                f"SELECT COUNT(DISTINCT code) FROM financial_roe WHERE date=(SELECT date FROM financial_roe GROUP BY date HAVING COUNT(DISTINCT code)>={settings.ROE_MIN_STOCKS} ORDER BY date DESC LIMIT 1)"
             ).fetchone()[0] if _rq else 0
             _c.close()
-            if _rc < 255:
+            if _rc < settings.ROE_MIN_STOCKS:
                 print("   📊 ROE数据覆盖率不足，开始下载...")
                 from data_fetcher.roe_downloader import download_all as download_all_roe
                 download_all_roe()
