@@ -75,6 +75,11 @@ nav .links a{color:var(--text-muted);text-decoration:none;padding:6px 12px;font-
 nav .links a:hover{color:var(--text);background:var(--border-light)}
 nav .links a.active{color:var(--accent);background:var(--accent-soft)}
 
+.theme-btn{background:none;border:none;cursor:pointer;padding:6px 8px;border-radius:6px;color:var(--text-muted);transition:all .15s;display:flex;align-items:center}
+.theme-btn:hover{color:var(--text);background:var(--border-light)}
+[data-theme="dark"] .icon-sun{display:none}
+[data-theme="light"] .icon-moon{display:none}
+
 main{max-width:768px;margin:0 auto;padding:24px 16px 48px;position:relative}
 
 /* ── 毛玻璃卡片（博客 glass-card 同款）── */
@@ -135,15 +140,22 @@ tr:hover td{background:var(--bg-hover)}
 
 # ═══════════════ SHARED ═══════════════
 
+THEME_SCRIPT = '<script>(function(){try{var t=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()</script>'
+TOGGLE_JS = '<script>function toggleTheme(){var d=document.documentElement;var n=d.getAttribute("data-theme")==="dark"?"light":"dark";d.setAttribute("data-theme",n);localStorage.setItem("theme",n)}</script>'
+
 def _nav(active=''):
     links = [('index.html','信号'),('market.html','市场'),
              ('history.html','历史'),('strategy.html','策略'),
              ('factors.html','因子'),('signals.html','日志')]
     items = ''.join(f'<a href="{h}"{" class=active" if h==active else ""}>{n}</a>' for h,n in links)
-    return f'<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links">{items}</div></div></nav>'
+    toggle = '<button onclick="toggleTheme()" class="theme-btn" aria-label="切换主题">'
+    toggle += '<svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+    toggle += '<svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+    toggle += '</button>'
+    return f'<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links">{items}{toggle}</div></div></nav>'
 
 def _page(title,active,body):
-    return f'<!DOCTYPE html>\n<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n<title>{title} · 量化交易</title>\n{FONTS_LINK}\n{CSS}\n</head>\n<body>\n{_nav(active)}\n<main>\n{body}\n</main>\n</body>\n</html>'
+    return f'<!DOCTYPE html>\n<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n<title>{title} · 量化交易</title>\n{THEME_SCRIPT}\n{FONTS_LINK}\n{CSS}\n</head>\n<body>\n{_nav(active)}\n<main>\n{body}\n</main>\n{TOGGLE_JS}\n</body>\n</html>'
 
 def _tag(c,t): return f'<span class="tag {c}">{t}</span>'
 def _ud(v): return f'<span class="{"up" if v>=0 else "dn"}">{v:+.1f}</span>' if v!=0 else '<span class="dim">0.0</span>'
