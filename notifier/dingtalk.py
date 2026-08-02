@@ -35,7 +35,7 @@ def format_signals(aggregated: list[dict], rejected: list[dict],
         lines.append(f"仓位系数: {regime['position_ratio']} | {regime['detail']}")
         if not regime['can_buy']:
             lines.append("")
-            lines.append("> ⚠️ 当前市场禁止开新仓，以下买入信号已自动屏蔽")
+            lines.append("> ⚠️ 当前市场偏弱，买入信号仅降权参考，请谨慎判断")
         lines.append("")
 
     # 策略状态

@@ -10,8 +10,8 @@
   MA60 向下时不做多（防止在下跌趋势中反复抄底被套）
 
 参数：
-  period: 布林带周期（默认 20）
-  std_dev: 标准差倍数（默认 2.0）
+  period: 布林带周期（默认从 config/settings.py 读取，当前 BB_PERIOD=10）
+  std_dev: 标准差倍数（默认从 config/settings.py 读取，当前 2.0）
 
 适合环境：🟡 震荡市（趋势策略在震荡市假信号多，均值回归正好互补）
 """

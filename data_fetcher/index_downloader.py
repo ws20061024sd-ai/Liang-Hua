@@ -5,6 +5,7 @@
       python data_fetcher/index_downloader.py --update  # 仅增量
 """
 import sqlite3, sys, os
+import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import settings
 
@@ -28,6 +29,60 @@ def download_csi300():
     df['amount'] = 0  # AKShare 指数日线不含成交额，另算
     print(f"  ✅ {len(df)} 条 ({df['date'].iloc[0]} ~ {df['date'].iloc[-1]})")
     return df
+
+
+def update_index():
+    """增量更新指数数据（run.py 每日调用）"""
+    conn = sqlite3.connect(DB)
+    # 确保表存在（全新安装时 run.py 直接调用本函数，不会先走 store_index_data）
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS index_daily (
+            date TEXT PRIMARY KEY,
+            open REAL, close REAL, high REAL, low REAL,
+            volume REAL, amount REAL
+        )
+    """)
+    last_date = conn.execute("SELECT MAX(date) FROM index_daily").fetchone()[0]
+    conn.close()
+
+    today = pd.Timestamp.now()
+    if last_date:
+        last_dt = pd.Timestamp(last_date)
+        if last_dt >= today:
+            print("   ✅ 指数数据已是最新")
+            return
+        # 只差几天的话直接全量重下（指数只有一条时间序列，很快）
+        if (today - last_dt).days <= 7:
+            print(f"   📡 指数数据落后 {(today - last_dt).days} 天，增量下载...")
+        else:
+            print(f"   📡 指数数据落后 {(today - last_dt).days} 天，全量刷新...")
+
+    import akshare as ak
+    df = ak.stock_zh_index_daily(symbol="sh000300")
+    df = df.rename(columns={'date': 'date', 'open': 'open', 'close': 'close',
+                            'high': 'high', 'low': 'low', 'volume': 'volume'})
+    df['date'] = df['date'].astype(str)
+
+    # 只保留新数据
+    if last_date:
+        df = df[df['date'] > last_date]
+
+    if df.empty:
+        print("   ℹ️ 无新指数数据")
+        return
+
+    rows = df[['date', 'open', 'close', 'high', 'low', 'volume']].values.tolist()
+    conn = sqlite3.connect(DB)
+    conn.executemany("""
+        INSERT OR REPLACE INTO index_daily (date, open, close, high, low, volume, amount)
+        VALUES (?, ?, ?, ?, ?, ?, 0)
+    """, rows)
+    conn.commit()
+    conn.close()
+    print(f"   ✅ 指数 +{len(rows)} 条 ({df['date'].iloc[0]} ~ {df['date'].iloc[-1]})")
+
+    # 新行 amount=0，回填当日全市场成交额（backfill_amount 内部有跳过保护）
+    backfill_amount()
 
 def store_index_data(df):
     """存入 index_daily 表"""

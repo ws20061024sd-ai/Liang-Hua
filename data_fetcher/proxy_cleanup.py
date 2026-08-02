@@ -27,6 +27,7 @@ def cleanup_proxy():
         os.environ.pop(key, None)
 
     # 同时清除其他含 proxy 的环境变量（npm_proxy, docker_proxy 等）
+    # 注意排除 no_proxy/NO_PROXY —— "no_proxy" 包含子串 "proxy"，误删会导致刚设置的直连名单失效
     for key in list(os.environ.keys()):
-        if "proxy" in key.lower():
+        if "proxy" in key.lower() and "no_proxy" not in key.lower():
             del os.environ[key]

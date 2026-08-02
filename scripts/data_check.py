@@ -144,7 +144,8 @@ def check_financial_data(conn: sqlite3.Connection):
         fail("financial_data 无数据")
         return
 
-    pe_ok = sum(1 for _, pe, _ in rows if pe is not None)
+    # PE 有效口径与 web/generate.py _health() 一致：亏损股(pe<0)/微利失真(pe>500) 不算有效覆盖
+    pe_ok = sum(1 for _, pe, _ in rows if pe is not None and 0 <= pe <= 500)
     pb_ok = sum(1 for _, _, pb in rows if pb is not None)
     fin_total = len(rows)
 

@@ -7,7 +7,7 @@
     python run.py --no-update  # 只生成信号，不更新数据
     python run.py --verbose    # 显示详细日志
 
-v0.2.0 功能:
+v0.3.0 功能:
     ✅ 三策略并行（双均线/动量突破/均值回归）
     ✅ 数据质量五层保障（重试+修复+检查+一致+兜底）
     ✅ 大盘择时（四档状态判断+策略权重匹配）
@@ -184,6 +184,13 @@ def main():
         init_database()
         download_all()
         fix_pct_change()
+
+        # 指数数据（沪深300日线，供大盘择时 & 仪表盘图表使用）
+        try:
+            from data_fetcher.index_downloader import update_index
+            update_index()
+        except Exception as e:
+            print(f"   ⚠️ 指数数据更新跳过: {e}")
 
         # 财务数据（估值因子：PE/PB/ROE）
         try:

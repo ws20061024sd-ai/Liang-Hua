@@ -1,10 +1,11 @@
 """
 策略基类 —— 所有策略必须继承此类，实现统一接口
 
-添加新策略只需 3 步：
+添加新策略只需 4 步：
 1. 在 strategies/ 下新建 .py 文件
 2. 继承 BaseStrategy，实现 calculate() 和 get_signal()
-3. 在 config/settings.py 的 ENABLED_STRATEGIES 中注册
+3. 在 engine/runner.py 的 STRATEGY_REGISTRY 中注册
+4. 在 config/settings.py 的 ENABLED_STRATEGIES 中启用
 """
 
 import pandas as pd

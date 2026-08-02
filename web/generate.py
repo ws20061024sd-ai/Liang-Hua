@@ -7,7 +7,8 @@ import sqlite3, os, sys
 from datetime import datetime, timedelta
 import pandas as pd, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DB = 'data/stocks.db'
+from config import settings
+DB = settings.DB_PATH
 
 # ═══════════════ CSS（博客设计系统） ═══════════════
 
@@ -228,20 +229,26 @@ def _health(conn):
     dc=int(_q(conn,"SELECT COUNT(DISTINCT code) FROM daily_kline WHERE date=?",(ld,)).iloc[0,0])
     nl=int(_q(conn,"SELECT COUNT(*) FROM daily_kline WHERE date=? AND pct_change IS NULL",(ld,)).iloc[0,0])
     tr=int(_q(conn,"SELECT COUNT(*) FROM daily_kline").iloc[0,0])
-    f=_q(conn,"""SELECT COUNT(*) as t,SUM(CASE WHEN pe IS NOT NULL THEN 1 ELSE 0 END)as pe,
-        SUM(CASE WHEN pb IS NOT NULL THEN 1 ELSE 0 END)as pb FROM financial_data
-        WHERE date=(SELECT MAX(date) FROM financial_data WHERE date<=?)""",(ld,))
+    # financial_data 分批入库，各股最新日期不同——用逐股最新日期统计（与 data_check.py 一致）
+    # PE 排除异常值（亏损股 pe<0 / 微利失真 pe>500 不算有效覆盖）
+    f=_q(conn,"""SELECT COUNT(*) as t,
+        SUM(CASE WHEN pe IS NOT NULL AND pe>=? AND pe<=? THEN 1 ELSE 0 END)as pe,
+        SUM(CASE WHEN pb IS NOT NULL THEN 1 ELSE 0 END)as pb
+        FROM (SELECT f.code,f.pe,f.pb FROM financial_data f
+              WHERE f.date=(SELECT MAX(f2.date) FROM financial_data f2
+                            WHERE f2.code=f.code AND f2.date<=?))""",
+        (settings.PE_MIN_VALID,settings.PE_MAX_VALID,ld,))
     pep=round(int(f['pe'].iloc[0])/int(f['t'].iloc[0])*100)if int(f['t'].iloc[0])else 0
     pbp=round(int(f['pb'].iloc[0])/int(f['t'].iloc[0])*100)if int(f['t'].iloc[0])else 0
     # ROE查达标季度（最新季度财报未到披露截止日，覆盖低是正常的）
     lr=_q(conn,"SELECT MAX(date) FROM financial_roe").iloc[0,0]
-    qr=_q(conn,"SELECT date FROM financial_roe GROUP BY date HAVING COUNT(DISTINCT code)>=255 ORDER BY date DESC LIMIT 1")
+    qr=_q(conn,"SELECT date FROM financial_roe GROUP BY date HAVING COUNT(DISTINCT code)>=? ORDER BY date DESC LIMIT 1",(settings.ROE_MIN_STOCKS,))
     cq=qr.iloc[0,0]if not qr.empty else lr
     rc=int(_q(conn,"SELECT COUNT(DISTINCT code) FROM financial_roe WHERE date=?",(cq,)).iloc[0,0])if lr else 0
     try:sz=round(os.path.getsize(DB)/1024/1024,1)
     except:sz=0
-    return {'daily_date':str(ld),'daily_stocks':dc,'daily_nulls':nl,'daily_total':tr,'daily_ok':dc>=280 and nl==0,
-        'pe_pct':pep,'pe_ok':pep>=80,'pb_pct':pbp,'pb_ok':pbp>=90,'roe_date':str(cq or''),'roe_stocks':rc,'roe_ok':rc>=255,'db':sz}
+    return {'daily_date':str(ld),'daily_stocks':dc,'daily_nulls':nl,'daily_total':tr,'daily_ok':dc>=settings.MIN_STOCK_COUNT and nl==0,
+        'pe_pct':pep,'pe_ok':pep>=80,'pb_pct':pbp,'pb_ok':pbp>=90,'roe_date':str(cq or''),'roe_stocks':rc,'roe_ok':rc>=settings.ROE_MIN_STOCKS,'db':sz}
 
 # ═══════════════ 历史快照系统 ═══════════════
 
@@ -304,7 +311,8 @@ def _load_history(days=30):
         try:
             with open(fp, 'r', encoding='utf-8') as f:
                 history.append(json.load(f))
-        except: pass
+        except Exception as e:
+            print(f"[generate] 跳过损坏的历史快照 {fp}: {e}", file=sys.stderr)
     return history
 
 def _sectors(conn):

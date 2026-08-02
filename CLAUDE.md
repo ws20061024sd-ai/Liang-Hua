@@ -67,14 +67,14 @@ run.py  ───  Main entry: download → fix data → quality check → strat
 
 **Data flow**: `AKShare → downloader.py → SQLite (daily_kline + signal_history + sector_history) → strategies → risk filters → signal_aggregator → DingTalk`
 
-**Three strategies running in parallel**:
-1. `MaCrossStrategy` — MA10/MA30 golden cross buy, death cross sell
-2. `MomentumBreakoutStrategy` — Breakout above 20-day high with 2% buffer
-3. `MeanReversionStrategy` — Bollinger Bands (20,2) oversold/overbought
+**Three strategies running in parallel** (v2 params from `config/settings.py`):
+1. `MaCrossStrategy` — MA20/MA60 golden cross buy, death cross sell
+2. `MomentumBreakoutStrategy` — Breakout above 10-day high with 2% buffer
+3. `MeanReversionStrategy` — Bollinger Bands (10,2.0) oversold/overbought
 
 **Three-line defense** (execution order matters):
 1. 基础风控 (`risk_filter.py`): Filter ST, limit-up/down, suspension, price cap, liquidity — **runs first**
-2. 大盘择时 (`market_timing.py`): Market regime (strong/shaky/weak/crash) — blocks buys in weak/crash, adjusts strategy weights
+2. 大盘择时 (`market_timing.py`): Market regime (strong/shaky/weak/crash) — v3: 降权不拦截, adjusts strategy weights only
 3. 仓位控制 (`risk_filter.py` calculate_position): Position sizing by capital tier
 
 ## Adding a New Strategy
@@ -87,7 +87,7 @@ run.py  ───  Main entry: download → fix data → quality check → strat
 ## Data Quality System
 
 Five-layer automatic protection runs on every execution:
-1. Download with 3 retries (0.5s/1.0s backoff) + second pass for failures
+1. Download with 3 retries (0.3s/0.6s backoff) + second pass for failures
 2. `fix_pct_change()` — SQL backfill of NULL pct_change from previous close
 3. `verify_data_quality()` — checks: date=today? stocks≥280? pct_change no NULLs? sector_count≥80? extreme values?
 4. Report consistency — all components use unified `data_date` from DB
@@ -148,13 +148,13 @@ PYTHONPATH=. python backtest/local_factor_backtest.py  # 本地回测（5个TOP_
 
 | File | Purpose |
 |------|------|
-| `docs/项目完整方案.md` | **Authoritative reference** — architecture, strategies, defense, deployment |
+| `docs/核心/项目完整方案.md` | **Authoritative reference** — architecture, strategies, defense, deployment |
 | `docs/核心/数据与回测正确性保障规范.md` | **宪法级** — 数据标准、回测规则、红线、校验流程 |
-| `docs/核心/项目状态与待办.md` | Current status, TODO, run log |
-| `docs/核心/项目下一步计划.md` | Roadmap, priorities, data source decisions |
+| `docs/核心/项目下一步计划.md` | Roadmap, priorities, data source decisions (当前状态主文档) |
 | `docs/核心/项目梳理与优化方案.md` | Audit checklist (7-layer), strategy iteration protocol |
-| `docs/核心/项目综合审查报告_2026-07-05.md` | **Latest audit** — 28 issues found, 26 resolved |
-| `docs/核心/优化执行计划_2026-07-05.md` | Execution plan + plain-language summary of all fixes |
+| `docs/存档/项目状态与待办.md` | **已归档** (2026-06-17, 内容过时) — 历史状态记录 |
+| `docs/存档/项目综合审查报告_2026-07-05.md` | **已归档** — 28 issues found, 26 resolved |
+| `docs/存档/优化执行计划_2026-07-05.md` | **已归档** — Execution plan + plain-language summary of all fixes |
 | `docs/架构/项目复盘与经验整理.md` | Problems encountered, solutions, deployment checklist |
 | `docs/架构/半自动化交易方案.md` | Original design blueprint (historical reference) |
 | `docs/架构/服务器部署指南.md` | Server setup guide with exact commands |

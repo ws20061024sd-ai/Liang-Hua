@@ -7,8 +7,8 @@
   否则 → HOLD（无信号）
 
 参数：
-  fast_period: 快线周期（默认 10）
-  slow_period: 慢线周期（默认 30）
+  fast_period: 快线周期（默认从 config/settings.py 读取，当前 MA_FAST=20）
+  slow_period: 慢线周期（默认从 config/settings.py 读取，当前 MA_SLOW=60）
 """
 
 import pandas as pd

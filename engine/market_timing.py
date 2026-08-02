@@ -1,16 +1,15 @@
 """
-大盘择时模块 —— 防线一
+大盘择时模块 —— 防线一（v3: 降权不拦截）
 
-判断市场状态，调节仓位系数：
+判断市场状态，调节策略权重：
 
 状态判断依据：沪深300指数与 MA20、MA60 的关系
 
-四档状态：
-  🟢 强势: 指数>MA20 且 MA20>MA60  → 仓位系数 1.0
-  🟡 震荡: 指数>MA20 但 MA20<MA60  → 仓位系数 0.3
-           或 指数在 MA20 附近反复
-  🟠 弱势: 指数<MA20 且 MA20<MA60  → 仓位系数 0.0（禁买）
-  🔴 极弱: 指数<MA60 且连续下跌10日  → 仓位系数 0.0（建议清仓）
+四档状态（v3 所有档位均不拦截买入，仅调节权重）：
+  🟢 强势: 指数>MA20 且 MA20>MA60  → 趋势增强
+  🟡 震荡: 指数>MA20 但 MA20<MA60，或跌破MA20但MA20>MA60（回调） → 回归增强
+  🟠 弱势: 指数<MA20 且 MA20<MA60（空头排列） → 全部降权
+  🔴 极弱: 指数<MA60 且连续下跌10日 → 大幅降权
 """
 
 import pandas as pd
@@ -119,11 +118,17 @@ def get_market_regime() -> dict:
         label = '🔴 极弱'
         position_ratio = 0.0
         detail = f'指数{latest:.0f}跌破MA60({ma60:.0f})且连续{consecutive_down}日下跌'
+    elif not above_ma20 and ma20_above_ma60:
+        # 价格跌破MA20但MA20仍在MA60上方 → 多头排列中的回调（可买，降权）
+        regime = 'shaky'
+        label = '🟡 震荡（回调）'
+        position_ratio = 0.3
+        detail = f'指数{latest:.0f}跌破MA20({ma20:.0f})，但MA20仍在MA60上方，属上涨趋势回调'
     else:
         regime = 'weak'
         label = '🟠 弱势'
         position_ratio = 0.0
-        detail = f'指数{latest:.0f}在MA20({ma20:.0f})下方，趋势偏空'
+        detail = f'指数{latest:.0f}在MA20({ma20:.0f})下方且均线空头排列，趋势偏空'
 
     return {
         'regime': regime,
@@ -215,7 +220,7 @@ def get_strategy_advice(regime: dict, enabled_strategies: list) -> str:
     advice = {
         'strong':  '🟢 强势市：趋势策略（双均线/动量突破）优先，均值回归降权',
         'shaky':   '🟡 震荡市：均值回归策略优先，趋势策略降权（假信号多）',
-        'weak':    '🟠 弱势市：所有买入信号已屏蔽，耐心等待趋势好转',
+        'weak':    '🟠 弱势市：买入信号已降权，谨慎操作',
         'crash':   '🔴 极弱市：建议观望，不建议任何做多操作',
     }
     return advice.get(regime['regime'], '')

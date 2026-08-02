@@ -221,6 +221,7 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
     value_weight = 0.10   # 全部给 PE
     quality_weight = 0.15  # ROE
     has_financial = df_score['pe'].notna().sum() > 10
+    scale = 1.0  # 无财务数据时价格因子归一化系数，默认不缩放
 
     if has_financial:
         # PE: 越低越好（负向）
@@ -264,7 +265,7 @@ def compute_factor_scores(date: str = None) -> pd.DataFrame:
         if price_total > 0:
             scale = 1.0 / price_total  # 归一化到 1.0
 
-    # 合成总分
+    # 合成总分（scale 仅在没有财务数据时生效，默认 1.0 不缩放）
     w_mom = 0.30 * (scale if not has_financial else 1.0)
     w_vol = 0.20 * (scale if not has_financial else 1.0)
     w_rev = 0.15 * (scale if not has_financial else 1.0)
