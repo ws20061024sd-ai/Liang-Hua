@@ -1087,12 +1087,12 @@ def build():
         ('health.html',page_health(h)),
     ]
 
-    # 股票详情页：为所有出现在买入信号中的股票生成
-    buy_codes=set()
+    # 股票详情页：为信号历史中出现过的所有股票生成（点击链接时页面始终最新，
+    # 避免 web/output 残留旧文件被原样上传）
+    stock_codes=set()
     if sigs:
-        latest=sigs[0]['d']
-        buy_codes=set(s['c']for s in sigs if s['a']=='BUY'and s['st']=='passed'and s['d']==latest)
-    for code in buy_codes:
+        stock_codes=set(s['c']for s in sigs)
+    for code in stock_codes:
         pages.append((f'stock_{code}.html',page_stock(conn,code)))
 
     for fn,html in pages:
