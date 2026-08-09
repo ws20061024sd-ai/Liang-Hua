@@ -132,6 +132,17 @@ tr:hover td{background:var(--bg-hover)}
 .stock-header .chg{font-size:13px;margin-left:4px}
 .stock-header .info td{padding:2px 8px 2px 0;border:none;font-size:12px}
 .chart-box{background:var(--bg-card-solid);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:12px;overflow-x:auto}
+/* 板块热力图 */
+.hm-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.hm-block{border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:36px;cursor:default}
+.hm-name{font-size:10px;font-weight:600;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45);max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hm-pct{font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+/* K线 tooltip */
+.kline-tip{position:fixed;z-index:999;background:var(--bg-card-solid);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:11px;box-shadow:var(--shadow-md);display:none;pointer-events:none;max-width:190px}
+.kt-date{font-weight:600;margin-bottom:4px;display:flex;gap:8px;align-items:center}
+.kt-row{display:flex;gap:8px;margin-top:2px}
+.kt-row span{color:var(--text-muted)}
+.kt-row b{font-weight:600}
 /* 微型走势条（历史对比用） */
 .mini-bar{display:inline-block;height:4px;border-radius:2px;min-width:2px}
 @keyframes pulse-warn { 0%,100%{opacity:1} 50%{opacity:0.6} }
@@ -346,6 +357,49 @@ def _sectors(conn):
     top=ranked[:5];bottom=ranked[-5:][::-1]
     return {'date':recent_dates[0],'days':min(5,days),'top':[{'n':n,'cum':d['cum'],'streak':d['streak']}for n,d in top],
         'bottom':[{'n':n,'cum':d['cum'],'streak':d['streak']}for n,d in bottom]},days
+
+def _sector_heatmap(conn):
+    """当日全板块数据（热力图用）——返回 [{name, pct, n}]"""
+    ld = _q(conn, "SELECT MAX(date) FROM sector_history").iloc[0, 0]
+    if not ld:
+        return []
+    df = _q(conn, "SELECT name, pct_change, up_count, down_count FROM sector_history WHERE date=?", (ld,))
+    rows = []
+    for _, r in df.iterrows():
+        pct = float(r['pct_change']) if r['pct_change'] is not None else 0
+        n = int((r['up_count'] or 0) + (r['down_count'] or 0))
+        rows.append({'name': r['name'], 'pct': round(pct, 1), 'n': max(n, 1)})
+    return rows
+
+
+def _heat_color(pct):
+    """涨跌幅 → (CSS颜色变量, 透明度)。A股红涨绿跌，3档色阶"""
+    if pct > 0:
+        a = 0.35 if pct < 0.5 else (0.6 if pct < 2 else 1.0)
+        return 'var(--up)', a
+    if pct < 0:
+        a = 0.35 if pct > -0.5 else (0.6 if pct > -2 else 1.0)
+        return 'var(--down)', a
+    return 'var(--border)', 0.5
+
+
+def _render_heatmap(rows):
+    """板块热力图——矩形色块 flex 排列，红涨绿跌，大小∝成分股数"""
+    if not rows:
+        return ''
+    blocks = []
+    for r in rows:
+        color, op = _heat_color(r['pct'])
+        sz = min(max(36, int(28 + r['n'] * 0.3)), 240)  # 成分股数→尺寸，上下限保护
+        blocks.append(
+            f'<div class="hm-block" data-sz="{sz}" style="width:{sz}px;height:{sz}px;'
+            f'background:{color};opacity:{op}" '
+            f'title="{r["name"]} · {r["pct"]:+.1f}% · {r["n"]}只成分股">'
+            f'<span class="hm-name">{r["name"]}</span>'
+            f'<span class="hm-pct">{r["pct"]:+.1f}%</span></div>'
+        )
+    return f'<div class="hm-wrap">{"".join(blocks)}</div>'
+
 
 def _signals_all(conn):
     df=_q(conn,"SELECT date,code,name,strategy,action,price,strength,status,reason,filter_reason FROM signal_history ORDER BY date DESC,id DESC LIMIT 200")
@@ -759,6 +813,16 @@ def page_market(m,sec,sec_days,conn=None):
       <div class="kv"><span class="dim">数据日期</span><span>{m["date"]} ({m["data_age"]}天前)</span></div>
     </div></div>'''
 
+    # ── 板块热力图（当日）──
+    heat_html = ''
+    if conn:
+        hm_rows = _sector_heatmap(conn)
+        if hm_rows:
+            hm_date = _q(conn, "SELECT MAX(date) FROM sector_history").iloc[0, 0]
+            heat_html = (f'<div class="panel" style="margin-bottom:12px">'
+                         f'<div class="panel-hd"> 板块热力图（{hm_date}）</div>'
+                         f'<div class="panel-bd">{_render_heatmap(hm_rows)}</div></div>')
+
     sec_html=''
     if sec:
         top_rows=''.join(f'<div class="kv"><span>{s["n"]}</span><span><span class="up">+{s["cum"]}%</span> <span class="dim" style="font-size:10px">{""*min(s["streak"],3)}</span></span></div>'for s in sec['top'])
@@ -781,6 +845,7 @@ def page_market(m,sec,sec_days,conn=None):
     <div class="hero"><h2> 市场监控</h2><p>数据: {m["date"]} · {m["total"]}只股票 · 沪深300 {m["idx_close"]:.0f}点 <span class="{("up"if m.get("idx_pct",0)>=0 else"dn")}" style="font-weight:500">{_ud(m.get("idx_pct",0))}%</span> · <span class="{reg_cls}" style="font-weight:500">{reg_label}</span> · 成交{m.get("turnover",0)/1e8:.0f}亿</p></div>
     {kline_html}
     {width_html}
+    {heat_html}
     {sec_html}'''
     return _page('市场监控','market.html',body)
 
