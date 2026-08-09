@@ -154,6 +154,41 @@ tr:hover td{background:var(--bg-hover)}
 
 THEME_SCRIPT = '<script>(function(){try{var t=localStorage.getItem("theme");t=(t==="dark"||t==="light")?t:"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()</script>'
 TOGGLE_JS = '<script>function toggleTheme(){var d=document.documentElement;var n=d.getAttribute("data-theme")==="dark"?"light":"dark";d.setAttribute("data-theme",n);try{localStorage.setItem("theme",n)}catch(e){}}</script>'
+KLINE_TOOLTIP_JS = '''<script>
+(function(){
+  var tip=null;
+  function fmt(v){return v||'—'}
+  function show(ev){
+    var t=ev.target;
+    var d=t.getAttribute('data-date');if(!d)return;
+    var o=t.getAttribute('data-o'),h=t.getAttribute('data-h'),l=t.getAttribute('data-l'),
+        c=t.getAttribute('data-c'),p=parseFloat(t.getAttribute('data-pct')),v=t.getAttribute('data-vol');
+    var cls=(p>=0?'up':'dn');
+    tip.innerHTML='<div class="kt-date">'+d+' <span class="'+cls+'">'+(p>=0?'+':'')+p.toFixed(2)+'%</span></div>'
+      +'<div class="kt-row"><span>开</span><b>'+fmt(o)+'</b><span>高</span><b>'+fmt(h)+'</b></div>'
+      +'<div class="kt-row"><span>低</span><b>'+fmt(l)+'</b><span>收</span><b>'+fmt(c)+'</b></div>'
+      +'<div class="kt-row"><span>量</span><b>'+fmt(v)+'</b></div>';
+    tip.style.display='block';
+    tip.style.left=(ev.clientX+12)+'px';
+    tip.style.top=(ev.clientY-10)+'px';
+    if(tip.getBoundingClientRect().right>window.innerWidth){tip.style.left=(ev.clientX-160)+'px';}
+  }
+  function hide(){if(tip)tip.style.display='none';}
+  document.addEventListener('DOMContentLoaded',function(){
+    var svgs=document.querySelectorAll('svg[data-kline]');
+    if(!svgs.length)return;
+    tip=document.createElement('div');tip.className='kline-tip';document.body.appendChild(tip);
+    svgs.forEach(function(svg){
+      svg.querySelectorAll('rect[data-date]').forEach(function(r){
+        r.addEventListener('mousemove',show);
+        r.addEventListener('mouseleave',hide);
+        r.addEventListener('click',show);
+        r.addEventListener('touchstart',function(ev){show(ev);ev.preventDefault();});
+      });
+    });
+  });
+})();
+</script>'''
 
 def _nav(active=''):
     links = [('index.html','信号'),('market.html','市场'),
@@ -167,7 +202,7 @@ def _nav(active=''):
     return f'<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links">{items}{toggle}</div></div></nav>'
 
 def _page(title,active,body):
-    return f'<!DOCTYPE html>\n<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n<title>{title} · 量化交易</title>\n{THEME_SCRIPT}\n{FONTS_LINK}\n{CSS}\n</head>\n<body>\n{_nav(active)}\n<main>\n{body}\n</main>\n{TOGGLE_JS}\n</body>\n</html>'
+    return f'<!DOCTYPE html>\n<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n<title>{title} · 量化交易</title>\n{THEME_SCRIPT}\n{FONTS_LINK}\n{CSS}\n</head>\n<body>\n{_nav(active)}\n<main>\n{body}\n</main>\n{TOGGLE_JS}\n{KLINE_TOOLTIP_JS}\n</body>\n</html>'
 
 def _tag(c,t): return f'<span class="tag {c}">{t}</span>'
 def _ud(v): return f'<span class="{"up" if v>=0 else "dn"}">{v:+.1f}</span>' if v!=0 else '<span class="dim">0.0</span>'
@@ -485,7 +520,7 @@ def _render_svg_kline(ohlc_df, ma5_series=None, ma10_series=None, ma20_series=No
     else:
         vols=[0]*n;vmax=1
 
-    parts=[f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" style="width:100%;max-width:800px">']
+    parts=[f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" style="width:100%;max-width:800px" data-kline="1">']
 
     # ── 价格网格(5条水平线) ──
     for i in range(5):
@@ -494,6 +529,7 @@ def _render_svg_kline(ohlc_df, ma5_series=None, ma10_series=None, ma20_series=No
         parts.append(f'<text x="{ml-5}" y="{y+4:.0f}" text-anchor="end" fill="var(--text-soft)" font-size="9">{price:.1f}</text>')
 
     # ── K线 + 成交量柱 ──
+    prev_close = None
     for i,(_,d)in enumerate(data.iterrows()):
         x=ml+i*(w-ml-mr)/n
         o,c,h_v,l_v=float(d['open']),float(d['close']),float(d['high']),float(d['low'])
@@ -508,6 +544,17 @@ def _render_svg_kline(ohlc_df, ma5_series=None, ma10_series=None, ma20_series=No
         vh=(vols[i]/vmax)*vol_h*0.9 if vmax>0 else 0
         vh=max(1,vh)if vh>0 else 0
         parts.append(f'<rect x="{x:.1f}" y="{vol_y0+vol_h-vh:.1f}" width="{bar_w:.1f}" height="{vh:.1f}" fill="{color}" opacity="0.35"/>')
+        # ── tooltip 数据 + 透明命中区（覆盖价格区+量区，便于悬停）──
+        pct = ((c - prev_close) / prev_close * 100) if prev_close else 0.0
+        prev_close = c
+        d_str = str(d['date'])
+        vol = vols[i]
+        vol_str = f'{vol/1e8:.1f}亿' if vol >= 1e8 else (f'{vol/1e4:.0f}万' if vol >= 1e4 else f'{vol:.0f}')
+        parts.append(
+            f'<rect x="{x-1:.1f}" y="{mt:.1f}" width="{bar_w+2:.1f}" height="{kline_h+vol_h:.1f}" '
+            f'fill="transparent" data-date="{d_str}" data-o="{o:.2f}" data-h="{h_v:.2f}" '
+            f'data-l="{l_v:.2f}" data-c="{c:.2f}" data-pct="{pct:+.2f}" data-vol="{vol_str}"/>'
+        )
 
     # 成交量基线
     parts.append(f'<line x1="{ml}" y1="{vol_y0:.0f}" x2="{w-mr}" y2="{vol_y0:.0f}" stroke="var(--border)" stroke-width="0.5"/>')
