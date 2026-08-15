@@ -1077,8 +1077,13 @@ def build():
 
     os.makedirs('web/output',exist_ok=True)
 
+    # quant.html 与 index.html 同页面：COS ".html 省略"规则使无斜杠 URL
+    # (/works/quant) 命中 quant.html 而非目录 index.html，必须保持同步，
+    # 否则无斜杠访问永远拿到旧版本（2026-08-16 事故根因）
+    index_html=page_index(conn,m,h,sigs,fs,ps)
     pages=[
-        ('index.html',page_index(conn,m,h,sigs,fs,ps)),
+        ('index.html',index_html),
+        ('quant.html',index_html),
         ('market.html',page_market(m,sec,sec_days,conn)),
         ('history.html',page_history(history)),
         ('strategy.html',page_strategy(sigs)),
