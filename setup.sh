@@ -78,6 +78,9 @@ cat << 'CRON'
 
 # 21:15 — 数据库备份（保留最近7天）
 15 21 * * 1-5 cd /root/Liang-Hua && ./venv/bin/python scripts/health_check.py --backup >> logs/health.log 2>&1
+
+# 21:20 — 仪表盘静态页面生成 + 上传 COS（双路径）
+20 21 * * 1-5 cd /root/Liang-Hua && PYTHONPATH=. ./venv/bin/python web/generate.py >> logs/dashboard.log 2>&1 && /usr/local/bin/coscmd upload -r web/output/ /works/quant/ --delete -H '{"Cache-Control":"max-age=300"}' >> logs/dashboard.log 2>&1 && /usr/local/bin/coscmd upload -r web/output/ /quant/ --delete -H '{"Cache-Control":"max-age=300"}' >> logs/dashboard.log 2>&1
 CRON
 echo "----------------------------------------"
 echo ""

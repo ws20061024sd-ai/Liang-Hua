@@ -86,8 +86,10 @@ def send_alert(message: str):
         resp = requests.post(settings.DINGTALK_WEBHOOK, json=payload, timeout=10)
         if resp.json().get("errcode") == 0:
             print("   📤 告警已推送")
-    except Exception:
-        pass
+        else:
+            print(f"   ⚠️ 告警推送被拒: {resp.json()}")
+    except Exception as e:
+        print(f"   ⚠️ 告警推送失败: {e}")
 
 
 if __name__ == "__main__":

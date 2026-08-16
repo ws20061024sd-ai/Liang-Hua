@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>因子参考 · 量化交易</title>
-<script>(function(){try{var t=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()</script>
+<script>(function(){try{var t=localStorage.getItem("theme");t=(t==="dark"||t==="light")?t:"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;450;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -121,6 +121,17 @@ tr:hover td{background:var(--bg-hover)}
 .stock-header .chg{font-size:13px;margin-left:4px}
 .stock-header .info td{padding:2px 8px 2px 0;border:none;font-size:12px}
 .chart-box{background:var(--bg-card-solid);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:12px;overflow-x:auto}
+/* 板块热力图 */
+.hm-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.hm-block{border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:36px;cursor:default}
+.hm-name{font-size:10px;font-weight:600;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45);max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hm-pct{font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+/* K线 tooltip */
+.kline-tip{position:fixed;z-index:999;background:var(--bg-card-solid);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:11px;box-shadow:var(--shadow-md);display:none;pointer-events:none;max-width:190px}
+.kt-date{font-weight:600;margin-bottom:4px;display:flex;gap:8px;align-items:center}
+.kt-row{display:flex;gap:8px;margin-top:2px}
+.kt-row span{color:var(--text-muted)}
+.kt-row b{font-weight:600}
 /* 微型走势条（历史对比用） */
 .mini-bar{display:inline-block;height:4px;border-radius:2px;min-width:2px}
 @keyframes pulse-warn { 0%,100%{opacity:1} 50%{opacity:0.6} }
@@ -135,6 +146,41 @@ tr:hover td{background:var(--bg-hover)}
     <div class="panel"><div class="panel-hd">排名 Top 15</div><div class="panel-bd"><table><thead><tr><th>#</th><th>代码</th><th>名称</th><th class="ta-r">现价</th><th class="ta-r">得分</th><th class="ta-r">动量</th><th>标签</th></tr></thead><tbody><tr><td>1</td><td class="code">002709</td><td>天赐材料</td><td class="ta-r code">¥40.06</td><td class="ta-r"><span class="ac fw">1.4</span></td><td class="ta-r up">+1.7</td><td></td></tr><tr><td>2</td><td class="code">600522</td><td>中天科技</td><td class="ta-r code">¥45.91</td><td class="ta-r"><span class="ac fw">1.3</span></td><td class="ta-r up">+2.6</td><td></td></tr><tr><td>3</td><td class="code">603993</td><td>洛阳钼业</td><td class="ta-r code">¥17.50</td><td class="ta-r"><span class="ac fw">0.9</span></td><td class="ta-r up">+1.1</td><td></td></tr><tr><td>4</td><td class="code">000792</td><td>盐湖股份</td><td class="ta-r code">¥25.40</td><td class="ta-r"><span class="ac fw">0.9</span></td><td class="ta-r up">+0.8</td><td></td></tr><tr><td>5</td><td class="code">601872</td><td>招商轮船</td><td class="ta-r code">¥15.47</td><td class="ta-r"><span class="ac fw">0.9</span></td><td class="ta-r up">+1.3</td><td></td></tr><tr><td>6</td><td class="code">600089</td><td>特变电工</td><td class="ta-r code">¥20.06</td><td class="ta-r"><span class="ac fw">0.7</span></td><td class="ta-r up">+1.0</td><td></td></tr><tr><td>7</td><td class="code">600221</td><td>海航控股</td><td class="ta-r code">¥1.34</td><td class="ta-r"><span class="ac fw">0.7</span></td><td class="ta-r up">+0.1</td><td></td></tr><tr><td>8</td><td class="code">600426</td><td>华鲁恒升</td><td class="ta-r code">¥18.63</td><td class="ta-r"><span class="ac fw">0.7</span></td><td class="ta-r up">+0.3</td><td></td></tr><tr><td>9</td><td class="code">600066</td><td>宇通客车</td><td class="ta-r code">¥28.40</td><td class="ta-r"><span class="ac fw">0.7</span></td><td class="ta-r up">+0.3</td><td></td></tr><tr><td>10</td><td class="code">002202</td><td>金风科技</td><td class="ta-r code">¥22.36</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+1.1</td><td></td></tr><tr><td>11</td><td class="code">600111</td><td>北方稀土</td><td class="ta-r code">¥42.51</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+1.0</td><td></td></tr><tr><td>12</td><td class="code">002050</td><td>三花智控</td><td class="ta-r code">¥43.20</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+0.8</td><td></td></tr><tr><td>13</td><td class="code">600160</td><td>巨化股份</td><td class="ta-r code">¥43.42</td><td class="ta-r"><span class="ac fw">0.6</span></td><td class="ta-r up">+0.5</td><td></td></tr><tr><td>14</td><td class="code">002466</td><td>天齐锂业</td><td class="ta-r code">¥47.80</td><td class="ta-r"><span class="ac fw">0.5</span></td><td class="ta-r up">+0.9</td><td></td></tr><tr><td>15</td><td class="code">000630</td><td>铜陵有色</td><td class="ta-r code">¥6.10</td><td class="ta-r"><span class="ac fw">0.5</span></td><td class="ta-r up">+1.0</td><td></td></tr></tbody></table></div></div>
     <div class="panel" style="margin-top:12px"><div class="panel-bd" style="background:#d9770608;font-size:11px;color:var(--warn)"><strong> 因子排名基于本地数据(AKShare)，与聚宽排名存在差异。</strong>多因子仅为辅助参考，选股决策以三策略信号为主。</div></div>
 </main>
-<script>function toggleTheme(){var d=document.documentElement;var n=d.getAttribute("data-theme")==="dark"?"light":"dark";d.setAttribute("data-theme",n);localStorage.setItem("theme",n)}</script>
+<script>function toggleTheme(){var d=document.documentElement;var n=d.getAttribute("data-theme")==="dark"?"light":"dark";d.setAttribute("data-theme",n);try{localStorage.setItem("theme",n)}catch(e){}}</script>
+<script>
+(function(){
+  var tip=null;
+  function fmt(v){return v||'—'}
+  function show(ev){
+    var t=ev.target;
+    var d=t.getAttribute('data-date');if(!d)return;
+    var o=t.getAttribute('data-o'),h=t.getAttribute('data-h'),l=t.getAttribute('data-l'),
+        c=t.getAttribute('data-c'),p=parseFloat(t.getAttribute('data-pct')),v=t.getAttribute('data-vol');
+    var cls=(p>=0?'up':'dn');
+    tip.innerHTML='<div class="kt-date">'+d+' <span class="'+cls+'">'+(p>=0?'+':'')+p.toFixed(2)+'%</span></div>'
+      +'<div class="kt-row"><span>开</span><b>'+fmt(o)+'</b><span>高</span><b>'+fmt(h)+'</b></div>'
+      +'<div class="kt-row"><span>低</span><b>'+fmt(l)+'</b><span>收</span><b>'+fmt(c)+'</b></div>'
+      +'<div class="kt-row"><span>量</span><b>'+fmt(v)+'</b></div>';
+    tip.style.display='block';
+    tip.style.left=(ev.clientX+12)+'px';
+    tip.style.top=(ev.clientY-10)+'px';
+    if(tip.getBoundingClientRect().right>window.innerWidth){tip.style.left=(ev.clientX-160)+'px';}
+  }
+  function hide(){if(tip)tip.style.display='none';}
+  document.addEventListener('DOMContentLoaded',function(){
+    var svgs=document.querySelectorAll('svg[data-kline]');
+    if(!svgs.length)return;
+    tip=document.createElement('div');tip.className='kline-tip';document.body.appendChild(tip);
+    svgs.forEach(function(svg){
+      svg.querySelectorAll('rect[data-date]').forEach(function(r){
+        r.addEventListener('mousemove',show);
+        r.addEventListener('mouseleave',hide);
+        r.addEventListener('click',show);
+        r.addEventListener('touchstart',function(ev){show(ev);ev.preventDefault();});
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>

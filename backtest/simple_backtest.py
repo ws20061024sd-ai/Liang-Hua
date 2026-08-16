@@ -12,7 +12,7 @@ from strategies.ma_cross import MaCrossStrategy
 
 
 def run():
-    print("📊 双均线策略回测 (MA10/MA30)")
+    print(f"📊 双均线策略回测 (MA{settings.MA_FAST}/MA{settings.MA_SLOW})")
     print("=" * 60)
 
     # 加载数据
@@ -68,7 +68,7 @@ def run():
                 current_price = float(row.iloc[0]['close'])
                 cost = holdings[code]['cost']
                 pnl_pct = (current_price - cost) / cost
-                if pnl_pct <= -0.05:  # -5% 止损
+                if pnl_pct <= -settings.TRAILING_STOP:  # 止损（读 settings，与实盘一致）
                     shares = holdings[code]['shares']
                     cash += shares * current_price * (1 - commission)
                     trades.append({
@@ -77,8 +77,6 @@ def run():
                     })
                     total_trades += 1
                     total_pnl += pnl_pct
-                    if pnl_pct < 0:
-                        pass  # 止损肯定是亏的
                     del holdings[code]
 
         # ---- 计算信号 ----

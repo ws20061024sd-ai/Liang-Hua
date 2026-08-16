@@ -35,8 +35,8 @@ def fetch_hs300_index(start_date: str) -> pd.DataFrame | None:
             df['close'] = df['close'].astype(float)
             df = df[df['date'] >= pd.Timestamp(start_date)].sort_values('date').reset_index(drop=True)
             return df
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"⚠️ [回测] 获取 {code} 数据失败: {e}")
     return None
 
 

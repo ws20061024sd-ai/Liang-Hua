@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>市场监控 · 量化交易</title>
-<script>(function(){try{var t=localStorage.getItem("theme")||"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()</script>
+<script>(function(){try{var t=localStorage.getItem("theme");t=(t==="dark"||t==="light")?t:"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;450;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -121,6 +121,17 @@ tr:hover td{background:var(--bg-hover)}
 .stock-header .chg{font-size:13px;margin-left:4px}
 .stock-header .info td{padding:2px 8px 2px 0;border:none;font-size:12px}
 .chart-box{background:var(--bg-card-solid);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:12px;overflow-x:auto}
+/* 板块热力图 */
+.hm-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.hm-block{border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:36px;cursor:default}
+.hm-name{font-size:10px;font-weight:600;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45);max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hm-pct{font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+/* K线 tooltip */
+.kline-tip{position:fixed;z-index:999;background:var(--bg-card-solid);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:11px;box-shadow:var(--shadow-md);display:none;pointer-events:none;max-width:190px}
+.kt-date{font-weight:600;margin-bottom:4px;display:flex;gap:8px;align-items:center}
+.kt-row{display:flex;gap:8px;margin-top:2px}
+.kt-row span{color:var(--text-muted)}
+.kt-row b{font-weight:600}
 /* 微型走势条（历史对比用） */
 .mini-bar{display:inline-block;height:4px;border-radius:2px;min-width:2px}
 @keyframes pulse-warn { 0%,100%{opacity:1} 50%{opacity:0.6} }
@@ -133,7 +144,7 @@ tr:hover td{background:var(--bg-hover)}
 <main>
 
     <div class="hero"><h2> 市场监控</h2><p>数据: 2026-07-10 · 299只股票 · 沪深300 4781点 <span class="dn" style="font-weight:500"><span class="dn">-2.0</span>%</span> · <span class="up" style="font-weight:500">强势 ↑</span> · 成交10839亿</p></div>
-    <div class="panel"><div class="panel-hd"> 沪深300 K线（120天）</div><div class="panel-bd" style="padding:4px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 310" style="width:100%;max-width:800px">
+    <div class="panel"><div class="panel-hd"> 沪深300 K线（120天）</div><div class="panel-bd" style="padding:4px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 310" style="width:100%;max-width:800px" data-kline="1">
 <line x1="50" y1="20" x2="780" y2="20" stroke="var(--border)" stroke-width="0.5"/>
 <text x="45" y="24" text-anchor="end" fill="var(--text-soft)" font-size="9">5064.3</text>
 <line x1="50" y1="73" x2="780" y2="73" stroke="var(--border)" stroke-width="0.5"/>
@@ -147,363 +158,483 @@ tr:hover td{background:var(--bg-hover)}
 <line x1="52.5" y1="112.1" x2="52.5" y2="128.5" stroke="var(--up)" stroke-width="1"/>
 <rect x="50.0" y="116.0" width="5.1" height="10.4" fill="var(--up)"/>
 <rect x="50.0" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="49.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-09" data-o="4725.96" data-h="4771.43" data-l="4719.13" data-c="4758.92" data-pct="+0.00" data-vol="0"/>
 <line x1="58.6" y1="104.3" x2="58.6" y2="122.7" stroke="var(--up)" stroke-width="1"/>
 <rect x="56.1" y="106.2" width="5.1" height="6.4" fill="var(--up)"/>
 <rect x="56.1" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="55.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-12" data-o="4769.65" data-h="4795.93" data-l="4737.57" data-c="4789.92" data-pct="+0.65" data-vol="0"/>
 <line x1="64.7" y1="91.5" x2="64.7" y2="120.2" stroke="var(--down)" stroke-width="1"/>
 <rect x="62.2" y="103.7" width="5.1" height="11.6" fill="var(--down)"/>
 <rect x="62.2" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="61.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-13" data-o="4798.05" data-h="4836.95" data-l="4745.52" data-c="4761.03" data-pct="-0.60" data-vol="0"/>
 <line x1="70.8" y1="97.4" x2="70.8" y2="128.1" stroke="var(--down)" stroke-width="1"/>
 <rect x="68.2" y="113.2" width="5.1" height="8.1" fill="var(--down)"/>
 <rect x="68.2" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="67.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-14" data-o="4767.70" data-h="4818.10" data-l="4720.25" data-c="4741.93" data-pct="-0.40" data-vol="0"/>
 <line x1="76.9" y1="112.6" x2="76.9" y2="127.9" stroke="var(--up)" stroke-width="1"/>
 <rect x="74.3" y="118.3" width="5.1" height="9.3" fill="var(--up)"/>
 <rect x="74.3" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="73.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-15" data-o="4721.80" data-h="4769.55" data-l="4720.94" data-c="4751.43" data-pct="+0.20" data-vol="0"/>
 <line x1="83.0" y1="105.4" x2="83.0" y2="129.7" stroke="var(--down)" stroke-width="1"/>
 <rect x="80.4" y="109.8" width="5.1" height="14.6" fill="var(--down)"/>
 <rect x="80.4" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="79.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-16" data-o="4778.43" data-h="4792.55" data-l="4715.36" data-c="4731.87" data-pct="-0.41" data-vol="0"/>
 <line x1="89.0" y1="115.1" x2="89.0" y2="129.8" stroke="var(--up)" stroke-width="1"/>
 <rect x="86.5" y="123.7" width="5.1" height="4.5" fill="var(--up)"/>
 <rect x="86.5" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="85.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-19" data-o="4720.19" data-h="4761.63" data-l="4715.09" data-c="4734.46" data-pct="+0.05" data-vol="0"/>
 <line x1="95.1" y1="119.3" x2="95.1" y2="139.2" stroke="var(--down)" stroke-width="1"/>
 <rect x="92.6" y="122.9" width="5.1" height="5.7" fill="var(--down)"/>
 <rect x="92.6" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="91.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-20" data-o="4736.91" data-h="4748.23" data-l="4684.97" data-c="4718.88" data-pct="-0.33" data-vol="0"/>
 <line x1="101.2" y1="116.2" x2="101.2" y2="130.0" stroke="var(--up)" stroke-width="1"/>
 <rect x="98.7" y="127.3" width="5.1" height="2.7" fill="var(--up)"/>
 <rect x="98.7" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="97.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-21" data-o="4714.55" data-h="4758.28" data-l="4714.24" data-c="4723.07" data-pct="+0.09" data-vol="0"/>
 <line x1="107.3" y1="116.3" x2="107.3" y2="134.4" stroke="var(--down)" stroke-width="1"/>
 <rect x="104.8" y="121.4" width="5.1" height="5.7" fill="var(--down)"/>
 <rect x="104.8" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="103.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-22" data-o="4741.76" data-h="4757.76" data-l="4700.45" data-c="4723.71" data-pct="+0.01" data-vol="0"/>
 <line x1="113.4" y1="123.6" x2="113.4" y2="139.3" stroke="var(--down)" stroke-width="1"/>
 <rect x="110.8" y="125.2" width="5.1" height="8.5" fill="var(--down)"/>
 <rect x="110.8" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="109.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-23" data-o="4729.59" data-h="4734.79" data-l="4684.62" data-c="4702.50" data-pct="-0.45" data-vol="0"/>
 <line x1="119.5" y1="117.5" x2="119.5" y2="136.7" stroke="var(--down)" stroke-width="1"/>
 <rect x="116.9" y="129.7" width="5.1" height="2.6" fill="var(--down)"/>
 <rect x="116.9" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="115.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-26" data-o="4715.38" data-h="4754.18" data-l="4693.16" data-c="4706.96" data-pct="+0.09" data-vol="0"/>
 <line x1="125.5" y1="122.9" x2="125.5" y2="142.2" stroke="var(--up)" stroke-width="1"/>
 <rect x="123.0" y="132.7" width="5.1" height="1.0" fill="var(--up)"/>
 <rect x="123.0" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="122.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-27" data-o="4705.17" data-h="4736.99" data-l="4675.64" data-c="4705.69" data-pct="-0.03" data-vol="0"/>
 <line x1="131.6" y1="122.0" x2="131.6" y2="135.2" stroke="var(--down)" stroke-width="1"/>
 <rect x="129.1" y="126.5" width="5.1" height="2.4" fill="var(--down)"/>
 <rect x="129.1" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="128.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-28" data-o="4725.60" data-h="4739.63" data-l="4697.91" data-c="4717.99" data-pct="+0.26" data-vol="0"/>
 <line x1="137.7" y1="112.2" x2="137.7" y2="135.7" stroke="var(--up)" stroke-width="1"/>
 <rect x="135.2" y="117.6" width="5.1" height="6.5" fill="var(--up)"/>
 <rect x="135.2" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="134.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-29" data-o="4733.09" data-h="4770.96" data-l="4696.05" data-c="4753.87" data-pct="+0.76" data-vol="0"/>
 <line x1="143.8" y1="122.3" x2="143.8" y2="151.6" stroke="var(--down)" stroke-width="1"/>
 <rect x="141.2" y="127.2" width="5.1" height="5.3" fill="var(--down)"/>
 <rect x="141.2" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="140.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-30" data-o="4723.08" data-h="4738.87" data-l="4645.47" data-c="4706.34" data-pct="-1.00" data-vol="0"/>
 <line x1="149.9" y1="129.3" x2="149.9" y2="165.4" stroke="var(--down)" stroke-width="1"/>
 <rect x="147.3" y="142.6" width="5.1" height="21.5" fill="var(--down)"/>
 <rect x="147.3" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="146.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-02" data-o="4674.28" data-h="4716.61" data-l="4601.76" data-c="4605.98" data-pct="-2.13" data-vol="0"/>
 <line x1="156.0" y1="146.4" x2="156.0" y2="172.8" stroke="var(--up)" stroke-width="1"/>
 <rect x="153.4" y="147.0" width="5.1" height="3.7" fill="var(--up)"/>
 <rect x="153.4" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="152.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-03" data-o="4648.36" data-h="4662.13" data-l="4578.21" data-c="4660.11" data-pct="+1.18" data-vol="0"/>
 <line x1="162.0" y1="134.0" x2="162.0" y2="152.8" stroke="var(--up)" stroke-width="1"/>
 <rect x="159.5" y="134.9" width="5.1" height="15.9" fill="var(--up)"/>
 <rect x="159.5" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="158.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-04" data-o="4647.97" data-h="4701.48" data-l="4641.84" data-c="4698.68" data-pct="+0.83" data-vol="0"/>
 <line x1="168.1" y1="138.6" x2="168.1" y2="153.5" stroke="var(--up)" stroke-width="1"/>
 <rect x="165.6" y="143.8" width="5.1" height="1.8" fill="var(--up)"/>
 <rect x="165.6" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="164.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-05" data-o="4664.75" data-h="4687.02" data-l="4639.43" data-c="4670.42" data-pct="-0.60" data-vol="0"/>
 <line x1="174.2" y1="141.3" x2="174.2" y2="163.9" stroke="var(--up)" stroke-width="1"/>
 <rect x="171.7" y="152.2" width="5.1" height="6.5" fill="var(--up)"/>
 <rect x="171.7" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="170.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-06" data-o="4622.98" data-h="4678.26" data-l="4606.64" data-c="4643.60" data-pct="-0.57" data-vol="0"/>
 <line x1="180.3" y1="128.2" x2="180.3" y2="140.8" stroke="var(--up)" stroke-width="1"/>
 <rect x="177.8" y="128.5" width="5.1" height="8.0" fill="var(--up)"/>
 <rect x="177.8" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="176.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-09" data-o="4693.67" data-h="4719.96" data-l="4679.90" data-c="4719.06" data-pct="+1.63" data-vol="0"/>
 <line x1="186.4" y1="124.4" x2="186.4" y2="130.1" stroke="var(--up)" stroke-width="1"/>
 <rect x="183.8" y="126.9" width="5.1" height="1.9" fill="var(--up)"/>
 <rect x="183.8" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="182.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-10" data-o="4718.26" data-h="4732.09" data-l="4713.87" data-c="4724.30" data-pct="+0.11" data-vol="0"/>
 <line x1="192.5" y1="127.1" x2="192.5" y2="133.3" stroke="var(--down)" stroke-width="1"/>
 <rect x="189.9" y="129.6" width="5.1" height="1.0" fill="var(--down)"/>
 <rect x="189.9" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="188.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-11" data-o="4715.67" data-h="4723.70" data-l="4703.69" data-c="4713.82" data-pct="-0.22" data-vol="0"/>
 <line x1="198.5" y1="126.3" x2="198.5" y2="132.1" stroke="var(--down)" stroke-width="1"/>
 <rect x="196.0" y="128.2" width="5.1" height="1.0" fill="var(--down)"/>
 <rect x="196.0" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="195.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-12" data-o="4720.01" data-h="4726.04" data-l="4707.74" data-c="4719.58" data-pct="+0.12" data-vol="0"/>
 <line x1="204.6" y1="133.4" x2="204.6" y2="147.6" stroke="var(--down)" stroke-width="1"/>
 <rect x="202.1" y="136.6" width="5.1" height="10.4" fill="var(--down)"/>
 <rect x="202.1" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="201.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-13" data-o="4693.41" data-h="4703.63" data-l="4658.40" data-c="4660.41" data-pct="-1.25" data-vol="0"/>
 <line x1="210.7" y1="125.9" x2="210.7" y2="135.0" stroke="var(--down)" stroke-width="1"/>
 <rect x="208.2" y="125.9" width="5.1" height="6.2" fill="var(--down)"/>
 <rect x="208.2" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="207.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-24" data-o="4727.30" data-h="4727.37" data-l="4698.35" data-c="4707.54" data-pct="+1.01" data-vol="0"/>
 <line x1="216.8" y1="113.6" x2="216.8" y2="130.3" stroke="var(--up)" stroke-width="1"/>
 <rect x="214.2" y="123.2" width="5.1" height="7.0" fill="var(--up)"/>
 <rect x="214.2" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="213.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-25" data-o="4713.57" data-h="4766.56" data-l="4713.34" data-c="4735.89" data-pct="+0.60" data-vol="0"/>
 <line x1="222.9" y1="121.3" x2="222.9" y2="132.4" stroke="var(--down)" stroke-width="1"/>
 <rect x="220.3" y="121.5" width="5.1" height="4.6" fill="var(--down)"/>
 <rect x="220.3" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="219.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-26" data-o="4741.39" data-h="4742.15" data-l="4706.69" data-c="4726.87" data-pct="-0.19" data-vol="0"/>
 <line x1="229.0" y1="127.9" x2="229.0" y2="136.7" stroke="var(--up)" stroke-width="1"/>
 <rect x="226.4" y="131.2" width="5.1" height="3.9" fill="var(--up)"/>
 <rect x="226.4" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="225.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-27" data-o="4698.30" data-h="4721.01" data-l="4692.89" data-c="4710.65" data-pct="-0.34" data-vol="0"/>
 <line x1="235.0" y1="123.4" x2="235.0" y2="144.8" stroke="var(--up)" stroke-width="1"/>
 <rect x="232.5" y="125.5" width="5.1" height="15.0" fill="var(--up)"/>
 <rect x="232.5" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="231.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-02" data-o="4681.01" data-h="4735.41" data-l="4667.27" data-c="4728.67" data-pct="+0.38" data-vol="0"/>
 <line x1="241.1" y1="120.5" x2="241.1" y2="149.8" stroke="var(--down)" stroke-width="1"/>
 <rect x="238.6" y="122.8" width="5.1" height="25.6" fill="var(--down)"/>
 <rect x="238.6" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="237.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-03" data-o="4737.32" data-h="4744.60" data-l="4651.40" data-c="4655.90" data-pct="-1.54" data-vol="0"/>
 <line x1="247.2" y1="153.5" x2="247.2" y2="173.5" stroke="var(--down)" stroke-width="1"/>
 <rect x="244.7" y="163.0" width="5.1" height="2.1" fill="var(--down)"/>
 <rect x="244.7" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="243.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-04" data-o="4609.19" data-h="4639.42" data-l="4575.82" data-c="4602.62" data-pct="-1.14" data-vol="0"/>
 <line x1="253.3" y1="143.5" x2="253.3" y2="156.4" stroke="var(--down)" stroke-width="1"/>
 <rect x="250.8" y="149.6" width="5.1" height="1.3" fill="var(--down)"/>
 <rect x="250.8" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="249.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-05" data-o="4651.94" data-h="4671.53" data-l="4630.30" data-c="4647.69" data-pct="+0.98" data-vol="0"/>
 <line x1="259.4" y1="143.4" x2="259.4" y2="161.9" stroke="var(--up)" stroke-width="1"/>
 <rect x="256.8" y="146.9" width="5.1" height="12.2" fill="var(--up)"/>
 <rect x="256.8" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="255.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-06" data-o="4621.49" data-h="4671.71" data-l="4612.79" data-c="4660.44" data-pct="+0.27" data-vol="0"/>
 <line x1="265.5" y1="157.8" x2="265.5" y2="182.0" stroke="var(--up)" stroke-width="1"/>
 <rect x="262.9" y="161.1" width="5.1" height="4.8" fill="var(--up)"/>
 <rect x="262.9" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="261.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-09" data-o="4600.25" data-h="4625.98" data-l="4548.97" data-c="4615.45" data-pct="-0.97" data-vol="0"/>
 <line x1="271.5" y1="141.5" x2="271.5" y2="150.6" stroke="var(--up)" stroke-width="1"/>
 <rect x="269.0" y="142.4" width="5.1" height="8.2" fill="var(--up)"/>
 <rect x="269.0" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="268.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-10" data-o="4648.78" data-h="4677.60" data-l="4648.78" data-c="4674.76" data-pct="+1.28" data-vol="0"/>
 <line x1="277.6" y1="130.8" x2="277.6" y2="142.5" stroke="var(--up)" stroke-width="1"/>
 <rect x="275.1" y="133.1" width="5.1" height="7.4" fill="var(--up)"/>
 <rect x="275.1" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="274.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-11" data-o="4681.03" data-h="4711.87" data-l="4674.71" data-c="4704.50" data-pct="+0.64" data-vol="0"/>
 <line x1="283.7" y1="133.1" x2="283.7" y2="148.9" stroke="var(--down)" stroke-width="1"/>
 <rect x="281.2" y="134.3" width="5.1" height="4.1" fill="var(--down)"/>
 <rect x="281.2" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="280.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-12" data-o="4700.72" data-h="4704.38" data-l="4654.31" data-c="4687.56" data-pct="-0.36" data-vol="0"/>
 <line x1="289.8" y1="132.2" x2="289.8" y2="147.2" stroke="var(--up)" stroke-width="1"/>
 <rect x="287.2" y="144.2" width="5.1" height="1.0" fill="var(--up)"/>
 <rect x="287.2" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="286.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-13" data-o="4669.06" data-h="4707.42" data-l="4659.50" data-c="4669.14" data-pct="-0.39" data-vol="0"/>
 <line x1="295.9" y1="142.8" x2="295.9" y2="159.1" stroke="var(--up)" stroke-width="1"/>
 <rect x="293.3" y="143.4" width="5.1" height="1.0" fill="var(--up)"/>
 <rect x="293.3" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="292.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-16" data-o="4669.22" data-h="4673.69" data-l="4621.81" data-c="4671.56" data-pct="+0.05" data-vol="0"/>
 <line x1="302.0" y1="127.9" x2="302.0" y2="154.2" stroke="var(--down)" stroke-width="1"/>
 <rect x="299.4" y="139.0" width="5.1" height="15.1" fill="var(--down)"/>
 <rect x="299.4" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="298.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-17" data-o="4685.57" data-h="4720.86" data-l="4637.37" data-c="4637.44" data-pct="-0.73" data-vol="0"/>
 <line x1="308.0" y1="146.4" x2="308.0" y2="164.5" stroke="var(--up)" stroke-width="1"/>
 <rect x="305.5" y="147.6" width="5.1" height="3.0" fill="var(--up)"/>
 <rect x="305.5" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="304.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-18" data-o="4648.75" data-h="4662.29" data-l="4604.52" data-c="4658.33" data-pct="+0.45" data-vol="0"/>
 <line x1="314.1" y1="155.1" x2="314.1" y2="175.2" stroke="var(--down)" stroke-width="1"/>
 <rect x="311.6" y="162.3" width="5.1" height="8.9" fill="var(--down)"/>
 <rect x="311.6" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="310.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-19" data-o="4611.44" data-h="4634.55" data-l="4570.39" data-c="4583.25" data-pct="-1.61" data-vol="0"/>
 <line x1="320.2" y1="156.9" x2="320.2" y2="177.5" stroke="var(--down)" stroke-width="1"/>
 <rect x="317.7" y="165.1" width="5.1" height="11.3" fill="var(--down)"/>
 <rect x="317.7" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="316.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-20" data-o="4602.82" data-h="4628.71" data-l="4563.07" data-c="4567.02" data-pct="-0.35" data-vol="0"/>
 <line x1="326.3" y1="192.7" x2="326.3" y2="229.6" stroke="var(--down)" stroke-width="1"/>
 <rect x="323.8" y="197.7" width="5.1" height="25.5" fill="var(--down)"/>
 <rect x="323.8" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="322.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-23" data-o="4499.10" data-h="4514.72" data-l="4397.57" data-c="4418.00" data-pct="-3.26" data-vol="0"/>
 <line x1="332.4" y1="205.3" x2="332.4" y2="230.6" stroke="var(--up)" stroke-width="1"/>
 <rect x="329.8" y="205.3" width="5.1" height="5.0" fill="var(--up)"/>
 <rect x="329.8" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="328.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-24" data-o="4458.91" data-h="4474.82" data-l="4394.29" data-c="4474.72" data-pct="+1.28" data-vol="0"/>
 <line x1="338.5" y1="184.1" x2="338.5" y2="196.7" stroke="var(--up)" stroke-width="1"/>
 <rect x="335.9" y="185.6" width="5.1" height="9.7" fill="var(--up)"/>
 <rect x="335.9" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="334.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-25" data-o="4506.62" data-h="4542.18" data-l="4502.03" data-c="4537.47" data-pct="+1.40" data-vol="0"/>
 <line x1="344.5" y1="184.5" x2="344.5" y2="207.1" stroke="var(--down)" stroke-width="1"/>
 <rect x="342.0" y="189.4" width="5.1" height="15.0" fill="var(--down)"/>
 <rect x="342.0" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="341.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-26" data-o="4525.33" data-h="4541.05" data-l="4468.96" data-c="4477.53" data-pct="-1.32" data-vol="0"/>
 <line x1="350.6" y1="191.1" x2="350.6" y2="218.9" stroke="var(--up)" stroke-width="1"/>
 <rect x="348.1" y="196.6" width="5.1" height="22.3" fill="var(--up)"/>
 <rect x="348.1" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="347.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-27" data-o="4431.50" data-h="4519.89" data-l="4431.42" data-c="4502.57" data-pct="+0.56" data-vol="0"/>
 <line x1="356.7" y1="198.5" x2="356.7" y2="214.0" stroke="var(--up)" stroke-width="1"/>
 <rect x="354.2" y="199.9" width="5.1" height="9.5" fill="var(--up)"/>
 <rect x="354.2" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="353.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-30" data-o="4461.74" data-h="4496.41" data-l="4447.14" data-c="4491.95" data-pct="-0.24" data-vol="0"/>
 <line x1="362.8" y1="190.1" x2="362.8" y2="213.1" stroke="var(--down)" stroke-width="1"/>
 <rect x="360.2" y="199.9" width="5.1" height="13.2" fill="var(--down)"/>
 <rect x="360.2" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="359.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-31" data-o="4491.92" data-h="4523.18" data-l="4450.05" data-c="4450.05" data-pct="-0.93" data-vol="0"/>
 <line x1="368.9" y1="187.3" x2="368.9" y2="199.9" stroke="var(--up)" stroke-width="1"/>
 <rect x="366.3" y="189.2" width="5.1" height="2.8" fill="var(--up)"/>
 <rect x="366.3" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="365.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-01" data-o="4517.27" data-h="4532.11" data-l="4492.05" data-c="4526.07" data-pct="+1.71" data-vol="0"/>
 <line x1="375.0" y1="191.2" x2="375.0" y2="210.1" stroke="var(--down)" stroke-width="1"/>
 <rect x="372.4" y="192.8" width="5.1" height="11.2" fill="var(--down)"/>
 <rect x="372.4" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="371.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-02" data-o="4514.44" data-h="4519.69" data-l="4459.61" data-c="4478.91" data-pct="-1.04" data-vol="0"/>
 <line x1="381.0" y1="199.1" x2="381.0" y2="217.0" stroke="var(--down)" stroke-width="1"/>
 <rect x="378.5" y="199.6" width="5.1" height="16.4" fill="var(--down)"/>
 <rect x="378.5" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="377.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-03" data-o="4492.85" data-h="4494.46" data-l="4437.60" data-c="4440.79" data-pct="-0.85" data-vol="0"/>
 <line x1="387.1" y1="210.3" x2="387.1" y2="222.3" stroke="var(--down)" stroke-width="1"/>
 <rect x="384.6" y="214.4" width="5.1" height="1.6" fill="var(--down)"/>
 <rect x="384.6" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="383.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-07" data-o="4445.86" data-h="4458.93" data-l="4420.69" data-c="4440.62" data-pct="-0.00" data-vol="0"/>
 <line x1="393.2" y1="167.3" x2="393.2" y2="193.0" stroke="var(--up)" stroke-width="1"/>
 <rect x="390.7" y="167.3" width="5.1" height="24.6" fill="var(--up)"/>
 <rect x="390.7" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="389.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-08" data-o="4517.34" data-h="4595.56" data-l="4513.77" data-c="4595.56" data-pct="+3.49" data-vol="0"/>
 <line x1="399.3" y1="172.5" x2="399.3" y2="180.9" stroke="var(--up)" stroke-width="1"/>
 <rect x="396.8" y="176.6" width="5.1" height="1.1" fill="var(--up)"/>
 <rect x="396.8" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="395.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-09" data-o="4562.67" data-h="4579.20" data-l="4552.42" data-c="4566.22" data-pct="-0.64" data-vol="0"/>
 <line x1="405.4" y1="148.6" x2="405.4" y2="169.0" stroke="var(--up)" stroke-width="1"/>
 <rect x="402.8" y="154.4" width="5.1" height="13.1" fill="var(--up)"/>
 <rect x="402.8" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="401.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-10" data-o="4594.95" data-h="4655.10" data-l="4590.11" data-c="4636.57" data-pct="+1.54" data-vol="0"/>
 <line x1="411.5" y1="149.2" x2="411.5" y2="161.2" stroke="var(--up)" stroke-width="1"/>
 <rect x="408.9" y="151.4" width="5.1" height="9.8" fill="var(--up)"/>
 <rect x="408.9" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="407.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-13" data-o="4615.13" data-h="4653.40" data-l="4615.13" data-c="4646.15" data-pct="+0.21" data-vol="0"/>
 <line x1="417.5" y1="134.1" x2="417.5" y2="148.7" stroke="var(--up)" stroke-width="1"/>
 <rect x="415.0" y="134.1" width="5.1" height="7.9" fill="var(--up)"/>
 <rect x="415.0" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="414.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-14" data-o="4676.12" data-h="4701.28" data-l="4654.85" data-c="4701.28" data-pct="+1.19" data-vol="0"/>
 <line x1="423.6" y1="124.7" x2="423.6" y2="143.1" stroke="var(--down)" stroke-width="1"/>
 <rect x="421.1" y="126.1" width="5.1" height="13.0" fill="var(--down)"/>
 <rect x="421.1" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="420.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-15" data-o="4726.64" data-h="4731.27" data-l="4672.56" data-c="4685.25" data-pct="-0.34" data-vol="0"/>
 <line x1="429.7" y1="122.2" x2="429.7" y2="137.8" stroke="var(--up)" stroke-width="1"/>
 <rect x="427.2" y="123.0" width="5.1" height="13.3" fill="var(--up)"/>
 <rect x="427.2" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="426.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-16" data-o="4694.43" data-h="4739.22" data-l="4689.41" data-c="4736.61" data-pct="+1.10" data-vol="0"/>
 <line x1="435.8" y1="122.5" x2="435.8" y2="130.0" stroke="var(--down)" stroke-width="1"/>
 <rect x="433.2" y="125.4" width="5.1" height="1.0" fill="var(--down)"/>
 <rect x="433.2" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="432.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-17" data-o="4728.99" data-h="4738.32" data-l="4714.47" data-c="4728.67" data-pct="-0.17" data-vol="0"/>
 <line x1="441.9" y1="114.7" x2="441.9" y2="128.0" stroke="var(--up)" stroke-width="1"/>
 <rect x="439.3" y="116.4" width="5.1" height="9.5" fill="var(--up)"/>
 <rect x="439.3" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="438.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-20" data-o="4727.17" data-h="4763.04" data-l="4720.69" data-c="4757.44" data-pct="+0.61" data-vol="0"/>
 <line x1="448.0" y1="110.4" x2="448.0" y2="127.6" stroke="var(--up)" stroke-width="1"/>
 <rect x="445.4" y="113.1" width="5.1" height="5.5" fill="var(--up)"/>
 <rect x="445.4" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="444.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-21" data-o="4750.52" data-h="4776.83" data-l="4722.01" data-c="4768.00" data-pct="+0.22" data-vol="0"/>
 <line x1="454.0" y1="102.6" x2="454.0" y2="118.7" stroke="var(--up)" stroke-width="1"/>
 <rect x="451.5" y="103.2" width="5.1" height="15.2" fill="var(--up)"/>
 <rect x="451.5" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="450.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-22" data-o="4751.28" data-h="4801.45" data-l="4750.35" data-c="4799.63" data-pct="+0.66" data-vol="0"/>
 <line x1="460.1" y1="95.7" x2="460.1" y2="115.7" stroke="var(--down)" stroke-width="1"/>
 <rect x="457.6" y="98.0" width="5.1" height="9.3" fill="var(--down)"/>
 <rect x="457.6" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="456.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-23" data-o="4816.03" data-h="4823.47" data-l="4759.86" data-c="4786.33" data-pct="-0.28" data-vol="0"/>
 <line x1="466.2" y1="107.3" x2="466.2" y2="123.3" stroke="var(--down)" stroke-width="1"/>
 <rect x="463.7" y="112.0" width="5.1" height="1.0" fill="var(--down)"/>
 <rect x="463.7" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="462.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-24" data-o="4771.73" data-h="4786.44" data-l="4735.61" data-c="4769.37" data-pct="-0.35" data-vol="0"/>
 <line x1="472.3" y1="104.6" x2="472.3" y2="114.8" stroke="var(--down)" stroke-width="1"/>
 <rect x="469.8" y="110.5" width="5.1" height="1.7" fill="var(--down)"/>
 <rect x="469.8" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="468.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-27" data-o="4776.34" data-h="4795.17" data-l="4762.64" data-c="4770.95" data-pct="+0.03" data-vol="0"/>
 <line x1="478.4" y1="109.9" x2="478.4" y2="120.9" stroke="var(--up)" stroke-width="1"/>
 <rect x="475.8" y="116.2" width="5.1" height="1.0" fill="var(--up)"/>
 <rect x="475.8" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="474.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-28" data-o="4757.08" data-h="4778.19" data-l="4743.44" data-c="4758.21" data-pct="-0.27" data-vol="0"/>
 <line x1="484.5" y1="98.8" x2="484.5" y2="122.8" stroke="var(--up)" stroke-width="1"/>
 <rect x="481.9" y="99.8" width="5.1" height="22.9" fill="var(--up)"/>
 <rect x="481.9" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="480.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-29" data-o="4737.58" data-h="4813.61" data-l="4737.11" data-c="4810.35" data-pct="+1.10" data-vol="0"/>
 <line x1="490.5" y1="93.9" x2="490.5" y2="103.8" stroke="var(--down)" stroke-width="1"/>
 <rect x="488.0" y="96.5" width="5.1" height="4.3" fill="var(--down)"/>
 <rect x="488.0" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="487.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-30" data-o="4820.97" data-h="4829.27" data-l="4797.55" data-c="4807.31" data-pct="-0.06" data-vol="0"/>
 <line x1="496.6" y1="73.9" x2="496.6" y2="92.3" stroke="var(--up)" stroke-width="1"/>
 <rect x="494.1" y="78.8" width="5.1" height="6.1" fill="var(--up)"/>
 <rect x="494.1" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="493.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-06" data-o="4857.65" data-h="4892.80" data-l="4834.28" data-c="4877.09" data-pct="+1.45" data-vol="0"/>
 <line x1="502.7" y1="71.1" x2="502.7" y2="82.0" stroke="var(--up)" stroke-width="1"/>
 <rect x="500.2" y="71.5" width="5.1" height="1.5" fill="var(--up)"/>
 <rect x="500.2" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="499.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-07" data-o="4895.80" data-h="4901.86" data-l="4866.88" data-c="4900.51" data-pct="+0.48" data-vol="0"/>
 <line x1="508.8" y1="75.7" x2="508.8" y2="87.4" stroke="var(--up)" stroke-width="1"/>
 <rect x="506.2" y="80.5" width="5.1" height="1.0" fill="var(--up)"/>
 <rect x="506.2" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="505.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-08" data-o="4871.12" data-h="4887.21" data-l="4849.99" data-c="4871.91" data-pct="-0.58" data-vol="0"/>
 <line x1="514.9" y1="52.6" x2="514.9" y2="74.9" stroke="var(--up)" stroke-width="1"/>
 <rect x="512.3" y="55.3" width="5.1" height="15.6" fill="var(--up)"/>
 <rect x="512.3" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="511.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-11" data-o="4902.28" data-h="4960.40" data-l="4889.57" data-c="4951.84" data-pct="+1.64" data-vol="0"/>
 <line x1="521.0" y1="49.2" x2="521.0" y2="63.2" stroke="var(--down)" stroke-width="1"/>
 <rect x="518.4" y="51.2" width="5.1" height="5.3" fill="var(--down)"/>
 <rect x="518.4" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="517.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-12" data-o="4965.02" data-h="4971.30" data-l="4926.79" data-c="4948.05" data-pct="-0.08" data-vol="0"/>
 <line x1="527.0" y1="39.8" x2="527.0" y2="65.5" stroke="var(--up)" stroke-width="1"/>
 <rect x="524.5" y="40.7" width="5.1" height="24.8" fill="var(--up)"/>
 <rect x="524.5" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="523.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-13" data-o="4919.43" data-h="5001.12" data-l="4919.43" data-c="4998.34" data-pct="+1.02" data-vol="0"/>
 <line x1="533.1" y1="30.6" x2="533.1" y2="67.4" stroke="var(--down)" stroke-width="1"/>
 <rect x="530.6" y="31.5" width="5.1" height="35.5" fill="var(--down)"/>
 <rect x="530.6" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="529.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-14" data-o="5027.64" data-h="5030.52" data-l="4913.60" data-c="4914.60" data-pct="-1.68" data-vol="0"/>
 <line x1="539.2" y1="60.4" x2="539.2" y2="92.8" stroke="var(--down)" stroke-width="1"/>
 <rect x="536.7" y="68.0" width="5.1" height="16.4" fill="var(--down)"/>
 <rect x="536.7" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="535.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-15" data-o="4911.62" data-h="4935.62" data-l="4832.69" data-c="4859.59" data-pct="-1.12" data-vol="0"/>
 <line x1="545.3" y1="81.5" x2="545.3" y2="101.1" stroke="var(--down)" stroke-width="1"/>
 <rect x="542.8" y="91.6" width="5.1" height="1.0" fill="var(--down)"/>
 <rect x="542.8" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="541.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-18" data-o="4836.33" data-h="4868.60" data-l="4806.15" data-c="4833.52" data-pct="-0.54" data-vol="0"/>
 <line x1="551.4" y1="85.9" x2="551.4" y2="111.4" stroke="var(--up)" stroke-width="1"/>
 <rect x="548.8" y="86.4" width="5.1" height="10.7" fill="var(--up)"/>
 <rect x="548.8" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="547.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-19" data-o="4818.70" data-h="4854.52" data-l="4773.53" data-c="4852.88" data-pct="+0.40" data-vol="0"/>
 <line x1="557.5" y1="82.3" x2="557.5" y2="95.0" stroke="var(--up)" stroke-width="1"/>
 <rect x="554.9" y="87.1" width="5.1" height="6.6" fill="var(--up)"/>
 <rect x="554.9" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="553.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-20" data-o="4829.61" data-h="4866.21" data-l="4825.64" data-c="4850.70" data-pct="-0.04" data-vol="0"/>
 <line x1="563.5" y1="59.7" x2="563.5" y2="109.1" stroke="var(--down)" stroke-width="1"/>
 <rect x="561.0" y="76.0" width="5.1" height="32.4" fill="var(--down)"/>
 <rect x="561.0" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="560.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-21" data-o="4886.24" data-h="4937.93" data-l="4780.71" data-c="4783.10" data-pct="-1.39" data-vol="0"/>
 <line x1="569.6" y1="86.9" x2="569.6" y2="107.7" stroke="var(--up)" stroke-width="1"/>
 <rect x="567.1" y="88.9" width="5.1" height="8.3" fill="var(--up)"/>
 <rect x="567.1" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="566.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-22" data-o="4818.84" data-h="4851.35" data-l="4785.35" data-c="4845.10" data-pct="+1.30" data-vol="0"/>
 <line x1="575.7" y1="64.6" x2="575.7" y2="85.1" stroke="var(--up)" stroke-width="1"/>
 <rect x="573.2" y="64.8" width="5.1" height="15.2" fill="var(--up)"/>
 <rect x="573.2" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="572.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-25" data-o="4873.20" data-h="4922.44" data-l="4857.14" data-c="4921.60" data-pct="+1.58" data-vol="0"/>
 <line x1="581.8" y1="55.1" x2="581.8" y2="73.9" stroke="var(--up)" stroke-width="1"/>
 <rect x="579.2" y="56.6" width="5.1" height="15.0" fill="var(--up)"/>
 <rect x="579.2" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="578.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-26" data-o="4900.11" data-h="4952.74" data-l="4892.68" data-c="4947.85" data-pct="+0.53" data-vol="0"/>
 <line x1="587.9" y1="48.3" x2="587.9" y2="74.4" stroke="var(--down)" stroke-width="1"/>
 <rect x="585.3" y="58.8" width="5.1" height="10.3" fill="var(--down)"/>
 <rect x="585.3" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="584.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-27" data-o="4940.94" data-h="4974.21" data-l="4891.34" data-c="4908.17" data-pct="-0.80" data-vol="0"/>
 <line x1="594.0" y1="64.6" x2="594.0" y2="89.5" stroke="var(--up)" stroke-width="1"/>
 <rect x="591.4" y="67.2" width="5.1" height="7.8" fill="var(--up)"/>
 <rect x="591.4" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="590.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-28" data-o="4889.27" data-h="4922.33" data-l="4843.23" data-c="4914.21" data-pct="+0.12" data-vol="0"/>
 <line x1="600.0" y1="54.6" x2="600.0" y2="78.3" stroke="var(--down)" stroke-width="1"/>
 <rect x="597.5" y="59.8" width="5.1" height="14.3" fill="var(--down)"/>
 <rect x="597.5" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="596.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-29" data-o="4937.51" data-h="4954.07" data-l="4878.79" data-c="4892.12" data-pct="-0.45" data-vol="0"/>
 <line x1="606.1" y1="65.7" x2="606.1" y2="91.5" stroke="var(--down)" stroke-width="1"/>
 <rect x="603.6" y="72.3" width="5.1" height="16.9" fill="var(--down)"/>
 <rect x="603.6" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="602.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-01" data-o="4897.90" data-h="4918.79" data-l="4836.69" data-c="4844.26" data-pct="-0.98" data-vol="0"/>
 <line x1="612.2" y1="62.1" x2="612.2" y2="93.0" stroke="var(--up)" stroke-width="1"/>
 <rect x="609.7" y="67.1" width="5.1" height="17.0" fill="var(--up)"/>
 <rect x="609.7" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="608.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-02" data-o="4860.61" data-h="4930.28" data-l="4832.00" data-c="4914.56" data-pct="+1.45" data-vol="0"/>
 <line x1="618.3" y1="42.8" x2="618.3" y2="70.1" stroke="var(--up)" stroke-width="1"/>
 <rect x="615.8" y="59.4" width="5.1" height="5.5" fill="var(--up)"/>
 <rect x="615.8" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="614.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-03" data-o="4921.35" data-h="4991.85" data-l="4904.90" data-c="4938.81" data-pct="+0.49" data-vol="0"/>
 <line x1="624.4" y1="59.4" x2="624.4" y2="74.9" stroke="var(--up)" stroke-width="1"/>
 <rect x="621.8" y="70.1" width="5.1" height="2.3" fill="var(--up)"/>
 <rect x="621.8" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="620.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-04" data-o="4897.32" data-h="4938.78" data-l="4889.75" data-c="4904.74" data-pct="-0.69" data-vol="0"/>
 <line x1="630.5" y1="64.0" x2="630.5" y2="103.4" stroke="var(--down)" stroke-width="1"/>
 <rect x="627.9" y="75.7" width="5.1" height="22.0" fill="var(--down)"/>
 <rect x="627.9" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="626.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-05" data-o="4886.97" data-h="4924.34" data-l="4798.91" data-c="4816.92" data-pct="-1.79" data-vol="0"/>
 <line x1="636.5" y1="109.4" x2="636.5" y2="141.6" stroke="var(--up)" stroke-width="1"/>
 <rect x="634.0" y="130.2" width="5.1" height="3.1" fill="var(--up)"/>
 <rect x="634.0" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="633.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-08" data-o="4703.77" data-h="4779.86" data-l="4677.57" data-c="4713.64" data-pct="-2.14" data-vol="0"/>
 <line x1="642.6" y1="102.3" x2="642.6" y2="129.7" stroke="var(--up)" stroke-width="1"/>
 <rect x="640.1" y="102.5" width="5.1" height="18.3" fill="var(--up)"/>
 <rect x="640.1" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="639.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-09" data-o="4743.45" data-h="4802.51" data-l="4715.39" data-c="4801.81" data-pct="+1.87" data-vol="0"/>
 <line x1="648.7" y1="107.3" x2="648.7" y2="128.5" stroke="var(--down)" stroke-width="1"/>
 <rect x="646.2" y="117.8" width="5.1" height="1.4" fill="var(--down)"/>
 <rect x="646.2" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="645.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-10" data-o="4753.11" data-h="4786.52" data-l="4718.99" data-c="4748.59" data-pct="-1.11" data-vol="0"/>
 <line x1="654.8" y1="113.7" x2="654.8" y2="139.1" stroke="var(--down)" stroke-width="1"/>
 <rect x="652.2" y="125.1" width="5.1" height="2.4" fill="var(--down)"/>
 <rect x="652.2" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="651.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-11" data-o="4730.07" data-h="4766.17" data-l="4685.50" data-c="4722.41" data-pct="-0.55" data-vol="0"/>
 <line x1="660.9" y1="100.0" x2="660.9" y2="116.4" stroke="var(--down)" stroke-width="1"/>
 <rect x="658.3" y="107.9" width="5.1" height="2.3" fill="var(--down)"/>
 <rect x="658.3" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="657.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-12" data-o="4784.64" data-h="4809.86" data-l="4757.56" data-c="4777.32" data-pct="+1.16" data-vol="0"/>
 <line x1="667.0" y1="74.0" x2="667.0" y2="102.1" stroke="var(--up)" stroke-width="1"/>
 <rect x="664.4" y="74.2" width="5.1" height="19.6" fill="var(--up)"/>
 <rect x="664.4" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="663.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-15" data-o="4829.29" data-h="4892.55" data-l="4803.18" data-c="4891.71" data-pct="+2.39" data-vol="0"/>
 <line x1="673.0" y1="69.0" x2="673.0" y2="82.3" stroke="var(--down)" stroke-width="1"/>
 <rect x="670.5" y="73.2" width="5.1" height="3.3" fill="var(--down)"/>
 <rect x="670.5" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="669.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-16" data-o="4894.88" data-h="4908.28" data-l="4866.06" data-c="4884.23" data-pct="-0.15" data-vol="0"/>
 <line x1="679.1" y1="61.0" x2="679.1" y2="84.3" stroke="var(--up)" stroke-width="1"/>
 <rect x="676.6" y="61.8" width="5.1" height="22.5" fill="var(--up)"/>
 <rect x="676.6" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="675.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-17" data-o="4859.70" data-h="4933.93" data-l="4859.70" data-c="4931.39" data-pct="+0.97" data-vol="0"/>
 <line x1="685.2" y1="47.5" x2="685.2" y2="66.6" stroke="var(--up)" stroke-width="1"/>
 <rect x="682.7" y="58.6" width="5.1" height="8.0" fill="var(--up)"/>
 <rect x="682.7" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="681.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-18" data-o="4916.04" data-h="4976.89" data-l="4916.04" data-c="4941.60" data-pct="+0.21" data-vol="0"/>
 <line x1="691.3" y1="20.9" x2="691.3" y2="62.7" stroke="var(--up)" stroke-width="1"/>
 <rect x="688.8" y="21.4" width="5.1" height="34.7" fill="var(--up)"/>
 <rect x="688.8" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="687.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-22" data-o="4949.35" data-h="5061.51" data-l="4928.46" data-c="5059.66" data-pct="+2.39" data-vol="0"/>
 <line x1="697.4" y1="20.0" x2="697.4" y2="74.1" stroke="var(--down)" stroke-width="1"/>
 <rect x="694.8" y="25.1" width="5.1" height="40.4" fill="var(--down)"/>
 <rect x="694.8" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="693.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-23" data-o="5048.03" data-h="5064.27" data-l="4892.09" data-c="4919.39" data-pct="-2.77" data-vol="0"/>
 <line x1="703.5" y1="54.9" x2="703.5" y2="74.1" stroke="var(--up)" stroke-width="1"/>
 <rect x="700.9" y="58.1" width="5.1" height="13.4" fill="var(--up)"/>
 <rect x="700.9" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="699.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-24" data-o="4900.38" data-h="4953.23" data-l="4892.27" data-c="4943.02" data-pct="+0.48" data-vol="0"/>
 <line x1="709.5" y1="30.1" x2="709.5" y2="57.5" stroke="var(--up)" stroke-width="1"/>
 <rect x="707.0" y="33.9" width="5.1" height="21.7" fill="var(--up)"/>
 <rect x="707.0" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="706.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-25" data-o="4950.98" data-h="5032.00" data-l="4944.88" data-c="5020.10" data-pct="+1.56" data-vol="0"/>
 <line x1="715.6" y1="45.9" x2="715.6" y2="88.9" stroke="var(--down)" stroke-width="1"/>
 <rect x="713.1" y="45.9" width="5.1" height="35.7" fill="var(--down)"/>
 <rect x="713.1" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="712.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-26" data-o="4981.82" data-h="4981.98" data-l="4845.19" data-c="4868.22" data-pct="-3.03" data-vol="0"/>
 <line x1="721.7" y1="62.6" x2="721.7" y2="94.5" stroke="var(--up)" stroke-width="1"/>
 <rect x="719.2" y="63.2" width="5.1" height="19.1" fill="var(--up)"/>
 <rect x="719.2" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="718.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-29" data-o="4866.04" data-h="4928.60" data-l="4827.15" data-c="4926.92" data-pct="+1.21" data-vol="0"/>
 <line x1="727.8" y1="44.1" x2="727.8" y2="67.1" stroke="var(--up)" stroke-width="1"/>
 <rect x="725.2" y="46.7" width="5.1" height="20.4" fill="var(--up)"/>
 <rect x="725.2" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="724.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-30" data-o="4914.49" data-h="4987.56" data-l="4914.49" data-c="4979.43" data-pct="+1.07" data-vol="0"/>
 <line x1="733.9" y1="34.7" x2="733.9" y2="63.6" stroke="var(--down)" stroke-width="1"/>
 <rect x="731.3" y="48.8" width="5.1" height="4.3" fill="var(--down)"/>
 <rect x="731.3" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="730.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-01" data-o="4972.69" data-h="5017.38" data-l="4925.63" data-c="4958.98" data-pct="-0.41" data-vol="0"/>
 <line x1="740.0" y1="72.6" x2="740.0" y2="102.9" stroke="var(--down)" stroke-width="1"/>
 <rect x="737.4" y="82.6" width="5.1" height="16.6" fill="var(--down)"/>
 <rect x="737.4" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="736.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-02" data-o="4865.17" data-h="4896.99" data-l="4800.48" data-c="4812.30" data-pct="-2.96" data-vol="0"/>
 <line x1="746.0" y1="74.5" x2="746.0" y2="100.1" stroke="var(--up)" stroke-width="1"/>
 <rect x="743.5" y="89.8" width="5.1" height="10.3" fill="var(--up)"/>
 <rect x="743.5" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="742.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-03" data-o="4809.50" data-h="4890.97" data-l="4809.50" data-c="4842.17" data-pct="+0.62" data-vol="0"/>
 <line x1="752.1" y1="78.4" x2="752.1" y2="106.3" stroke="var(--down)" stroke-width="1"/>
 <rect x="749.6" y="81.5" width="5.1" height="8.3" fill="var(--down)"/>
 <rect x="749.6" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="748.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-06" data-o="4868.54" data-h="4878.32" data-l="4789.80" data-c="4842.00" data-pct="-0.00" data-vol="0"/>
 <line x1="758.2" y1="90.6" x2="758.2" y2="116.7" stroke="var(--down)" stroke-width="1"/>
 <rect x="755.7" y="98.7" width="5.1" height="6.8" fill="var(--down)"/>
 <rect x="755.7" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="754.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-07" data-o="4813.87" data-h="4839.51" data-l="4756.73" data-c="4792.26" data-pct="-1.03" data-vol="0"/>
 <line x1="764.3" y1="93.6" x2="764.3" y2="118.3" stroke="var(--down)" stroke-width="1"/>
 <rect x="761.8" y="101.7" width="5.1" height="15.4" fill="var(--down)"/>
 <rect x="761.8" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="760.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-08" data-o="4804.48" data-h="4830.05" data-l="4751.40" data-c="4755.53" data-pct="-0.77" data-vol="0"/>
 <line x1="770.4" y1="77.0" x2="770.4" y2="123.5" stroke="var(--up)" stroke-width="1"/>
 <rect x="767.8" y="79.1" width="5.1" height="32.0" fill="var(--up)"/>
 <rect x="767.8" y="294.0" width="5.1" height="0.0" fill="var(--up)" opacity="0.35"/>
+<rect x="766.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-09" data-o="4774.40" data-h="4882.85" data-l="4734.87" data-c="4876.31" data-pct="+2.54" data-vol="0"/>
 <line x1="776.5" y1="69.6" x2="776.5" y2="109.1" stroke="var(--down)" stroke-width="1"/>
 <rect x="773.9" y="75.6" width="5.1" height="33.6" fill="var(--down)"/>
 <rect x="773.9" y="294.0" width="5.1" height="0.0" fill="var(--down)" opacity="0.35"/>
+<rect x="772.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-10" data-o="4887.54" data-h="4906.49" data-l="4780.75" data-c="4780.79" data-pct="-1.96" data-vol="0"/>
 <line x1="50" y1="235" x2="780" y2="235" stroke="var(--border)" stroke-width="0.5"/>
 <polyline points="50.0,116.8 56.1,112.3 62.2,114.1 68.2,116.3 74.3,115.4 80.4,117.1 86.5,120.6 92.6,123.3 98.7,124.5 104.8,126.2 110.8,128.1 116.9,129.8 123.0,130.6 129.1,130.9 135.2,129.0 141.2,128.8 147.3,135.1 153.4,138.0 159.5,139.2 165.6,144.5 171.7,148.4 177.8,141.3 183.8,137.3 189.9,136.3 196.0,133.2 202.1,132.2 208.2,132.9 214.2,132.2 220.3,131.3 226.4,131.9 232.5,127.6 238.6,130.9 244.7,139.2 250.8,144.2 256.8,147.4 262.9,154.5 269.0,153.3 275.1,146.9 281.2,144.4 287.2,143.8 293.3,140.3 299.4,142.7 305.5,145.6 311.6,152.1 317.7,158.5 323.8,174.5 329.8,184.7 335.9,192.3 342.0,199.0 348.1,203.0 354.2,198.4 360.2,199.9 366.3,200.6 372.4,200.5 378.5,204.4 384.6,207.7 390.7,198.5 396.8,196.0 402.8,186.1 408.9,173.2 415.0,156.8 421.1,151.1 427.2,140.4 433.2,134.6 439.3,127.6 445.4,123.4 451.5,116.3 457.6,113.1 463.7,110.6 469.8,109.7 475.8,110.3 481.9,109.7 488.0,108.3 494.1,101.6 500.2,93.4 506.2,86.3 512.3,77.4 518.4,68.5 524.5,60.9 530.6,60.0 536.7,60.8 542.8,68.2 548.8,74.2 554.9,83.5 561.0,91.8 567.1,92.7 573.2,87.1 579.2,81.2 585.3,77.6 591.4,69.3 597.5,66.4 603.6,71.2 609.7,73.3 615.8,71.4 621.8,72.0 627.9,76.7 634.0,84.9 640.1,92.0 646.2,104.0 652.2,115.4 658.3,117.9 664.4,106.7 670.5,101.5 676.6,90.1 682.7,76.3 688.8,58.5 694.8,56.8 700.9,53.1 707.0,47.5 713.1,52.1 719.2,60.5 725.2,56.7 731.3,55.7 737.4,68.8 743.5,70.4 749.6,75.7 755.7,87.5 761.8,100.3 767.8,96.3 773.9,100.1" fill="none" stroke="var(--warn)" stroke-width="1" opacity="0.7"/>
 <polyline points="50.0,134.4 56.1,129.8 62.2,126.5 68.2,123.3 74.3,120.2 80.4,117.0 86.5,116.4 92.6,118.7 98.7,120.4 104.8,120.8 110.8,122.6 116.9,125.2 123.0,126.9 129.1,127.7 135.2,127.6 141.2,128.4 147.3,132.5 153.4,134.3 159.5,135.1 165.6,136.7 171.7,138.6 177.8,138.2 183.8,137.6 189.9,137.8 196.0,138.8 202.1,140.3 208.2,137.1 214.2,134.7 220.3,133.8 226.4,132.6 232.5,129.9 238.6,131.9 244.7,135.7 250.8,137.8 256.8,139.6 262.9,141.1 269.0,142.1 275.1,143.1 281.2,144.3 287.2,145.6 293.3,147.4 299.4,148.0 305.5,146.2 311.6,148.3 317.7,151.2 323.8,157.4 329.8,163.7 335.9,168.9 342.0,175.5 348.1,180.8 354.2,186.4 360.2,192.3 366.3,196.5 372.4,199.8 378.5,203.7 384.6,203.0 390.7,199.2 396.8,198.3 402.8,193.3 408.9,188.8 415.0,182.2 421.1,174.8 427.2,168.2 433.2,160.4 439.3,150.4 445.4,140.1 451.5,133.7 457.6,126.8 463.7,122.6 469.8,118.7 475.8,116.9 481.9,113.0 488.0,110.7 494.1,106.1 500.2,101.6 506.2,98.3 512.3,93.5 518.4,88.4 524.5,81.2 530.6,76.7 536.7,73.5 542.8,72.8 548.8,71.4 554.9,72.2 561.0,75.9 567.1,76.7 573.2,77.7 579.2,77.7 585.3,80.5 591.4,80.5 597.5,79.5 603.6,79.2 609.7,77.2 615.8,74.5 621.8,70.6 627.9,71.5 634.0,78.1 640.1,82.7 646.2,87.7 652.2,93.7 658.3,97.3 664.4,95.8 670.5,96.8 676.6,97.0 682.7,95.9 688.8,88.2 694.8,81.8 700.9,77.3 707.0,68.8 713.1,64.2 719.2,59.5 725.2,56.7 731.3,54.4 737.4,58.1 743.5,61.3 749.6,68.1 755.7,72.1 761.8,78.0 767.8,82.5 773.9,85.3" fill="none" stroke="var(--accent-3)" stroke-width="1" opacity="0.7"/>
@@ -528,8 +659,9 @@ tr:hover td{background:var(--bg-hover)}
       <div class="kv"><span class="dim">上涨比例</span><span class="up">61.2%</span></div>
       <div class="kv"><span class="dim">下跌比例</span><span class="dn">37.8%</span></div>
       <div class="kv"><span class="dim">涨跌停</span><span>涨停 <span class="up fw">3</span> 只 · 跌停 <span class="dn fw">3</span> 只</span></div>
-      <div class="kv"><span class="dim">数据日期</span><span>2026-07-10 (18天前)</span></div>
+      <div class="kv"><span class="dim">数据日期</span><span>2026-07-10 (37天前)</span></div>
     </div></div>
+    <div class="panel" style="margin-bottom:12px"><div class="panel-hd"> 板块热力图（2026-06-09）</div><div class="panel-bd"><div class="hm-wrap"><div class="hm-block" data-sz="66" style="width:66px;height:66px;background:var(--up);opacity:0.6" title="IT服务 · +1.7% · 128只成分股"><span class="hm-name">IT服务</span><span class="hm-pct">+1.7%</span></div><div class="hm-block" data-sz="85" style="width:85px;height:85px;background:var(--up);opacity:0.6" title="专用设备 · +0.9% · 190只成分股"><span class="hm-name">专用设备</span><span class="hm-pct">+0.9%</span></div><div class="hm-block" data-sz="47" style="width:47px;height:47px;background:var(--down);opacity:0.35" title="中药 · -0.2% · 65只成分股"><span class="hm-name">中药</span><span class="hm-pct">-0.2%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:1.0" title="互联网电商 · +2.0% · 18只成分股"><span class="hm-name">互联网电商</span><span class="hm-pct">+2.0%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:0.6" title="保险 · +0.9% · 5只成分股"><span class="hm-name">保险</span><span class="hm-pct">+0.9%</span></div><div class="hm-block" data-sz="46" style="width:46px;height:46px;background:var(--up);opacity:1.0" title="元件 · +5.5% · 62只成分股"><span class="hm-name">元件</span><span class="hm-pct">+5.5%</span></div><div class="hm-block" data-sz="49" style="width:49px;height:49px;background:var(--up);opacity:1.0" title="光伏设备 · +2.5% · 73只成分股"><span class="hm-name">光伏设备</span><span class="hm-pct">+2.5%</span></div><div class="hm-block" data-sz="58" style="width:58px;height:58px;background:var(--up);opacity:1.0" title="光学光电子 · +2.3% · 102只成分股"><span class="hm-name">光学光电子</span><span class="hm-pct">+2.3%</span></div><div class="hm-block" data-sz="37" style="width:37px;height:37px;background:var(--up);opacity:0.6" title="公路铁路运输 · +0.5% · 31只成分股"><span class="hm-name">公路铁路运输</span><span class="hm-pct">+0.5%</span></div><div class="hm-block" data-sz="38" style="width:38px;height:38px;background:var(--up);opacity:1.0" title="其他电子 · +5.2% · 34只成分股"><span class="hm-name">其他电子</span><span class="hm-pct">+5.2%</span></div><div class="hm-block" data-sz="38" style="width:38px;height:38px;background:var(--up);opacity:1.0" title="其他电源设备 · +3.6% · 34只成分股"><span class="hm-name">其他电源设备</span><span class="hm-pct">+3.6%</span></div><div class="hm-block" data-sz="39" style="width:39px;height:39px;background:var(--up);opacity:0.6" title="其他社会服务 · +0.6% · 38只成分股"><span class="hm-name">其他社会服务</span><span class="hm-pct">+0.6%</span></div><div class="hm-block" data-sz="38" style="width:38px;height:38px;background:var(--down);opacity:0.35" title="养殖业 · -0.2% · 35只成分股"><span class="hm-name">养殖业</span><span class="hm-pct">-0.2%</span></div><div class="hm-block" data-sz="46" style="width:46px;height:46px;background:var(--up);opacity:1.0" title="军工电子 · +2.0% · 61只成分股"><span class="hm-name">军工电子</span><span class="hm-pct">+2.0%</span></div><div class="hm-block" data-sz="52" style="width:52px;height:52px;background:var(--up);opacity:0.35" title="军工装备 · +0.3% · 80只成分股"><span class="hm-name">军工装备</span><span class="hm-pct">+0.3%</span></div><div class="hm-block" data-sz="39" style="width:39px;height:39px;background:var(--down);opacity:0.6" title="农产品加工 · -0.7% · 38只成分股"><span class="hm-name">农产品加工</span><span class="hm-pct">-0.7%</span></div><div class="hm-block" data-sz="45" style="width:45px;height:45px;background:var(--up);opacity:0.35" title="农化制品 · +0.3% · 59只成分股"><span class="hm-name">农化制品</span><span class="hm-pct">+0.3%</span></div><div class="hm-block" data-sz="40" style="width:40px;height:40px;background:var(--up);opacity:0.6" title="包装印刷 · +0.6% · 41只成分股"><span class="hm-name">包装印刷</span><span class="hm-pct">+0.6%</span></div><div class="hm-block" data-sz="79" style="width:79px;height:79px;background:var(--up);opacity:1.0" title="化学制品 · +2.0% · 172只成分股"><span class="hm-name">化学制品</span><span class="hm-pct">+2.0%</span></div><div class="hm-block" data-sz="73" style="width:73px;height:73px;background:var(--up);opacity:0.6" title="化学制药 · +0.5% · 151只成分股"><span class="hm-name">化学制药</span><span class="hm-pct">+0.5%</span></div><div class="hm-block" data-sz="45" style="width:45px;height:45px;background:var(--up);opacity:0.6" title="化学原料 · +0.7% · 58只成分股"><span class="hm-name">化学原料</span><span class="hm-pct">+0.7%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:0.6" title="化学纤维 · +1.5% · 29只成分股"><span class="hm-name">化学纤维</span><span class="hm-pct">+1.5%</span></div><div class="hm-block" data-sz="68" style="width:68px;height:68px;background:var(--up);opacity:0.35" title="医疗器械 · +0.4% · 135只成分股"><span class="hm-name">医疗器械</span><span class="hm-pct">+0.4%</span></div><div class="hm-block" data-sz="43" style="width:43px;height:43px;background:var(--up);opacity:0.6" title="医疗服务 · +1.0% · 51只成分股"><span class="hm-name">医疗服务</span><span class="hm-pct">+1.0%</span></div><div class="hm-block" data-sz="37" style="width:37px;height:37px;background:var(--down);opacity:0.35" title="医药商业 · -0.2% · 32只成分股"><span class="hm-name">医药商业</span><span class="hm-pct">-0.2%</span></div><div class="hm-block" data-sz="81" style="width:81px;height:81px;background:var(--up);opacity:1.0" title="半导体 · +6.4% · 179只成分股"><span class="hm-name">半导体</span><span class="hm-pct">+6.4%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:0.35" title="厨卫电器 · +0.3% · 9只成分股"><span class="hm-name">厨卫电器</span><span class="hm-pct">+0.3%</span></div><div class="hm-block" data-sz="51" style="width:51px;height:51px;background:var(--up);opacity:1.0" title="塑料制品 · +3.8% · 78只成分股"><span class="hm-name">塑料制品</span><span class="hm-pct">+3.8%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:0.35" title="多元金融 · +0.4% · 24只成分股"><span class="hm-name">多元金融</span><span class="hm-pct">+0.4%</span></div><div class="hm-block" data-sz="56" style="width:56px;height:56px;background:var(--down);opacity:0.35" title="家居用品 · -0.3% · 96只成分股"><span class="hm-name">家居用品</span><span class="hm-pct">-0.3%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--down);opacity:0.35" title="小家电 · -0.3% · 24只成分股"><span class="hm-name">小家电</span><span class="hm-pct">-0.3%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:1.0" title="小金属 · +2.7% · 29只成分股"><span class="hm-name">小金属</span><span class="hm-pct">+2.7%</span></div><div class="hm-block" data-sz="43" style="width:43px;height:43px;background:var(--up);opacity:0.6" title="工业金属 · +1.2% · 53只成分股"><span class="hm-name">工业金属</span><span class="hm-pct">+1.2%</span></div><div class="hm-block" data-sz="38" style="width:38px;height:38px;background:var(--border);opacity:0.5" title="工程机械 · -0.0% · 35只成分股"><span class="hm-name">工程机械</span><span class="hm-pct">-0.0%</span></div><div class="hm-block" data-sz="49" style="width:49px;height:49px;background:var(--up);opacity:0.6" title="建筑材料 · +1.4% · 72只成分股"><span class="hm-name">建筑材料</span><span class="hm-pct">+1.4%</span></div><div class="hm-block" data-sz="68" style="width:68px;height:68px;background:var(--up);opacity:0.35" title="建筑装饰 · +0.3% · 136只成分股"><span class="hm-name">建筑装饰</span><span class="hm-pct">+0.3%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:0.35" title="影视院线 · +0.3% · 18只成分股"><span class="hm-name">影视院线</span><span class="hm-pct">+0.3%</span></div><div class="hm-block" data-sz="52" style="width:52px;height:52px;background:var(--down);opacity:0.6" title="房地产 · -0.9% · 83只成分股"><span class="hm-name">房地产</span><span class="hm-pct">-0.9%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--border);opacity:0.5" title="教育 · +0.0% · 15只成分股"><span class="hm-name">教育</span><span class="hm-pct">+0.0%</span></div><div class="hm-block" data-sz="52" style="width:52px;height:52px;background:var(--up);opacity:0.6" title="文化传媒 · +1.0% · 81只成分股"><span class="hm-name">文化传媒</span><span class="hm-pct">+1.0%</span></div><div class="hm-block" data-sz="38" style="width:38px;height:38px;background:var(--down);opacity:0.6" title="旅游及酒店 · -0.9% · 35只成分股"><span class="hm-name">旅游及酒店</span><span class="hm-pct">-0.9%</span></div><div class="hm-block" data-sz="48" style="width:48px;height:48px;background:var(--border);opacity:0.5" title="服装家纺 · -0.0% · 69只成分股"><span class="hm-name">服装家纺</span><span class="hm-pct">-0.0%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:0.6" title="机场航运 · +1.6% · 13只成分股"><span class="hm-name">机场航运</span><span class="hm-pct">+1.6%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:1.0" title="橡胶制品 · +2.2% · 22只成分股"><span class="hm-name">橡胶制品</span><span class="hm-pct">+2.2%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--border);opacity:0.5" title="汽车整车 · +0.0% · 22只成分股"><span class="hm-name">汽车整车</span><span class="hm-pct">+0.0%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:0.35" title="汽车服务及其他 · +0.3% · 24只成分股"><span class="hm-name">汽车服务及其他</span><span class="hm-pct">+0.3%</span></div><div class="hm-block" data-sz="107" style="width:107px;height:107px;background:var(--up);opacity:0.6" title="汽车零部件 · +0.7% · 266只成分股"><span class="hm-name">汽车零部件</span><span class="hm-pct">+0.7%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--down);opacity:1.0" title="油气开采及服务 · -4.2% · 19只成分股"><span class="hm-name">油气开采及服务</span><span class="hm-pct">-4.2%</span></div><div class="hm-block" data-sz="55" style="width:55px;height:55px;background:var(--up);opacity:1.0" title="消费电子 · +2.2% · 91只成分股"><span class="hm-name">消费电子</span><span class="hm-pct">+2.2%</span></div><div class="hm-block" data-sz="38" style="width:38px;height:38px;background:var(--down);opacity:0.6" title="港口航运 · -0.8% · 34只成分股"><span class="hm-name">港口航运</span><span class="hm-pct">-0.8%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:0.6" title="游戏 · +0.9% · 23只成分股"><span class="hm-name">游戏</span><span class="hm-pct">+0.9%</span></div><div class="hm-block" data-sz="38" style="width:38px;height:38px;background:var(--down);opacity:1.0" title="煤炭开采加工 · -2.8% · 34只成分股"><span class="hm-name">煤炭开采加工</span><span class="hm-pct">-2.8%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--down);opacity:0.6" title="燃气 · -0.7% · 26只成分股"><span class="hm-name">燃气</span><span class="hm-pct">-0.7%</span></div><div class="hm-block" data-sz="42" style="width:42px;height:42px;background:var(--up);opacity:0.35" title="物流 · +0.2% · 49只成分股"><span class="hm-name">物流</span><span class="hm-pct">+0.2%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:0.6" title="环保设备 · +0.9% · 29只成分股"><span class="hm-name">环保设备</span><span class="hm-pct">+0.9%</span></div><div class="hm-block" data-sz="60" style="width:60px;height:60px;background:var(--up);opacity:0.6" title="环境治理 · +0.8% · 109只成分股"><span class="hm-name">环境治理</span><span class="hm-pct">+0.8%</span></div><div class="hm-block" data-sz="43" style="width:43px;height:43px;background:var(--up);opacity:0.35" title="生物制品 · +0.2% · 53只成分股"><span class="hm-name">生物制品</span><span class="hm-pct">+0.2%</span></div><div class="hm-block" data-sz="60" style="width:60px;height:60px;background:var(--up);opacity:0.6" title="电力 · +0.9% · 107只成分股"><span class="hm-name">电力</span><span class="hm-pct">+0.9%</span></div><div class="hm-block" data-sz="40" style="width:40px;height:40px;background:var(--up);opacity:1.0" title="电子化学品 · +7.0% · 42只成分股"><span class="hm-name">电子化学品</span><span class="hm-pct">+7.0%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--down);opacity:0.6" title="电机 · -0.8% · 25只成分股"><span class="hm-name">电机</span><span class="hm-pct">-0.8%</span></div><div class="hm-block" data-sz="59" style="width:59px;height:59px;background:var(--up);opacity:1.0" title="电池 · +3.0% · 104只成分股"><span class="hm-name">电池</span><span class="hm-pct">+3.0%</span></div><div class="hm-block" data-sz="69" style="width:69px;height:69px;background:var(--up);opacity:0.6" title="电网设备 · +0.8% · 137只成分股"><span class="hm-name">电网设备</span><span class="hm-pct">+0.8%</span></div><div class="hm-block" data-sz="41" style="width:41px;height:41px;background:var(--up);opacity:0.6" title="白色家电 · +1.2% · 45只成分股"><span class="hm-name">白色家电</span><span class="hm-pct">+1.2%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--down);opacity:1.0" title="白酒 · -2.5% · 20只成分股"><span class="hm-name">白酒</span><span class="hm-pct">-2.5%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--down);opacity:0.6" title="石油加工贸易 · -0.7% · 27只成分股"><span class="hm-name">石油加工贸易</span><span class="hm-pct">-0.7%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--down);opacity:0.6" title="种植业与林业 · -0.7% · 29只成分股"><span class="hm-name">种植业与林业</span><span class="hm-pct">-0.7%</span></div><div class="hm-block" data-sz="37" style="width:37px;height:37px;background:var(--up);opacity:0.6" title="纺织制造 · +0.6% · 30只成分股"><span class="hm-name">纺织制造</span><span class="hm-pct">+0.6%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:0.6" title="综合 · +1.6% · 15只成分股"><span class="hm-name">综合</span><span class="hm-pct">+1.6%</span></div><div class="hm-block" data-sz="37" style="width:37px;height:37px;background:var(--down);opacity:0.35" title="美容护理 · -0.3% · 33只成分股"><span class="hm-name">美容护理</span><span class="hm-pct">-0.3%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:1.0" title="能源金属 · +4.9% · 12只成分股"><span class="hm-name">能源金属</span><span class="hm-pct">+4.9%</span></div><div class="hm-block" data-sz="56" style="width:56px;height:56px;background:var(--up);opacity:0.6" title="自动化设备 · +1.3% · 95只成分股"><span class="hm-name">自动化设备</span><span class="hm-pct">+1.3%</span></div><div class="hm-block" data-sz="52" style="width:52px;height:52px;background:var(--up);opacity:0.6" title="计算机设备 · +1.0% · 82只成分股"><span class="hm-name">计算机设备</span><span class="hm-pct">+1.0%</span></div><div class="hm-block" data-sz="42" style="width:42px;height:42px;background:var(--up);opacity:0.35" title="证券 · +0.2% · 49只成分股"><span class="hm-name">证券</span><span class="hm-pct">+0.2%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:0.6" title="贵金属 · +1.4% · 13只成分股"><span class="hm-name">贵金属</span><span class="hm-pct">+1.4%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--down);opacity:0.6" title="贸易 · -1.0% · 14只成分股"><span class="hm-name">贸易</span><span class="hm-pct">-1.0%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:0.6" title="轨交设备 · +1.0% · 29只成分股"><span class="hm-name">轨交设备</span><span class="hm-pct">+1.0%</span></div><div class="hm-block" data-sz="69" style="width:69px;height:69px;background:var(--up);opacity:0.6" title="软件开发 · +1.6% · 138只成分股"><span class="hm-name">软件开发</span><span class="hm-pct">+1.6%</span></div><div class="hm-block" data-sz="41" style="width:41px;height:41px;background:var(--up);opacity:0.6" title="通信服务 · +1.3% · 44只成分股"><span class="hm-name">通信服务</span><span class="hm-pct">+1.3%</span></div><div class="hm-block" data-sz="55" style="width:55px;height:55px;background:var(--up);opacity:1.0" title="通信设备 · +3.3% · 90只成分股"><span class="hm-name">通信设备</span><span class="hm-pct">+3.3%</span></div><div class="hm-block" data-sz="102" style="width:102px;height:102px;background:var(--up);opacity:0.6" title="通用设备 · +1.3% · 248只成分股"><span class="hm-name">通用设备</span><span class="hm-pct">+1.3%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:0.6" title="造纸 · +1.4% · 23只成分股"><span class="hm-name">造纸</span><span class="hm-pct">+1.4%</span></div><div class="hm-block" data-sz="38" style="width:38px;height:38px;background:var(--up);opacity:1.0" title="金属新材料 · +2.6% · 34只成分股"><span class="hm-name">金属新材料</span><span class="hm-pct">+2.6%</span></div><div class="hm-block" data-sz="40" style="width:40px;height:40px;background:var(--down);opacity:0.35" title="钢铁 · -0.1% · 40只成分股"><span class="hm-name">钢铁</span><span class="hm-pct">-0.1%</span></div><div class="hm-block" data-sz="40" style="width:40px;height:40px;background:var(--up);opacity:0.6" title="银行 · +0.6% · 41只成分股"><span class="hm-name">银行</span><span class="hm-pct">+0.6%</span></div><div class="hm-block" data-sz="49" style="width:49px;height:49px;background:var(--down);opacity:0.6" title="零售 · -1.0% · 70只成分股"><span class="hm-name">零售</span><span class="hm-pct">-1.0%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:1.0" title="非金属材料 · +2.5% · 13只成分股"><span class="hm-name">非金属材料</span><span class="hm-pct">+2.5%</span></div><div class="hm-block" data-sz="37" style="width:37px;height:37px;background:var(--up);opacity:0.6" title="风电设备 · +0.9% · 31只成分股"><span class="hm-name">风电设备</span><span class="hm-pct">+0.9%</span></div><div class="hm-block" data-sz="47" style="width:47px;height:47px;background:var(--up);opacity:0.6" title="食品加工制造 · +0.5% · 66只成分股"><span class="hm-name">食品加工制造</span><span class="hm-pct">+0.5%</span></div><div class="hm-block" data-sz="41" style="width:41px;height:41px;background:var(--border);opacity:0.5" title="饮料制造 · +0.0% · 44只成分股"><span class="hm-name">饮料制造</span><span class="hm-pct">+0.0%</span></div><div class="hm-block" data-sz="36" style="width:36px;height:36px;background:var(--up);opacity:0.35" title="黑色家电 · +0.3% · 9只成分股"><span class="hm-name">黑色家电</span><span class="hm-pct">+0.3%</span></div></div></div></div>
     
     <div class="panel" style="margin-bottom:12px"><div class="panel-bd" style="text-align:center;padding:24px">
       <div class="dim" style="font-size:13px;margin-bottom:8px">板块数据积累中（0/5天）</div>
@@ -537,6 +669,41 @@ tr:hover td{background:var(--bg-hover)}
         <div style="height:100%;width:0%;background:var(--accent);border-radius:2px;transition:width 1s"></div></div>
       <div class="dim" style="font-size:11px;margin-top:6px">需要 report.py 每日运行积累 ≥5天数据</div></div></div>
 </main>
-<script>function toggleTheme(){var d=document.documentElement;var n=d.getAttribute("data-theme")==="dark"?"light":"dark";d.setAttribute("data-theme",n);localStorage.setItem("theme",n)}</script>
+<script>function toggleTheme(){var d=document.documentElement;var n=d.getAttribute("data-theme")==="dark"?"light":"dark";d.setAttribute("data-theme",n);try{localStorage.setItem("theme",n)}catch(e){}}</script>
+<script>
+(function(){
+  var tip=null;
+  function fmt(v){return v||'—'}
+  function show(ev){
+    var t=ev.target;
+    var d=t.getAttribute('data-date');if(!d)return;
+    var o=t.getAttribute('data-o'),h=t.getAttribute('data-h'),l=t.getAttribute('data-l'),
+        c=t.getAttribute('data-c'),p=parseFloat(t.getAttribute('data-pct')),v=t.getAttribute('data-vol');
+    var cls=(p>=0?'up':'dn');
+    tip.innerHTML='<div class="kt-date">'+d+' <span class="'+cls+'">'+(p>=0?'+':'')+p.toFixed(2)+'%</span></div>'
+      +'<div class="kt-row"><span>开</span><b>'+fmt(o)+'</b><span>高</span><b>'+fmt(h)+'</b></div>'
+      +'<div class="kt-row"><span>低</span><b>'+fmt(l)+'</b><span>收</span><b>'+fmt(c)+'</b></div>'
+      +'<div class="kt-row"><span>量</span><b>'+fmt(v)+'</b></div>';
+    tip.style.display='block';
+    tip.style.left=(ev.clientX+12)+'px';
+    tip.style.top=(ev.clientY-10)+'px';
+    if(tip.getBoundingClientRect().right>window.innerWidth){tip.style.left=(ev.clientX-160)+'px';}
+  }
+  function hide(){if(tip)tip.style.display='none';}
+  document.addEventListener('DOMContentLoaded',function(){
+    var svgs=document.querySelectorAll('svg[data-kline]');
+    if(!svgs.length)return;
+    tip=document.createElement('div');tip.className='kline-tip';document.body.appendChild(tip);
+    svgs.forEach(function(svg){
+      svg.querySelectorAll('rect[data-date]').forEach(function(r){
+        r.addEventListener('mousemove',show);
+        r.addEventListener('mouseleave',hide);
+        r.addEventListener('click',show);
+        r.addEventListener('touchstart',function(ev){show(ev);ev.preventDefault();});
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>

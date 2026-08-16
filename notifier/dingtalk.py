@@ -73,7 +73,7 @@ def format_signals(aggregated: list[dict], rejected: list[dict],
                 lines.append(f"  - [{s['name']}] {s['reason']}{note_text}")
             if pos['actionable']:
                 lines.append(f"  - 建议：{pos['shares']}股 ¥{pos['amount']:,.0f}（{pos['pct']:.1%}）")
-                lines.append(f"  - 🛑 止损 ¥{pos['stop_loss']:.2f}（-{pos['stop_loss_pct']:.0%}）")
+                lines.append(f"  - 🛑 参考止损 ¥{pos['stop_loss']:.2f}（-{pos['stop_loss_pct']:.0%}，持仓实际按移动止损追踪）")
                 if pos.get('warning'):
                     lines.append(f"  - ⚠️ {pos['warning']}")
             else:

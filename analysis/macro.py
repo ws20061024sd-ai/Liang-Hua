@@ -98,8 +98,8 @@ def _fetch_indices(data_date: str = None) -> list[dict]:
                     'pct_5d': round(pct5, 2) if pct5 else None,
                     'data_date': idx_date,
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"   ⚠️ [宏观] 指数 {symbol} 解析失败: {e}")
 
         return results
     except Exception:

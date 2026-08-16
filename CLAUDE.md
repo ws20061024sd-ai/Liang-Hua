@@ -29,7 +29,7 @@ python -m engine.factor_engine  # Multi-factor scoring (monthly stock ranking)
 python web/generate.py        # Generate dashboard static HTML (web/output/)
 
 # Testing
-python -m pytest tests/ -v  # Run all tests (26 cases)
+python -m pytest tests/ -v  # Run all tests (61 cases)
 
 # Backtest
 python backtest/simple_backtest.py

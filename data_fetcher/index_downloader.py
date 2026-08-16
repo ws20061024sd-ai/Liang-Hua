@@ -105,7 +105,8 @@ def store_index_data(df):
             """, (str(row['date']), float(row['open']), float(row['close']),
                   float(row['high']), float(row['low']), float(row['volume']), float(row.get('amount', 0))))
             count += 1
-        except: pass
+        except Exception as e:
+            print(f"   ⚠️ [指数] 行 {str(row.get('date', '?'))} 写入失败: {e}")
 
     conn.commit()
     print(f"  ✅ 写入 {count} 条到 index_daily")

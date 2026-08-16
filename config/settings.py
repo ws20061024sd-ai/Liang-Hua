@@ -128,4 +128,4 @@ USE_WATCHLIST_ONLY = False
 try:
     from config.settings_local import *  # noqa: F403
 except ImportError:
-    pass
+    print("⚠️ 未找到 config/settings_local.py，密钥配置缺失（钉钉推送等将不可用）")

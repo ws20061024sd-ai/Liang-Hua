@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>603501 豪威集团 · 量化交易</title>
+<script>(function(){try{var t=localStorage.getItem("theme");t=(t==="dark"||t==="light")?t:"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;450;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #fafaf8; --bg-card: rgba(255,255,255,0.6); --bg-card-solid: #ffffff; --bg-hover: #f5f5f2;
+  --text: #1a1a1a; --text-muted: #6b6b6b; --text-soft: #94948c;
+  --border: #e8e8e4; --border-light: #f0f0ec;
+  --accent: #2563eb; --accent-hover: #1d4ed8; --accent-soft: #eff6ff;
+  --accent-2: #7c3aed; --accent-3: #059669; --code-bg: #f3f3f0;
+  --amber: #d97706; --amber-soft: rgba(217,119,6,0.08);
+  --up: #dc2626; --down: #059669; --warn: #d97706; --danger: #dc2626;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.04),0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.05),0 4px 6px rgba(0,0,0,0.04);
+}
+[data-theme="dark"] {
+  --bg: #111110; --bg-card: rgba(26,26,25,0.6); --bg-card-solid: #1a1a19; --bg-hover: #22221e;
+  --text: #e4e4e0; --text-muted: #8b8b85; --text-soft: #6b6b65;
+  --border: #2a2a25; --border-light: #22221e;
+  --accent: #60a5fa; --accent-hover: #93bbfd; --accent-soft: #1e2a3a;
+  --accent-2: #a78bfa; --accent-3: #34d399; --code-bg: #1e1e1a;
+  --amber: #fbbf24; --amber-soft: rgba(251,191,36,0.08);
+  --up: #f87171; --down: #34d399; --warn: #fbbf24; --danger: #f87171;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow: 0 1px 3px rgba(0,0,0,0.3),0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.3),0 2px 4px rgba(0,0,0,0.2);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.3),0 4px 6px rgba(0,0,0,0.2);
+}
+[data-theme="dark"] body::before { opacity: 0.04; filter: invert(1); }
+[data-theme="dark"] nav { --bg: #111110; }
+[data-theme="dark"] .glass-card { background: rgba(26,26,25,0.6); border-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .glass-card:hover { border-color: rgba(96,165,250,0.3); }
+
+*,::before,::after{box-sizing:border-box;margin:0;padding:0}
+
+/* ── 噪声纹理（博客同款）── */
+body::before {
+  content:""; position:fixed; inset:0; z-index:9999; pointer-events:none;
+  opacity:0.025;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat:repeat; background-size:256px 256px;
+}
+
+body{background:var(--bg);color:var(--text);font-family:"Inter","Noto Sans SC",system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+
+/* ── Geo-blobs 装饰（博客 Hero 同款）── */
+.geo-blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.10;pointer-events:none}
+.geo-grid-bg{position:absolute;inset:0;opacity:0.05;pointer-events:none;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:60px 60px;}
+
+/* ── 导航栏（对齐博客 Header）── */
+nav{background:var(--bg);border-bottom:1px solid transparent;position:sticky;top:0;z-index:50;transition:border-color .3s,box-shadow .3s}
+nav.scrolled, nav {border-bottom-color:var(--border)}
+@supports (backdrop-filter:blur(12px)) { nav{background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)} }
+nav .inner{max-width:768px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:16px}
+nav .brand{font-weight:600;font-size:18px;letter-spacing:-.02em;color:var(--text);text-decoration:none;transition:opacity .15s}
+nav .brand:hover{opacity:0.7}
+nav .links{display:flex;align-items:center;gap:4px}
+nav .links a{color:var(--text-muted);text-decoration:none;padding:6px 12px;font-size:14px;font-weight:500;border-radius:6px;transition:all .15s}
+nav .links a:hover{color:var(--text);background:var(--border-light)}
+nav .links a.active{color:var(--accent);background:var(--accent-soft)}
+
+.theme-btn{background:none;border:none;cursor:pointer;padding:6px 8px;border-radius:6px;color:var(--text-muted);transition:all .15s;display:flex;align-items:center}
+.theme-btn:hover{color:var(--text);background:var(--border-light)}
+[data-theme="dark"] .icon-sun{display:none}
+[data-theme="light"] .icon-moon{display:none}
+
+main{max-width:768px;margin:0 auto;padding:24px 16px 48px;position:relative}
+
+/* ── 毛玻璃卡片（博客 glass-card 同款）── */
+.panel{background:var(--bg-card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid rgba(0,0,0,0.06);border-radius:12px;box-shadow:var(--shadow-sm);
+  margin-bottom:12px;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s}
+.panel:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:rgba(37,99,235,0.15)}
+.panel-solid{background:var(--bg-card-solid);backdrop-filter:none;-webkit-backdrop-filter:none}
+.panel-solid:hover{transform:none;box-shadow:var(--shadow-sm);border-color:var(--border)}
+
+.panel-hd{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border-light);font-size:11px;color:var(--text-soft);text-transform:uppercase;letter-spacing:.4px;font-weight:500}
+.panel-bd{padding:12px 16px}
+.up{color:var(--up)}.dn{color:var(--down)}.ac{color:var(--accent)}.dim{color:var(--text-soft)}.muted{color:var(--text-muted)}.fw{font-weight:600}
+.code{font-family:"JetBrains Mono","SF Mono","Cascadia Code",ui-monospace,monospace;font-weight:450;font-size:13px}
+.ta-r{text-align:right}.ta-c{text-align:center}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--text-soft);font-weight:500;padding:5px 8px;border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+td{padding:5px 8px;border-bottom:1px solid var(--border-light)}
+tr:hover td{background:var(--bg-hover)}
+.tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600}
+.t-buy{background:#dc262615;color:var(--up)}.t-sell{background:#05966915;color:var(--down)}
+.t-pass{background:#2563eb12;color:var(--accent)}.t-block{background:#6b6b6b12;color:var(--text-muted)}
+.t-trend{background:#2563eb10;color:var(--accent)}.t-rev{background:#7c3aed10;color:var(--accent-2)}
+.t-warn{background:#d9770615;color:var(--warn)}.t-danger{background:#dc262615;color:var(--danger)}
+.banner{padding:9px 14px;border-radius:8px;margin-bottom:12px;font-size:12px}
+.banner-ok{background:#05966908;border:1px solid #05966918;color:var(--accent-3)}
+.banner-warn{background:#d9770608;border:1px solid #d9770618;color:var(--warn)}
+.banner-danger{background:#dc262608;border:1px solid #dc262618;color:var(--danger)}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
+/* ── 装饰分割线（博客同款）── */
+.decorative-hr{display:flex;align-items:center;gap:16px;border:none;margin:24px 0;color:var(--text-soft)}
+.decorative-hr::before,.decorative-hr::after{content:"";flex:1;height:1px;
+  background:linear-gradient(to right,transparent,var(--border),transparent)}
+.decorative-hr span{font-size:11px;font-weight:500;letter-spacing:.4px;text-transform:uppercase}
+.hero{padding:20px 0 12px;position:relative}
+.hero h2{font-family:"Noto Serif SC","Georgia",serif;font-size:20px;font-weight:700;margin-bottom:2px;letter-spacing:-.01em}
+.hero p{color:var(--text-muted);font-size:13px}
+.sig-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-light);font-size:13px}
+.sig-row:hover{background:var(--bg-hover)}
+.sig-rank{font-size:15px;font-weight:700;color:var(--text-soft);min-width:24px}
+.sig-meta{flex:1;min-width:0}
+.sig-meta .reason{font-size:11px;color:var(--text-muted);margin-top:1px}
+.empty{color:var(--text-soft);text-align:center;padding:32px 16px;font-size:13px}
+.kv{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border-light);font-size:13px}
+.kv:last-child{border-bottom:none}
+.stock-header{display:flex;gap:20px;align-items:flex-start;margin-bottom:12px}
+.stock-header .price{font-size:24px;font-weight:700}
+.stock-header .chg{font-size:13px;margin-left:4px}
+.stock-header .info td{padding:2px 8px 2px 0;border:none;font-size:12px}
+.chart-box{background:var(--bg-card-solid);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:12px;overflow-x:auto}
+/* 板块热力图 */
+.hm-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.hm-block{border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:36px;cursor:default}
+.hm-name{font-size:10px;font-weight:600;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45);max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hm-pct{font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+/* K线 tooltip */
+.kline-tip{position:fixed;z-index:999;background:var(--bg-card-solid);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:11px;box-shadow:var(--shadow-md);display:none;pointer-events:none;max-width:190px}
+.kt-date{font-weight:600;margin-bottom:4px;display:flex;gap:8px;align-items:center}
+.kt-row{display:flex;gap:8px;margin-top:2px}
+.kt-row span{color:var(--text-muted)}
+.kt-row b{font-weight:600}
+/* 微型走势条（历史对比用） */
+.mini-bar{display:inline-block;height:4px;border-radius:2px;min-width:2px}
+@keyframes pulse-warn { 0%,100%{opacity:1} 50%{opacity:0.6} }
+.data-alert { animation: pulse-warn 2s ease-in-out infinite; }
+@media(max-width:640px){.g2,.g3{grid-template-columns:1fr}nav .links{flex-wrap:wrap}nav .inner{padding:12px 16px}}
+</style>
+</head>
+<body>
+<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links"><a href="index.html">信号</a><a href="market.html">市场</a><a href="history.html">历史</a><a href="strategy.html">策略</a><a href="factors.html">因子</a><a href="signals.html">日志</a><button onclick="toggleTheme()" class="theme-btn" aria-label="切换主题"><svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button></div></div></nav>
+<main>
+
+    <div style="margin-bottom:12px"><a href="index.html" style="color:var(--accent);text-decoration:none;font-size:12px">← 返回信号列表</a></div>
+
+    <div class="panel"><div class="panel-bd">
+      <div class="stock-header">
+        <div><div class="code" style="font-size:14px">603501</div><div style="font-size:11px;color:var(--text-muted)">豪威集团</div></div>
+        <div><span class="price">103.21</span><span class="chg dn">-3.7%</span></div>
+        <div class="info"><table><tr><td class="dim">PE: 30.2</td><td class="dim">PB: 3.39</td></tr></table></div>
+      </div>
+
+      <div class="chart-box"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 310" style="width:100%;max-width:800px" data-kline="1">
+<line x1="50" y1="20" x2="780" y2="20" stroke="var(--border)" stroke-width="0.5"/>
+<text x="45" y="24" text-anchor="end" fill="var(--text-soft)" font-size="9">135.2</text>
+<line x1="50" y1="73" x2="780" y2="73" stroke="var(--border)" stroke-width="0.5"/>
+<text x="45" y="77" text-anchor="end" fill="var(--text-soft)" font-size="9">122.6</text>
+<line x1="50" y1="125" x2="780" y2="125" stroke="var(--border)" stroke-width="0.5"/>
+<text x="45" y="129" text-anchor="end" fill="var(--text-soft)" font-size="9">109.9</text>
+<line x1="50" y1="178" x2="780" y2="178" stroke="var(--border)" stroke-width="0.5"/>
+<text x="45" y="182" text-anchor="end" fill="var(--text-soft)" font-size="9">97.3</text>
+<line x1="50" y1="231" x2="780" y2="231" stroke="var(--border)" stroke-width="0.5"/>
+<text x="45" y="235" text-anchor="end" fill="var(--text-soft)" font-size="9">84.6</text>
+<line x1="52.5" y1="33.1" x2="52.5" y2="41.9" stroke="var(--down)" stroke-width="1"/>
+<rect x="50.0" y="34.5" width="5.1" height="1.4" fill="var(--down)"/>
+<rect x="50.0" y="282.0" width="5.1" height="12.0" fill="var(--down)" opacity="0.35"/>
+<rect x="49.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-09" data-o="131.73" data-h="132.06" data-l="129.95" data-c="131.39" data-pct="+0.00" data-vol="1644万"/>
+<line x1="58.6" y1="20.0" x2="58.6" y2="43.9" stroke="var(--up)" stroke-width="1"/>
+<rect x="56.1" y="27.4" width="5.1" height="8.4" fill="var(--up)"/>
+<rect x="56.1" y="275.9" width="5.1" height="18.1" fill="var(--up)" opacity="0.35"/>
+<rect x="55.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-12" data-o="131.40" data-h="135.20" data-l="129.45" data-c="133.42" data-pct="+1.55" data-vol="2480万"/>
+<line x1="64.7" y1="22.8" x2="64.7" y2="50.5" stroke="var(--down)" stroke-width="1"/>
+<rect x="62.2" y="26.4" width="5.1" height="22.6" fill="var(--down)"/>
+<rect x="62.2" y="274.9" width="5.1" height="19.1" fill="var(--down)" opacity="0.35"/>
+<rect x="61.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-13" data-o="133.67" data-h="134.53" data-l="127.87" data-c="128.25" data-pct="-3.87" data-vol="2619万"/>
+<line x1="70.8" y1="38.2" x2="70.8" y2="53.9" stroke="var(--down)" stroke-width="1"/>
+<rect x="68.2" y="49.7" width="5.1" height="2.0" fill="var(--down)"/>
+<rect x="68.2" y="277.5" width="5.1" height="16.5" fill="var(--down)" opacity="0.35"/>
+<rect x="67.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-14" data-o="128.07" data-h="130.83" data-l="127.07" data-c="127.58" data-pct="-0.52" data-vol="2260万"/>
+<line x1="76.9" y1="47.7" x2="76.9" y2="58.0" stroke="var(--up)" stroke-width="1"/>
+<rect x="74.3" y="48.6" width="5.1" height="3.5" fill="var(--up)"/>
+<rect x="74.3" y="281.5" width="5.1" height="12.5" fill="var(--up)" opacity="0.35"/>
+<rect x="73.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-15" data-o="127.49" data-h="128.55" data-l="126.08" data-c="128.34" data-pct="+0.60" data-vol="1709万"/>
+<line x1="83.0" y1="32.6" x2="83.0" y2="46.4" stroke="var(--up)" stroke-width="1"/>
+<rect x="80.4" y="38.7" width="5.1" height="5.5" fill="var(--up)"/>
+<rect x="80.4" y="277.0" width="5.1" height="17.0" fill="var(--up)" opacity="0.35"/>
+<rect x="79.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-16" data-o="129.39" data-h="132.17" data-l="128.87" data-c="130.70" data-pct="+1.84" data-vol="2326万"/>
+<line x1="89.0" y1="35.1" x2="89.0" y2="47.6" stroke="var(--down)" stroke-width="1"/>
+<rect x="86.5" y="38.7" width="5.1" height="8.0" fill="var(--down)"/>
+<rect x="86.5" y="282.3" width="5.1" height="11.7" fill="var(--down)" opacity="0.35"/>
+<rect x="85.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-19" data-o="130.70" data-h="131.57" data-l="128.57" data-c="128.79" data-pct="-1.46" data-vol="1607万"/>
+<line x1="95.1" y1="33.2" x2="95.1" y2="47.8" stroke="var(--down)" stroke-width="1"/>
+<rect x="92.6" y="45.9" width="5.1" height="1.0" fill="var(--down)"/>
+<rect x="92.6" y="280.7" width="5.1" height="13.3" fill="var(--down)" opacity="0.35"/>
+<rect x="91.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-20" data-o="128.97" data-h="132.02" data-l="128.52" data-c="128.86" data-pct="+0.05" data-vol="1819万"/>
+<line x1="101.2" y1="34.9" x2="101.2" y2="50.5" stroke="var(--up)" stroke-width="1"/>
+<rect x="98.7" y="40.4" width="5.1" height="9.8" fill="var(--up)"/>
+<rect x="98.7" y="277.5" width="5.1" height="16.5" fill="var(--up)" opacity="0.35"/>
+<rect x="97.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-21" data-o="127.93" data-h="131.62" data-l="127.87" data-c="130.29" data-pct="+1.11" data-vol="2262万"/>
+<line x1="107.3" y1="34.5" x2="107.3" y2="48.9" stroke="var(--down)" stroke-width="1"/>
+<rect x="104.8" y="36.8" width="5.1" height="10.2" fill="var(--down)"/>
+<rect x="104.8" y="280.1" width="5.1" height="13.9" fill="var(--down)" opacity="0.35"/>
+<rect x="103.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-22" data-o="131.17" data-h="131.72" data-l="128.27" data-c="128.71" data-pct="-1.21" data-vol="1900万"/>
+<line x1="113.4" y1="39.7" x2="113.4" y2="49.8" stroke="var(--up)" stroke-width="1"/>
+<rect x="110.8" y="44.7" width="5.1" height="2.3" fill="var(--up)"/>
+<rect x="110.8" y="279.3" width="5.1" height="14.7" fill="var(--up)" opacity="0.35"/>
+<rect x="109.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-23" data-o="128.72" data-h="130.47" data-l="128.04" data-c="129.27" data-pct="+0.44" data-vol="2017万"/>
+<line x1="119.5" y1="43.3" x2="119.5" y2="64.6" stroke="var(--down)" stroke-width="1"/>
+<rect x="116.9" y="44.7" width="5.1" height="19.9" fill="var(--down)"/>
+<rect x="116.9" y="274.0" width="5.1" height="20.0" fill="var(--down)" opacity="0.35"/>
+<rect x="115.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-26" data-o="129.27" data-h="129.61" data-l="124.48" data-c="124.50" data-pct="-3.69" data-vol="2738万"/>
+<line x1="125.5" y1="59.2" x2="125.5" y2="72.4" stroke="var(--up)" stroke-width="1"/>
+<rect x="123.0" y="63.6" width="5.1" height="1.5" fill="var(--up)"/>
+<rect x="123.0" y="281.2" width="5.1" height="12.8" fill="var(--up)" opacity="0.35"/>
+<rect x="122.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-27" data-o="124.38" data-h="125.78" data-l="122.61" data-c="124.74" data-pct="+0.19" data-vol="1753万"/>
+<line x1="131.6" y1="38.6" x2="131.6" y2="64.2" stroke="var(--up)" stroke-width="1"/>
+<rect x="129.1" y="50.2" width="5.1" height="13.6" fill="var(--up)"/>
+<rect x="129.1" y="269.6" width="5.1" height="24.4" fill="var(--up)" opacity="0.35"/>
+<rect x="128.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-28" data-o="124.68" data-h="130.73" data-l="124.58" data-c="127.95" data-pct="+2.57" data-vol="3349万"/>
+<line x1="137.7" y1="51.0" x2="137.7" y2="73.1" stroke="var(--down)" stroke-width="1"/>
+<rect x="135.2" y="53.4" width="5.1" height="18.4" fill="var(--down)"/>
+<rect x="135.2" y="272.1" width="5.1" height="21.9" fill="var(--down)" opacity="0.35"/>
+<rect x="134.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-29" data-o="127.17" data-h="127.75" data-l="122.46" data-c="122.76" data-pct="-4.06" data-vol="3000万"/>
+<line x1="143.8" y1="69.8" x2="143.8" y2="81.8" stroke="var(--down)" stroke-width="1"/>
+<rect x="141.2" y="73.3" width="5.1" height="5.5" fill="var(--down)"/>
+<rect x="141.2" y="282.4" width="5.1" height="11.6" fill="var(--down)" opacity="0.35"/>
+<rect x="140.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-01-30" data-o="122.39" data-h="123.23" data-l="120.35" data-c="121.08" data-pct="-1.37" data-vol="1591万"/>
+<line x1="149.9" y1="76.3" x2="149.9" y2="93.4" stroke="var(--down)" stroke-width="1"/>
+<rect x="147.3" y="81.4" width="5.1" height="11.0" fill="var(--down)"/>
+<rect x="147.3" y="283.5" width="5.1" height="10.5" fill="var(--down)" opacity="0.35"/>
+<rect x="146.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-02" data-o="120.46" data-h="121.67" data-l="117.58" data-c="117.83" data-pct="-2.68" data-vol="1437万"/>
+<line x1="156.0" y1="84.3" x2="156.0" y2="96.3" stroke="var(--down)" stroke-width="1"/>
+<rect x="153.4" y="85.0" width="5.1" height="5.3" fill="var(--down)"/>
+<rect x="153.4" y="283.9" width="5.1" height="10.1" fill="var(--down)" opacity="0.35"/>
+<rect x="152.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-03" data-o="119.59" data-h="119.76" data-l="116.88" data-c="118.31" data-pct="+0.41" data-vol="1378万"/>
+<line x1="162.0" y1="93.6" x2="162.0" y2="100.9" stroke="var(--down)" stroke-width="1"/>
+<rect x="159.5" y="95.0" width="5.1" height="1.0" fill="var(--down)"/>
+<rect x="159.5" y="284.6" width="5.1" height="9.4" fill="var(--down)" opacity="0.35"/>
+<rect x="158.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-04" data-o="117.19" data-h="117.53" data-l="115.78" data-c="117.17" data-pct="-0.96" data-vol="1284万"/>
+<line x1="168.1" y1="93.0" x2="168.1" y2="99.6" stroke="var(--up)" stroke-width="1"/>
+<rect x="165.6" y="93.7" width="5.1" height="4.8" fill="var(--up)"/>
+<rect x="165.6" y="286.5" width="5.1" height="7.5" fill="var(--up)" opacity="0.35"/>
+<rect x="164.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-05" data-o="116.36" data-h="117.67" data-l="116.09" data-c="117.51" data-pct="+0.29" data-vol="1025万"/>
+<line x1="174.2" y1="96.3" x2="174.2" y2="102.0" stroke="var(--down)" stroke-width="1"/>
+<rect x="171.7" y="98.0" width="5.1" height="2.7" fill="var(--down)"/>
+<rect x="171.7" y="284.7" width="5.1" height="9.3" fill="var(--down)" opacity="0.35"/>
+<rect x="170.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-06" data-o="116.48" data-h="116.88" data-l="115.50" data-c="115.84" data-pct="-1.42" data-vol="1270万"/>
+<line x1="180.3" y1="94.2" x2="180.3" y2="99.1" stroke="var(--down)" stroke-width="1"/>
+<rect x="177.8" y="94.9" width="5.1" height="1.4" fill="var(--down)"/>
+<rect x="177.8" y="285.8" width="5.1" height="8.2" fill="var(--down)" opacity="0.35"/>
+<rect x="176.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-09" data-o="117.22" data-h="117.38" data-l="116.20" data-c="116.89" data-pct="+0.91" data-vol="1118万"/>
+<line x1="186.4" y1="89.4" x2="186.4" y2="96.2" stroke="var(--up)" stroke-width="1"/>
+<rect x="183.8" y="92.8" width="5.1" height="3.3" fill="var(--up)"/>
+<rect x="183.8" y="286.3" width="5.1" height="7.7" fill="var(--up)" opacity="0.35"/>
+<rect x="182.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-10" data-o="116.92" data-h="118.54" data-l="116.90" data-c="117.71" data-pct="+0.70" data-vol="1061万"/>
+<line x1="192.5" y1="91.3" x2="192.5" y2="96.1" stroke="var(--down)" stroke-width="1"/>
+<rect x="189.9" y="92.9" width="5.1" height="2.2" fill="var(--down)"/>
+<rect x="189.9" y="288.4" width="5.1" height="5.6" fill="var(--down)" opacity="0.35"/>
+<rect x="188.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-11" data-o="117.69" data-h="118.08" data-l="116.93" data-c="117.17" data-pct="-0.46" data-vol="768万"/>
+<line x1="198.5" y1="92.4" x2="198.5" y2="99.0" stroke="var(--down)" stroke-width="1"/>
+<rect x="196.0" y="94.9" width="5.1" height="1.2" fill="var(--down)"/>
+<rect x="196.0" y="286.3" width="5.1" height="7.7" fill="var(--down)" opacity="0.35"/>
+<rect x="195.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-12" data-o="117.21" data-h="117.81" data-l="116.24" data-c="116.93" data-pct="-0.20" data-vol="1053万"/>
+<line x1="204.6" y1="94.3" x2="204.6" y2="101.2" stroke="var(--down)" stroke-width="1"/>
+<rect x="202.1" y="98.1" width="5.1" height="3.0" fill="var(--down)"/>
+<rect x="202.1" y="286.1" width="5.1" height="7.9" fill="var(--down)" opacity="0.35"/>
+<rect x="201.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-13" data-o="116.44" data-h="117.36" data-l="115.69" data-c="115.71" data-pct="-1.04" data-vol="1085万"/>
+<line x1="210.7" y1="93.1" x2="210.7" y2="101.3" stroke="var(--up)" stroke-width="1"/>
+<rect x="208.2" y="95.1" width="5.1" height="1.2" fill="var(--up)"/>
+<rect x="208.2" y="285.6" width="5.1" height="8.4" fill="var(--up)" opacity="0.35"/>
+<rect x="207.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-24" data-o="116.88" data-h="117.64" data-l="115.67" data-c="117.16" data-pct="+1.25" data-vol="1148万"/>
+<line x1="216.8" y1="91.0" x2="216.8" y2="96.7" stroke="var(--up)" stroke-width="1"/>
+<rect x="214.2" y="92.8" width="5.1" height="2.3" fill="var(--up)"/>
+<rect x="214.2" y="285.2" width="5.1" height="8.8" fill="var(--up)" opacity="0.35"/>
+<rect x="213.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-25" data-o="117.17" data-h="118.14" data-l="116.78" data-c="117.72" data-pct="+0.48" data-vol="1200万"/>
+<line x1="222.9" y1="71.3" x2="222.9" y2="94.5" stroke="var(--up)" stroke-width="1"/>
+<rect x="220.3" y="73.0" width="5.1" height="18.7" fill="var(--up)"/>
+<rect x="220.3" y="274.9" width="5.1" height="19.1" fill="var(--up)" opacity="0.35"/>
+<rect x="219.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-26" data-o="117.98" data-h="122.89" data-l="117.31" data-c="122.48" data-pct="+4.04" data-vol="2619万"/>
+<line x1="229.0" y1="66.3" x2="229.0" y2="81.2" stroke="var(--up)" stroke-width="1"/>
+<rect x="226.4" y="71.3" width="5.1" height="8.3" fill="var(--up)"/>
+<rect x="226.4" y="281.3" width="5.1" height="12.7" fill="var(--up)" opacity="0.35"/>
+<rect x="225.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-02-27" data-o="120.88" data-h="124.08" data-l="120.50" data-c="122.88" data-pct="+0.33" data-vol="1744万"/>
+<line x1="235.0" y1="76.6" x2="235.0" y2="89.4" stroke="var(--down)" stroke-width="1"/>
+<rect x="232.5" y="82.2" width="5.1" height="6.0" fill="var(--down)"/>
+<rect x="232.5" y="280.2" width="5.1" height="13.8" fill="var(--down)" opacity="0.35"/>
+<rect x="231.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-02" data-o="120.26" data-h="121.60" data-l="118.54" data-c="118.81" data-pct="-3.31" data-vol="1895万"/>
+<line x1="241.1" y1="78.8" x2="241.1" y2="100.4" stroke="var(--down)" stroke-width="1"/>
+<rect x="238.6" y="89.3" width="5.1" height="9.7" fill="var(--down)"/>
+<rect x="238.6" y="281.2" width="5.1" height="12.8" fill="var(--down)" opacity="0.35"/>
+<rect x="237.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-03" data-o="118.56" data-h="121.08" data-l="115.89" data-c="116.23" data-pct="-2.17" data-vol="1754万"/>
+<line x1="247.2" y1="97.5" x2="247.2" y2="110.8" stroke="var(--down)" stroke-width="1"/>
+<rect x="244.7" y="104.6" width="5.1" height="6.2" fill="var(--down)"/>
+<rect x="244.7" y="282.0" width="5.1" height="12.0" fill="var(--down)" opacity="0.35"/>
+<rect x="243.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-04" data-o="114.89" data-h="116.58" data-l="113.39" data-c="113.41" data-pct="-2.43" data-vol="1646万"/>
+<line x1="253.3" y1="100.9" x2="253.3" y2="109.2" stroke="var(--down)" stroke-width="1"/>
+<rect x="250.8" y="101.2" width="5.1" height="6.8" fill="var(--down)"/>
+<rect x="250.8" y="286.6" width="5.1" height="7.4" fill="var(--down)" opacity="0.35"/>
+<rect x="249.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-05" data-o="115.69" data-h="115.77" data-l="113.78" data-c="114.06" data-pct="+0.57" data-vol="1014万"/>
+<line x1="259.4" y1="102.2" x2="259.4" y2="110.0" stroke="var(--up)" stroke-width="1"/>
+<rect x="256.8" y="104.4" width="5.1" height="3.7" fill="var(--up)"/>
+<rect x="256.8" y="288.3" width="5.1" height="5.7" fill="var(--up)" opacity="0.35"/>
+<rect x="255.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-06" data-o="114.06" data-h="115.47" data-l="113.60" data-c="114.94" data-pct="+0.77" data-vol="784万"/>
+<line x1="265.5" y1="112.9" x2="265.5" y2="123.1" stroke="var(--down)" stroke-width="1"/>
+<rect x="262.9" y="112.9" width="5.1" height="3.3" fill="var(--down)"/>
+<rect x="262.9" y="284.1" width="5.1" height="9.9" fill="var(--down)" opacity="0.35"/>
+<rect x="261.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-09" data-o="112.89" data-h="112.90" data-l="110.45" data-c="112.09" data-pct="-2.48" data-vol="1363万"/>
+<line x1="271.5" y1="106.6" x2="271.5" y2="111.9" stroke="var(--up)" stroke-width="1"/>
+<rect x="269.0" y="108.4" width="5.1" height="2.0" fill="var(--up)"/>
+<rect x="269.0" y="288.0" width="5.1" height="6.0" fill="var(--up)" opacity="0.35"/>
+<rect x="268.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-10" data-o="113.49" data-h="114.41" data-l="113.14" data-c="113.97" data-pct="+1.68" data-vol="823万"/>
+<line x1="277.6" y1="105.0" x2="277.6" y2="110.0" stroke="var(--up)" stroke-width="1"/>
+<rect x="275.1" y="107.5" width="5.1" height="1.2" fill="var(--up)"/>
+<rect x="275.1" y="287.3" width="5.1" height="6.7" fill="var(--up)" opacity="0.35"/>
+<rect x="274.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-11" data-o="113.89" data-h="114.78" data-l="113.60" data-c="114.19" data-pct="+0.19" data-vol="916万"/>
+<line x1="283.7" y1="106.3" x2="283.7" y2="116.2" stroke="var(--down)" stroke-width="1"/>
+<rect x="281.2" y="108.8" width="5.1" height="4.9" fill="var(--down)"/>
+<rect x="281.2" y="287.9" width="5.1" height="6.1" fill="var(--down)" opacity="0.35"/>
+<rect x="280.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-12" data-o="113.88" data-h="114.48" data-l="112.09" data-c="112.71" data-pct="-1.30" data-vol="831万"/>
+<line x1="289.8" y1="112.2" x2="289.8" y2="119.8" stroke="var(--down)" stroke-width="1"/>
+<rect x="287.2" y="117.1" width="5.1" height="1.1" fill="var(--down)"/>
+<rect x="287.2" y="287.8" width="5.1" height="6.2" fill="var(--down)" opacity="0.35"/>
+<rect x="286.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-13" data-o="111.89" data-h="113.06" data-l="111.24" data-c="111.62" data-pct="-0.97" data-vol="844万"/>
+<line x1="295.9" y1="117.9" x2="295.9" y2="132.0" stroke="var(--down)" stroke-width="1"/>
+<rect x="293.3" y="118.2" width="5.1" height="6.0" fill="var(--down)"/>
+<rect x="293.3" y="283.5" width="5.1" height="10.5" fill="var(--down)" opacity="0.35"/>
+<rect x="292.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-16" data-o="111.63" data-h="111.70" data-l="108.30" data-c="110.19" data-pct="-1.28" data-vol="1440万"/>
+<line x1="302.0" y1="119.6" x2="302.0" y2="130.0" stroke="var(--down)" stroke-width="1"/>
+<rect x="299.4" y="121.9" width="5.1" height="8.0" fill="var(--down)"/>
+<rect x="299.4" y="286.7" width="5.1" height="7.3" fill="var(--down)" opacity="0.35"/>
+<rect x="298.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-17" data-o="110.74" data-h="111.29" data-l="108.79" data-c="108.81" data-pct="-1.25" data-vol="1000万"/>
+<line x1="308.0" y1="126.8" x2="308.0" y2="139.6" stroke="var(--down)" stroke-width="1"/>
+<rect x="305.5" y="127.5" width="5.1" height="5.1" fill="var(--down)"/>
+<rect x="305.5" y="284.8" width="5.1" height="9.2" fill="var(--down)" opacity="0.35"/>
+<rect x="304.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-18" data-o="109.39" data-h="109.55" data-l="106.47" data-c="108.17" data-pct="-0.59" data-vol="1254万"/>
+<line x1="314.1" y1="137.9" x2="314.1" y2="145.0" stroke="var(--down)" stroke-width="1"/>
+<rect x="311.6" y="139.2" width="5.1" height="3.5" fill="var(--down)"/>
+<rect x="311.6" y="285.0" width="5.1" height="9.0" fill="var(--down)" opacity="0.35"/>
+<rect x="310.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-19" data-o="106.58" data-h="106.88" data-l="105.18" data-c="105.74" data-pct="-2.25" data-vol="1238万"/>
+<line x1="320.2" y1="139.5" x2="320.2" y2="152.2" stroke="var(--down)" stroke-width="1"/>
+<rect x="317.7" y="140.8" width="5.1" height="11.5" fill="var(--down)"/>
+<rect x="317.7" y="285.5" width="5.1" height="8.5" fill="var(--down)" opacity="0.35"/>
+<rect x="316.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-20" data-o="106.20" data-h="106.51" data-l="103.45" data-c="103.45" data-pct="-2.17" data-vol="1169万"/>
+<line x1="326.3" y1="160.0" x2="326.3" y2="174.3" stroke="var(--down)" stroke-width="1"/>
+<rect x="323.8" y="164.8" width="5.1" height="7.9" fill="var(--down)"/>
+<rect x="323.8" y="281.8" width="5.1" height="12.2" fill="var(--down)" opacity="0.35"/>
+<rect x="322.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-23" data-o="100.42" data-h="101.59" data-l="98.15" data-c="98.52" data-pct="-4.77" data-vol="1673万"/>
+<line x1="332.4" y1="164.9" x2="332.4" y2="176.3" stroke="var(--up)" stroke-width="1"/>
+<rect x="329.8" y="167.1" width="5.1" height="1.0" fill="var(--up)"/>
+<rect x="329.8" y="286.3" width="5.1" height="7.7" fill="var(--up)" opacity="0.35"/>
+<rect x="328.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-24" data-o="99.85" data-h="100.40" data-l="97.66" data-c="99.88" data-pct="+1.38" data-vol="1055万"/>
+<line x1="338.5" y1="155.4" x2="338.5" y2="165.0" stroke="var(--up)" stroke-width="1"/>
+<rect x="335.9" y="157.2" width="5.1" height="7.7" fill="var(--up)"/>
+<rect x="335.9" y="285.8" width="5.1" height="8.2" fill="var(--up)" opacity="0.35"/>
+<rect x="334.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-25" data-o="100.39" data-h="102.68" data-l="100.39" data-c="102.25" data-pct="+2.37" data-vol="1118万"/>
+<line x1="344.5" y1="158.0" x2="344.5" y2="167.8" stroke="var(--down)" stroke-width="1"/>
+<rect x="342.0" y="159.6" width="5.1" height="7.4" fill="var(--down)"/>
+<rect x="342.0" y="288.5" width="5.1" height="5.5" fill="var(--down)" opacity="0.35"/>
+<rect x="341.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-26" data-o="101.68" data-h="102.07" data-l="99.72" data-c="99.90" data-pct="-2.30" data-vol="751万"/>
+<line x1="350.6" y1="160.4" x2="350.6" y2="173.0" stroke="var(--up)" stroke-width="1"/>
+<rect x="348.1" y="162.8" width="5.1" height="10.2" fill="var(--up)"/>
+<rect x="348.1" y="288.3" width="5.1" height="5.7" fill="var(--up)" opacity="0.35"/>
+<rect x="347.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-27" data-o="98.47" data-h="101.48" data-l="98.47" data-c="100.92" data-pct="+1.02" data-vol="776万"/>
+<line x1="356.7" y1="163.8" x2="356.7" y2="172.4" stroke="var(--up)" stroke-width="1"/>
+<rect x="354.2" y="165.7" width="5.1" height="3.7" fill="var(--up)"/>
+<rect x="354.2" y="288.6" width="5.1" height="5.4" fill="var(--up)" opacity="0.35"/>
+<rect x="353.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-30" data-o="99.33" data-h="100.68" data-l="98.60" data-c="100.22" data-pct="-0.69" data-vol="745万"/>
+<line x1="362.8" y1="168.4" x2="362.8" y2="189.6" stroke="var(--down)" stroke-width="1"/>
+<rect x="360.2" y="172.0" width="5.1" height="16.0" fill="var(--down)"/>
+<rect x="360.2" y="278.5" width="5.1" height="15.5" fill="var(--down)" opacity="0.35"/>
+<rect x="359.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-03-31" data-o="98.70" data-h="99.56" data-l="94.47" data-c="94.87" data-pct="-5.34" data-vol="2126万"/>
+<line x1="368.9" y1="179.5" x2="368.9" y2="187.8" stroke="var(--down)" stroke-width="1"/>
+<rect x="366.3" y="180.2" width="5.1" height="3.3" fill="var(--down)"/>
+<rect x="366.3" y="283.1" width="5.1" height="10.9" fill="var(--down)" opacity="0.35"/>
+<rect x="365.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-01" data-o="96.74" data-h="96.90" data-l="94.91" data-c="95.95" data-pct="+1.14" data-vol="1500万"/>
+<line x1="375.0" y1="185.7" x2="375.0" y2="203.9" stroke="var(--down)" stroke-width="1"/>
+<rect x="372.4" y="185.7" width="5.1" height="17.2" fill="var(--down)"/>
+<rect x="372.4" y="276.1" width="5.1" height="17.9" fill="var(--down)" opacity="0.35"/>
+<rect x="371.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-02" data-o="95.40" data-h="95.40" data-l="91.03" data-c="91.26" data-pct="-4.89" data-vol="2452万"/>
+<line x1="381.0" y1="199.5" x2="381.0" y2="210.2" stroke="var(--down)" stroke-width="1"/>
+<rect x="378.5" y="199.7" width="5.1" height="8.2" fill="var(--down)"/>
+<rect x="378.5" y="283.7" width="5.1" height="10.3" fill="var(--down)" opacity="0.35"/>
+<rect x="377.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-03" data-o="92.04" data-h="92.09" data-l="89.52" data-c="90.06" data-pct="-1.31" data-vol="1407万"/>
+<line x1="387.1" y1="201.6" x2="387.1" y2="207.7" stroke="var(--up)" stroke-width="1"/>
+<rect x="384.6" y="205.2" width="5.1" height="2.5" fill="var(--up)"/>
+<rect x="384.6" y="286.6" width="5.1" height="7.4" fill="var(--up)" opacity="0.35"/>
+<rect x="383.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-07" data-o="90.14" data-h="91.59" data-l="90.12" data-c="90.73" data-pct="+0.74" data-vol="1012万"/>
+<line x1="393.2" y1="185.8" x2="393.2" y2="198.8" stroke="var(--up)" stroke-width="1"/>
+<rect x="390.7" y="185.9" width="5.1" height="12.9" fill="var(--up)"/>
+<rect x="390.7" y="279.6" width="5.1" height="14.4" fill="var(--up)" opacity="0.35"/>
+<rect x="389.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-08" data-o="92.26" data-h="95.39" data-l="92.26" data-c="95.36" data-pct="+5.10" data-vol="1974万"/>
+<line x1="399.3" y1="189.5" x2="399.3" y2="195.2" stroke="var(--up)" stroke-width="1"/>
+<rect x="396.8" y="191.0" width="5.1" height="1.0" fill="var(--up)"/>
+<rect x="396.8" y="283.8" width="5.1" height="10.2" fill="var(--up)" opacity="0.35"/>
+<rect x="395.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-09" data-o="93.91" data-h="94.50" data-l="93.13" data-c="94.15" data-pct="-1.27" data-vol="1394万"/>
+<line x1="405.4" y1="180.5" x2="405.4" y2="188.2" stroke="var(--up)" stroke-width="1"/>
+<rect x="402.8" y="186.3" width="5.1" height="1.5" fill="var(--up)"/>
+<rect x="402.8" y="283.4" width="5.1" height="10.6" fill="var(--up)" opacity="0.35"/>
+<rect x="401.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-10" data-o="94.91" data-h="96.65" data-l="94.81" data-c="95.26" data-pct="+1.18" data-vol="1449万"/>
+<line x1="411.5" y1="184.5" x2="411.5" y2="191.8" stroke="var(--up)" stroke-width="1"/>
+<rect x="408.9" y="188.5" width="5.1" height="2.2" fill="var(--up)"/>
+<rect x="408.9" y="285.4" width="5.1" height="8.6" fill="var(--up)" opacity="0.35"/>
+<rect x="407.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-13" data-o="94.20" data-h="95.70" data-l="93.94" data-c="94.74" data-pct="-0.55" data-vol="1172万"/>
+<line x1="417.5" y1="182.4" x2="417.5" y2="193.0" stroke="var(--down)" stroke-width="1"/>
+<rect x="415.0" y="185.3" width="5.1" height="3.9" fill="var(--down)"/>
+<rect x="415.0" y="281.7" width="5.1" height="12.3" fill="var(--down)" opacity="0.35"/>
+<rect x="414.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-14" data-o="95.50" data-h="96.20" data-l="93.66" data-c="94.57" data-pct="-0.18" data-vol="1688万"/>
+<line x1="423.6" y1="185.7" x2="423.6" y2="199.1" stroke="var(--down)" stroke-width="1"/>
+<rect x="421.1" y="189.2" width="5.1" height="9.8" fill="var(--down)"/>
+<rect x="421.1" y="277.5" width="5.1" height="16.5" fill="var(--down)" opacity="0.35"/>
+<rect x="420.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-15" data-o="94.57" data-h="95.41" data-l="92.20" data-c="92.22" data-pct="-2.48" data-vol="2263万"/>
+<line x1="429.7" y1="191.2" x2="429.7" y2="198.2" stroke="var(--up)" stroke-width="1"/>
+<rect x="427.2" y="193.2" width="5.1" height="4.0" fill="var(--up)"/>
+<rect x="427.2" y="281.9" width="5.1" height="12.1" fill="var(--up)" opacity="0.35"/>
+<rect x="426.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-16" data-o="92.66" data-h="94.08" data-l="92.40" data-c="93.62" data-pct="+1.52" data-vol="1665万"/>
+<line x1="435.8" y1="192.4" x2="435.8" y2="199.5" stroke="var(--down)" stroke-width="1"/>
+<rect x="433.2" y="193.5" width="5.1" height="2.5" fill="var(--down)"/>
+<rect x="433.2" y="281.9" width="5.1" height="12.1" fill="var(--down)" opacity="0.35"/>
+<rect x="432.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-17" data-o="93.54" data-h="93.81" data-l="92.09" data-c="92.95" data-pct="-0.72" data-vol="1663万"/>
+<line x1="441.9" y1="189.9" x2="441.9" y2="196.2" stroke="var(--up)" stroke-width="1"/>
+<rect x="439.3" y="192.9" width="5.1" height="3.1" fill="var(--up)"/>
+<rect x="439.3" y="280.9" width="5.1" height="13.1" fill="var(--up)" opacity="0.35"/>
+<rect x="438.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-20" data-o="92.95" data-h="94.40" data-l="92.89" data-c="93.69" data-pct="+0.80" data-vol="1797万"/>
+<line x1="448.0" y1="193.6" x2="448.0" y2="201.9" stroke="var(--down)" stroke-width="1"/>
+<rect x="445.4" y="194.7" width="5.1" height="2.0" fill="var(--down)"/>
+<rect x="445.4" y="281.5" width="5.1" height="12.5" fill="var(--down)" opacity="0.35"/>
+<rect x="444.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-21" data-o="93.24" data-h="93.52" data-l="91.53" data-c="92.76" data-pct="-0.99" data-vol="1713万"/>
+<line x1="454.0" y1="191.1" x2="454.0" y2="199.4" stroke="var(--up)" stroke-width="1"/>
+<rect x="451.5" y="191.1" width="5.1" height="7.2" fill="var(--up)"/>
+<rect x="451.5" y="279.6" width="5.1" height="14.4" fill="var(--up)" opacity="0.35"/>
+<rect x="450.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-22" data-o="92.39" data-h="94.11" data-l="92.11" data-c="94.11" data-pct="+1.46" data-vol="1979万"/>
+<line x1="460.1" y1="189.9" x2="460.1" y2="199.4" stroke="var(--down)" stroke-width="1"/>
+<rect x="457.6" y="190.0" width="5.1" height="8.4" fill="var(--down)"/>
+<rect x="457.6" y="281.7" width="5.1" height="12.3" fill="var(--down)" opacity="0.35"/>
+<rect x="456.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-23" data-o="94.37" data-h="94.41" data-l="92.13" data-c="92.35" data-pct="-1.87" data-vol="1679万"/>
+<line x1="466.2" y1="180.7" x2="466.2" y2="199.6" stroke="var(--up)" stroke-width="1"/>
+<rect x="463.7" y="187.3" width="5.1" height="12.0" fill="var(--up)"/>
+<rect x="463.7" y="268.5" width="5.1" height="25.5" fill="var(--up)" opacity="0.35"/>
+<rect x="462.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-24" data-o="92.16" data-h="96.62" data-l="92.08" data-c="95.03" data-pct="+2.90" data-vol="3498万"/>
+<line x1="472.3" y1="147.7" x2="472.3" y2="183.2" stroke="var(--up)" stroke-width="1"/>
+<rect x="469.8" y="147.7" width="5.1" height="35.1" fill="var(--up)"/>
+<rect x="469.8" y="255.8" width="5.1" height="38.2" fill="var(--up)" opacity="0.35"/>
+<rect x="468.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-27" data-o="96.09" data-h="104.53" data-l="96.00" data-c="104.53" data-pct="+10.00" data-vol="5237万"/>
+<line x1="478.4" y1="138.1" x2="478.4" y2="152.8" stroke="var(--down)" stroke-width="1"/>
+<rect x="475.8" y="138.1" width="5.1" height="12.7" fill="var(--down)"/>
+<rect x="475.8" y="256.7" width="5.1" height="37.3" fill="var(--down)" opacity="0.35"/>
+<rect x="474.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-28" data-o="106.84" data-h="106.84" data-l="103.30" data-c="103.79" data-pct="-0.71" data-vol="5117万"/>
+<line x1="484.5" y1="153.1" x2="484.5" y2="168.1" stroke="var(--down)" stroke-width="1"/>
+<rect x="481.9" y="155.1" width="5.1" height="5.2" fill="var(--down)"/>
+<rect x="481.9" y="267.3" width="5.1" height="26.7" fill="var(--down)" opacity="0.35"/>
+<rect x="480.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-29" data-o="102.75" data-h="103.25" data-l="99.64" data-c="101.49" data-pct="-2.22" data-vol="3663万"/>
+<line x1="490.5" y1="169.6" x2="490.5" y2="179.5" stroke="var(--up)" stroke-width="1"/>
+<rect x="488.0" y="174.1" width="5.1" height="2.2" fill="var(--up)"/>
+<rect x="488.0" y="260.4" width="5.1" height="33.6" fill="var(--up)" opacity="0.35"/>
+<rect x="487.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-04-30" data-o="97.67" data-h="99.28" data-l="96.90" data-c="98.20" data-pct="-3.24" data-vol="4600万"/>
+<line x1="496.6" y1="151.2" x2="496.6" y2="169.1" stroke="var(--up)" stroke-width="1"/>
+<rect x="494.1" y="163.3" width="5.1" height="5.0" fill="var(--up)"/>
+<rect x="494.1" y="260.6" width="5.1" height="33.4" fill="var(--up)" opacity="0.35"/>
+<rect x="493.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-06" data-o="99.59" data-h="103.70" data-l="99.40" data-c="100.80" data-pct="+2.65" data-vol="4581万"/>
+<line x1="502.7" y1="158.7" x2="502.7" y2="170.7" stroke="var(--down)" stroke-width="1"/>
+<rect x="500.2" y="159.1" width="5.1" height="6.8" fill="var(--down)"/>
+<rect x="500.2" y="273.3" width="5.1" height="20.7" fill="var(--down)" opacity="0.35"/>
+<rect x="499.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-07" data-o="101.80" data-h="101.90" data-l="99.01" data-c="100.16" data-pct="-0.63" data-vol="2839万"/>
+<line x1="508.8" y1="168.7" x2="508.8" y2="174.0" stroke="var(--down)" stroke-width="1"/>
+<rect x="506.2" y="169.9" width="5.1" height="1.0" fill="var(--down)"/>
+<rect x="506.2" y="277.7" width="5.1" height="16.3" fill="var(--down)" opacity="0.35"/>
+<rect x="505.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-08" data-o="99.21" data-h="99.50" data-l="98.21" data-c="99.08" data-pct="-1.08" data-vol="2232万"/>
+<line x1="514.9" y1="158.3" x2="514.9" y2="167.6" stroke="var(--up)" stroke-width="1"/>
+<rect x="512.3" y="161.3" width="5.1" height="5.4" fill="var(--up)"/>
+<rect x="512.3" y="270.1" width="5.1" height="23.9" fill="var(--up)" opacity="0.35"/>
+<rect x="511.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-11" data-o="99.98" data-h="101.98" data-l="99.76" data-c="101.28" data-pct="+2.22" data-vol="3280万"/>
+<line x1="521.0" y1="148.7" x2="521.0" y2="164.9" stroke="var(--up)" stroke-width="1"/>
+<rect x="518.4" y="153.2" width="5.1" height="5.5" fill="var(--up)"/>
+<rect x="518.4" y="266.0" width="5.1" height="28.0" fill="var(--up)" opacity="0.35"/>
+<rect x="517.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-12" data-o="101.90" data-h="104.30" data-l="100.41" data-c="103.21" data-pct="+1.91" data-vol="3836万"/>
+<line x1="527.0" y1="150.8" x2="527.0" y2="168.7" stroke="var(--up)" stroke-width="1"/>
+<rect x="524.5" y="152.4" width="5.1" height="7.6" fill="var(--up)"/>
+<rect x="524.5" y="267.7" width="5.1" height="26.3" fill="var(--up)" opacity="0.35"/>
+<rect x="523.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-13" data-o="101.58" data-h="103.80" data-l="99.50" data-c="103.41" data-pct="+0.19" data-vol="3605万"/>
+<line x1="533.1" y1="148.1" x2="533.1" y2="164.9" stroke="var(--down)" stroke-width="1"/>
+<rect x="530.6" y="148.2" width="5.1" height="16.7" fill="var(--down)"/>
+<rect x="530.6" y="271.9" width="5.1" height="22.1" fill="var(--down)" opacity="0.35"/>
+<rect x="529.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-14" data-o="104.41" data-h="104.44" data-l="100.40" data-c="100.40" data-pct="-2.91" data-vol="3031万"/>
+<line x1="539.2" y1="147.4" x2="539.2" y2="176.2" stroke="var(--up)" stroke-width="1"/>
+<rect x="536.7" y="161.2" width="5.1" height="3.5" fill="var(--up)"/>
+<rect x="536.7" y="263.6" width="5.1" height="30.4" fill="var(--up)" opacity="0.35"/>
+<rect x="535.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-15" data-o="100.45" data-h="104.60" data-l="97.70" data-c="101.29" data-pct="+0.89" data-vol="4166万"/>
+<line x1="545.3" y1="155.2" x2="545.3" y2="171.1" stroke="var(--down)" stroke-width="1"/>
+<rect x="542.8" y="163.3" width="5.1" height="4.6" fill="var(--down)"/>
+<rect x="542.8" y="273.3" width="5.1" height="20.7" fill="var(--down)" opacity="0.35"/>
+<rect x="541.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-18" data-o="100.80" data-h="102.74" data-l="98.92" data-c="99.69" data-pct="-1.58" data-vol="2833万"/>
+<line x1="551.4" y1="155.0" x2="551.4" y2="178.7" stroke="var(--up)" stroke-width="1"/>
+<rect x="548.8" y="156.1" width="5.1" height="11.7" fill="var(--up)"/>
+<rect x="548.8" y="268.5" width="5.1" height="25.5" fill="var(--up)" opacity="0.35"/>
+<rect x="547.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-19" data-o="99.70" data-h="102.79" data-l="97.09" data-c="102.52" data-pct="+2.84" data-vol="3496万"/>
+<line x1="557.5" y1="157.8" x2="557.5" y2="165.4" stroke="var(--down)" stroke-width="1"/>
+<rect x="554.9" y="160.3" width="5.1" height="1.3" fill="var(--down)"/>
+<rect x="554.9" y="277.1" width="5.1" height="16.9" fill="var(--down)" opacity="0.35"/>
+<rect x="553.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-20" data-o="101.52" data-h="102.10" data-l="100.28" data-c="101.20" data-pct="-1.29" data-vol="2322万"/>
+<line x1="563.5" y1="131.9" x2="563.5" y2="159.5" stroke="var(--down)" stroke-width="1"/>
+<rect x="561.0" y="155.3" width="5.1" height="1.0" fill="var(--down)"/>
+<rect x="561.0" y="247.2" width="5.1" height="46.8" fill="var(--down)" opacity="0.35"/>
+<rect x="560.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-21" data-o="102.70" data-h="108.32" data-l="101.70" data-c="102.56" data-pct="+1.34" data-vol="6414万"/>
+<line x1="569.6" y1="147.9" x2="569.6" y2="163.7" stroke="var(--down)" stroke-width="1"/>
+<rect x="567.1" y="148.1" width="5.1" height="1.2" fill="var(--down)"/>
+<rect x="567.1" y="265.2" width="5.1" height="28.8" fill="var(--down)" opacity="0.35"/>
+<rect x="566.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-22" data-o="104.45" data-h="104.50" data-l="100.70" data-c="104.15" data-pct="+1.55" data-vol="3948万"/>
+<line x1="575.7" y1="129.2" x2="575.7" y2="150.8" stroke="var(--up)" stroke-width="1"/>
+<rect x="573.2" y="129.8" width="5.1" height="16.4" fill="var(--up)"/>
+<rect x="573.2" y="255.4" width="5.1" height="38.6" fill="var(--up)" opacity="0.35"/>
+<rect x="572.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-25" data-o="104.90" data-h="108.98" data-l="103.80" data-c="108.83" data-pct="+4.49" data-vol="5295万"/>
+<line x1="581.8" y1="129.8" x2="581.8" y2="148.9" stroke="var(--down)" stroke-width="1"/>
+<rect x="579.2" y="129.8" width="5.1" height="12.0" fill="var(--down)"/>
+<rect x="579.2" y="262.3" width="5.1" height="31.7" fill="var(--down)" opacity="0.35"/>
+<rect x="578.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-26" data-o="108.83" data-h="108.84" data-l="104.24" data-c="105.96" data-pct="-2.64" data-vol="4345万"/>
+<line x1="587.9" y1="132.0" x2="587.9" y2="149.0" stroke="var(--down)" stroke-width="1"/>
+<rect x="585.3" y="138.1" width="5.1" height="8.2" fill="var(--down)"/>
+<rect x="585.3" y="267.0" width="5.1" height="27.0" fill="var(--down)" opacity="0.35"/>
+<rect x="584.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-27" data-o="106.83" data-h="108.30" data-l="104.23" data-c="104.86" data-pct="-1.04" data-vol="3703万"/>
+<line x1="594.0" y1="151.4" x2="594.0" y2="166.8" stroke="var(--down)" stroke-width="1"/>
+<rect x="591.4" y="151.4" width="5.1" height="7.7" fill="var(--down)"/>
+<rect x="591.4" y="267.3" width="5.1" height="26.7" fill="var(--down)" opacity="0.35"/>
+<rect x="590.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-28" data-o="103.65" data-h="103.65" data-l="99.95" data-c="101.80" data-pct="-2.92" data-vol="3665万"/>
+<line x1="600.0" y1="157.1" x2="600.0" y2="187.8" stroke="var(--down)" stroke-width="1"/>
+<rect x="597.5" y="159.1" width="5.1" height="28.7" fill="var(--down)"/>
+<rect x="597.5" y="266.6" width="5.1" height="27.4" fill="var(--down)" opacity="0.35"/>
+<rect x="596.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-05-29" data-o="101.80" data-h="102.29" data-l="94.91" data-c="94.91" data-pct="-6.77" data-vol="3750万"/>
+<line x1="606.1" y1="188.2" x2="606.1" y2="199.4" stroke="var(--down)" stroke-width="1"/>
+<rect x="603.6" y="188.3" width="5.1" height="11.0" fill="var(--down)"/>
+<rect x="603.6" y="277.0" width="5.1" height="17.0" fill="var(--down)" opacity="0.35"/>
+<rect x="602.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-01" data-o="94.79" data-h="94.80" data-l="92.11" data-c="92.14" data-pct="-2.92" data-vol="2328万"/>
+<line x1="612.2" y1="194.5" x2="612.2" y2="204.6" stroke="var(--up)" stroke-width="1"/>
+<rect x="609.7" y="197.6" width="5.1" height="2.6" fill="var(--up)"/>
+<rect x="609.7" y="280.7" width="5.1" height="13.3" fill="var(--up)" opacity="0.35"/>
+<rect x="608.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-02" data-o="91.93" data-h="93.29" data-l="90.88" data-c="92.56" data-pct="+0.46" data-vol="1822万"/>
+<line x1="618.3" y1="159.0" x2="618.3" y2="198.8" stroke="var(--up)" stroke-width="1"/>
+<rect x="615.8" y="163.2" width="5.1" height="35.3" fill="var(--up)"/>
+<rect x="615.8" y="249.7" width="5.1" height="44.3" fill="var(--up)" opacity="0.35"/>
+<rect x="614.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-03" data-o="92.33" data-h="101.82" data-l="92.27" data-c="100.81" data-pct="+8.91" data-vol="6075万"/>
+<line x1="624.4" y1="158.7" x2="624.4" y2="182.5" stroke="var(--up)" stroke-width="1"/>
+<rect x="621.8" y="171.3" width="5.1" height="3.6" fill="var(--up)"/>
+<rect x="621.8" y="264.4" width="5.1" height="29.6" fill="var(--up)" opacity="0.35"/>
+<rect x="620.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-04" data-o="98.00" data-h="101.90" data-l="96.17" data-c="98.86" data-pct="-1.93" data-vol="4055万"/>
+<line x1="630.5" y1="175.6" x2="630.5" y2="186.0" stroke="var(--down)" stroke-width="1"/>
+<rect x="627.9" y="177.0" width="5.1" height="8.8" fill="var(--down)"/>
+<rect x="627.9" y="276.2" width="5.1" height="17.8" fill="var(--down)" opacity="0.35"/>
+<rect x="626.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-05" data-o="97.50" data-h="97.83" data-l="95.35" data-c="95.39" data-pct="-3.51" data-vol="2444万"/>
+<line x1="636.5" y1="194.3" x2="636.5" y2="204.1" stroke="var(--up)" stroke-width="1"/>
+<rect x="634.0" y="199.8" width="5.1" height="2.2" fill="var(--up)"/>
+<rect x="634.0" y="277.4" width="5.1" height="16.6" fill="var(--up)" opacity="0.35"/>
+<rect x="633.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-08" data-o="91.50" data-h="93.35" data-l="91.00" data-c="92.02" data-pct="-3.53" data-vol="2280万"/>
+<line x1="642.6" y1="193.3" x2="642.6" y2="201.1" stroke="var(--down)" stroke-width="1"/>
+<rect x="640.1" y="194.1" width="5.1" height="1.0" fill="var(--down)"/>
+<rect x="640.1" y="281.4" width="5.1" height="12.6" fill="var(--down)" opacity="0.35"/>
+<rect x="639.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-09" data-o="93.39" data-h="93.59" data-l="91.72" data-c="93.32" data-pct="+1.41" data-vol="1726万"/>
+<line x1="648.7" y1="197.5" x2="648.7" y2="209.8" stroke="var(--down)" stroke-width="1"/>
+<rect x="646.2" y="199.9" width="5.1" height="7.6" fill="var(--down)"/>
+<rect x="646.2" y="278.5" width="5.1" height="15.5" fill="var(--down)" opacity="0.35"/>
+<rect x="645.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-10" data-o="92.00" data-h="92.58" data-l="89.63" data-c="90.18" data-pct="-3.36" data-vol="2125万"/>
+<line x1="654.8" y1="208.2" x2="654.8" y2="228.7" stroke="var(--down)" stroke-width="1"/>
+<rect x="652.2" y="209.7" width="5.1" height="18.7" fill="var(--down)"/>
+<rect x="652.2" y="273.6" width="5.1" height="20.4" fill="var(--down)" opacity="0.35"/>
+<rect x="651.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-11" data-o="89.65" data-h="90.00" data-l="85.08" data-c="85.17" data-pct="-5.56" data-vol="2801万"/>
+<line x1="660.9" y1="219.7" x2="660.9" y2="227.6" stroke="var(--down)" stroke-width="1"/>
+<rect x="658.3" y="221.1" width="5.1" height="3.7" fill="var(--down)"/>
+<rect x="658.3" y="278.4" width="5.1" height="15.6" fill="var(--down)" opacity="0.35"/>
+<rect x="657.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-12" data-o="86.90" data-h="87.25" data-l="85.34" data-c="86.01" data-pct="+0.99" data-vol="2141万"/>
+<line x1="667.0" y1="213.6" x2="667.0" y2="226.7" stroke="var(--up)" stroke-width="1"/>
+<rect x="664.4" y="213.6" width="5.1" height="8.4" fill="var(--up)"/>
+<rect x="664.4" y="280.3" width="5.1" height="13.7" fill="var(--up)" opacity="0.35"/>
+<rect x="663.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-15" data-o="86.70" data-h="88.72" data-l="85.57" data-c="88.72" data-pct="+3.15" data-vol="1883万"/>
+<line x1="673.0" y1="209.7" x2="673.0" y2="217.7" stroke="var(--up)" stroke-width="1"/>
+<rect x="670.5" y="215.7" width="5.1" height="1.0" fill="var(--up)"/>
+<rect x="670.5" y="281.5" width="5.1" height="12.5" fill="var(--up)" opacity="0.35"/>
+<rect x="669.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-16" data-o="88.00" data-h="89.65" data-l="87.72" data-c="88.20" data-pct="-0.59" data-vol="1712万"/>
+<line x1="679.1" y1="203.2" x2="679.1" y2="219.4" stroke="var(--up)" stroke-width="1"/>
+<rect x="676.6" y="207.7" width="5.1" height="10.3" fill="var(--up)"/>
+<rect x="676.6" y="278.0" width="5.1" height="16.0" fill="var(--up)" opacity="0.35"/>
+<rect x="675.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-17" data-o="87.64" data-h="91.20" data-l="87.31" data-c="90.12" data-pct="+2.18" data-vol="2198万"/>
+<line x1="685.2" y1="202.6" x2="685.2" y2="210.7" stroke="var(--up)" stroke-width="1"/>
+<rect x="682.7" y="208.4" width="5.1" height="1.0" fill="var(--up)"/>
+<rect x="682.7" y="280.1" width="5.1" height="13.9" fill="var(--up)" opacity="0.35"/>
+<rect x="681.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-18" data-o="89.88" data-h="91.36" data-l="89.40" data-c="89.97" data-pct="-0.17" data-vol="1911万"/>
+<line x1="691.3" y1="204.6" x2="691.3" y2="217.4" stroke="var(--up)" stroke-width="1"/>
+<rect x="688.8" y="205.9" width="5.1" height="2.7" fill="var(--up)"/>
+<rect x="688.8" y="277.5" width="5.1" height="16.5" fill="var(--up)" opacity="0.35"/>
+<rect x="687.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-22" data-o="89.90" data-h="90.88" data-l="87.79" data-c="90.56" data-pct="+0.66" data-vol="2260万"/>
+<line x1="697.4" y1="203.1" x2="697.4" y2="218.6" stroke="var(--down)" stroke-width="1"/>
+<rect x="694.8" y="209.1" width="5.1" height="8.7" fill="var(--down)"/>
+<rect x="694.8" y="278.4" width="5.1" height="15.6" fill="var(--down)" opacity="0.35"/>
+<rect x="693.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-23" data-o="89.80" data-h="91.23" data-l="87.51" data-c="87.70" data-pct="-3.16" data-vol="2144万"/>
+<line x1="703.5" y1="201.6" x2="703.5" y2="223.3" stroke="var(--up)" stroke-width="1"/>
+<rect x="700.9" y="207.0" width="5.1" height="14.8" fill="var(--up)"/>
+<rect x="700.9" y="275.6" width="5.1" height="18.4" fill="var(--up)" opacity="0.35"/>
+<rect x="699.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-24" data-o="86.75" data-h="91.59" data-l="86.38" data-c="90.30" data-pct="+2.96" data-vol="2527万"/>
+<line x1="709.5" y1="198.1" x2="709.5" y2="213.2" stroke="var(--down)" stroke-width="1"/>
+<rect x="707.0" y="205.7" width="5.1" height="3.7" fill="var(--down)"/>
+<rect x="707.0" y="276.7" width="5.1" height="17.3" fill="var(--down)" opacity="0.35"/>
+<rect x="706.0" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-25" data-o="90.61" data-h="92.43" data-l="88.80" data-c="89.71" data-pct="-0.65" data-vol="2372万"/>
+<line x1="715.6" y1="206.2" x2="715.6" y2="222.8" stroke="var(--down)" stroke-width="1"/>
+<rect x="713.1" y="213.7" width="5.1" height="8.2" fill="var(--down)"/>
+<rect x="713.1" y="277.9" width="5.1" height="16.1" fill="var(--down)" opacity="0.35"/>
+<rect x="712.1" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-26" data-o="88.70" data-h="90.50" data-l="86.50" data-c="86.72" data-pct="-3.33" data-vol="2210万"/>
+<line x1="721.7" y1="212.4" x2="721.7" y2="230.6" stroke="var(--up)" stroke-width="1"/>
+<rect x="719.2" y="215.3" width="5.1" height="9.6" fill="var(--up)"/>
+<rect x="719.2" y="274.3" width="5.1" height="19.7" fill="var(--up)" opacity="0.35"/>
+<rect x="718.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-29" data-o="86.00" data-h="89.00" data-l="84.63" data-c="88.30" data-pct="+1.82" data-vol="2706万"/>
+<line x1="727.8" y1="187.4" x2="727.8" y2="218.6" stroke="var(--up)" stroke-width="1"/>
+<rect x="725.2" y="188.0" width="5.1" height="27.7" fill="var(--up)"/>
+<rect x="725.2" y="263.1" width="5.1" height="30.9" fill="var(--up)" opacity="0.35"/>
+<rect x="724.2" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-06-30" data-o="88.20" data-h="95.00" data-l="87.51" data-c="94.85" data-pct="+7.42" data-vol="4234万"/>
+<line x1="733.9" y1="168.7" x2="733.9" y2="189.5" stroke="var(--up)" stroke-width="1"/>
+<rect x="731.3" y="178.6" width="5.1" height="5.5" fill="var(--up)"/>
+<rect x="731.3" y="264.1" width="5.1" height="29.9" fill="var(--up)" opacity="0.35"/>
+<rect x="730.3" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-01" data-o="95.80" data-h="99.50" data-l="94.50" data-c="97.11" data-pct="+2.38" data-vol="4092万"/>
+<line x1="740.0" y1="141.7" x2="740.0" y2="197.8" stroke="var(--up)" stroke-width="1"/>
+<rect x="737.4" y="161.3" width="5.1" height="28.4" fill="var(--up)"/>
+<rect x="737.4" y="240.5" width="5.1" height="53.5" fill="var(--up)" opacity="0.35"/>
+<rect x="736.4" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-02" data-o="94.45" data-h="105.98" data-l="92.50" data-c="101.27" data-pct="+4.28" data-vol="7325万"/>
+<line x1="746.0" y1="144.9" x2="746.0" y2="171.6" stroke="var(--up)" stroke-width="1"/>
+<rect x="743.5" y="157.0" width="5.1" height="8.8" fill="var(--up)"/>
+<rect x="743.5" y="261.9" width="5.1" height="32.1" fill="var(--up)" opacity="0.35"/>
+<rect x="742.5" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-03" data-o="100.18" data-h="105.20" data-l="98.80" data-c="102.30" data-pct="+1.02" data-vol="4402万"/>
+<line x1="752.1" y1="151.2" x2="752.1" y2="179.6" stroke="var(--down)" stroke-width="1"/>
+<rect x="749.6" y="153.2" width="5.1" height="25.9" fill="var(--down)"/>
+<rect x="749.6" y="268.5" width="5.1" height="25.5" fill="var(--down)" opacity="0.35"/>
+<rect x="748.6" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-06" data-o="103.21" data-h="103.70" data-l="96.88" data-c="97.00" data-pct="-5.18" data-vol="3498万"/>
+<line x1="758.2" y1="154.9" x2="758.2" y2="185.3" stroke="var(--up)" stroke-width="1"/>
+<rect x="755.7" y="168.8" width="5.1" height="13.1" fill="var(--up)"/>
+<rect x="755.7" y="268.7" width="5.1" height="25.3" fill="var(--up)" opacity="0.35"/>
+<rect x="754.7" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-07" data-o="96.32" data-h="102.80" data-l="95.50" data-c="99.46" data-pct="+2.54" data-vol="3463万"/>
+<line x1="764.3" y1="152.1" x2="764.3" y2="179.0" stroke="var(--up)" stroke-width="1"/>
+<rect x="761.8" y="162.6" width="5.1" height="4.6" fill="var(--up)"/>
+<rect x="761.8" y="269.1" width="5.1" height="24.9" fill="var(--up)" opacity="0.35"/>
+<rect x="760.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-08" data-o="99.85" data-h="103.48" data-l="97.01" data-c="100.95" data-pct="+1.50" data-vol="3415万"/>
+<line x1="770.4" y1="134.3" x2="770.4" y2="168.9" stroke="var(--up)" stroke-width="1"/>
+<rect x="767.8" y="136.9" width="5.1" height="20.8" fill="var(--up)"/>
+<rect x="767.8" y="259.4" width="5.1" height="34.6" fill="var(--up)" opacity="0.35"/>
+<rect x="766.8" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-09" data-o="102.15" data-h="107.75" data-l="99.44" data-c="107.14" data-pct="+6.13" data-vol="4747万"/>
+<line x1="776.5" y1="125.8" x2="776.5" y2="153.3" stroke="var(--down)" stroke-width="1"/>
+<rect x="773.9" y="141.9" width="5.1" height="11.4" fill="var(--down)"/>
+<rect x="773.9" y="261.3" width="5.1" height="32.7" fill="var(--down)" opacity="0.35"/>
+<rect x="772.9" y="20.0" width="7.1" height="270.0" fill="transparent" data-date="2026-07-10" data-o="105.94" data-h="109.80" data-l="103.20" data-c="103.21" data-pct="-3.67" data-vol="4486万"/>
+<line x1="50" y1="235" x2="780" y2="235" stroke="var(--border)" stroke-width="0.5"/>
+<polyline points="50.0,40.1 56.1,36.1 62.2,38.2 68.2,39.7 74.3,42.5 80.4,43.1 86.5,46.9 92.6,46.4 98.7,44.2 104.8,43.9 110.8,45.1 116.9,48.6 123.0,52.1 129.1,54.0 135.2,59.0 141.2,65.8 147.3,71.3 153.4,76.7 159.5,85.7 165.6,90.0 171.7,94.4 177.8,95.2 183.8,95.7 189.9,95.7 196.0,96.2 202.1,96.3 208.2,96.1 214.2,96.1 220.3,91.6 226.4,86.7 232.5,84.1 238.6,84.9 244.7,88.5 250.8,95.5 256.8,102.1 262.9,107.7 269.0,109.6 275.1,108.9 281.2,110.0 287.2,112.8 293.3,114.4 299.4,118.7 305.5,123.7 311.6,129.5 317.7,136.3 323.8,146.0 329.8,153.5 335.9,158.4 342.0,163.3 348.1,165.4 354.2,164.0 360.2,168.1 366.3,173.4 372.4,180.6 378.5,189.6 384.6,197.5 390.7,197.1 396.8,198.6 402.8,195.3 408.9,191.4 415.0,188.2 421.1,190.8 427.2,191.2 433.2,193.2 439.3,194.0 445.4,195.5 451.5,194.0 457.6,195.0 463.7,193.3 469.8,184.3 475.8,175.1 481.9,168.9 488.0,164.1 494.1,159.3 500.2,162.9 506.2,166.8 512.3,167.0 518.4,162.8 524.5,160.6 530.6,160.4 536.7,158.6 542.8,159.9 548.8,160.5 554.9,162.3 561.0,160.5 567.1,158.2 573.2,150.5 579.2,147.7 585.3,144.6 591.4,145.3 597.5,153.0 603.6,166.9 609.7,178.0 615.8,181.4 621.8,183.8 627.9,183.4 634.0,183.5 640.1,182.9 646.2,191.8 652.2,203.2 658.3,211.0 664.4,213.7 670.5,218.0 676.6,218.0 682.7,214.1 688.8,210.3 694.8,211.1 700.9,209.4 707.0,209.7 713.1,212.4 719.2,214.3 725.2,208.3 731.3,202.7 737.4,193.0 743.5,180.1 749.6,172.8 755.7,169.0 761.8,165.8 767.8,160.9 773.9,160.1" fill="none" stroke="var(--warn)" stroke-width="1" opacity="0.7"/>
+<polyline points="50.0,47.1 56.1,44.5 62.2,44.7 68.2,44.3 74.3,43.6 80.4,41.6 86.5,41.5 92.6,42.3 98.7,41.9 104.8,43.2 110.8,44.1 116.9,47.8 123.0,49.2 129.1,49.1 135.2,51.4 141.2,55.4 147.3,60.0 153.4,64.4 159.5,69.8 165.6,74.5 171.7,80.1 177.8,83.3 183.8,86.2 189.9,90.7 196.0,93.1 202.1,95.3 208.2,95.6 214.2,95.9 220.3,93.7 226.4,91.4 232.5,90.2 238.6,90.5 244.7,92.3 250.8,93.5 256.8,94.4 262.9,95.9 269.0,97.2 275.1,98.7 281.2,102.8 287.2,107.4 293.3,111.0 299.4,114.1 305.5,116.3 311.6,119.8 317.7,124.6 323.8,130.2 329.8,136.1 335.9,141.0 342.0,146.4 348.1,150.8 354.2,155.0 360.2,160.8 366.3,165.9 372.4,171.9 378.5,177.5 384.6,180.7 390.7,182.6 396.8,186.0 402.8,187.9 408.9,190.5 415.0,192.8 421.1,194.0 427.2,194.9 433.2,194.2 439.3,192.7 445.4,191.9 451.5,192.4 457.6,193.1 463.7,193.2 469.8,189.2 475.8,185.3 481.9,181.5 488.0,179.5 494.1,176.3 500.2,173.6 506.2,170.9 512.3,168.0 518.4,163.4 524.5,159.9 530.6,161.7 536.7,162.7 542.8,163.5 548.8,161.7 554.9,161.5 561.0,160.5 567.1,158.4 573.2,155.2 579.2,154.1 585.3,153.5 591.4,152.9 597.5,155.6 603.6,158.7 609.7,162.9 615.8,163.0 621.8,164.6 627.9,168.2 634.0,175.2 640.1,180.5 646.2,186.6 652.2,193.5 658.3,197.2 664.4,198.6 670.5,200.5 676.6,204.9 682.7,208.6 688.8,210.6 694.8,212.4 700.9,213.7 707.0,213.9 713.1,213.2 719.2,212.3 725.2,209.7 731.3,206.0 737.4,201.4 743.5,196.2 749.6,193.6 755.7,188.7 761.8,184.2 767.8,177.0 773.9,170.1" fill="none" stroke="var(--accent-3)" stroke-width="1" opacity="0.7"/>
+<polyline points="50.0,55.5 56.1,53.0 62.2,52.7 68.2,52.0 74.3,51.2 80.4,50.1 86.5,48.9 92.6,47.9 98.7,47.0 104.8,46.2 110.8,45.6 116.9,46.1 123.0,46.9 129.1,46.7 135.2,47.5 141.2,48.5 147.3,50.7 153.4,53.3 159.5,55.9 165.6,58.8 171.7,62.1 177.8,65.5 183.8,67.7 189.9,69.9 196.0,72.3 202.1,75.4 208.2,77.8 214.2,80.1 220.3,81.8 226.4,83.0 232.5,85.1 238.6,86.9 244.7,89.2 250.8,92.1 256.8,93.7 262.9,95.6 269.0,96.4 275.1,97.3 281.2,98.2 287.2,99.4 293.3,100.6 299.4,102.3 305.5,104.3 311.6,106.7 317.7,109.5 323.8,113.0 329.8,116.6 335.9,119.9 342.0,124.6 348.1,129.1 354.2,133.0 360.2,137.5 366.3,141.1 372.4,145.8 378.5,151.0 384.6,155.5 390.7,159.3 396.8,163.5 402.8,167.2 408.9,170.7 415.0,173.9 421.1,177.4 427.2,180.4 433.2,183.1 439.3,185.1 445.4,186.3 451.5,187.5 457.6,189.6 463.7,190.6 469.8,189.8 475.8,189.1 481.9,187.7 488.0,187.2 494.1,185.2 500.2,183.1 506.2,181.4 512.3,180.2 518.4,178.3 524.5,176.6 530.6,175.4 536.7,174.0 542.8,172.5 548.8,170.6 554.9,168.9 561.0,167.0 567.1,164.7 573.2,161.6 579.2,158.8 585.3,156.7 591.4,157.3 597.5,159.1 603.6,161.1 609.7,162.3 615.8,162.3 621.8,162.5 627.9,163.3 634.0,165.2 640.1,167.3 646.2,170.0 652.2,173.2 658.3,176.4 664.4,178.7 670.5,181.7 676.6,184.0 682.7,186.6 688.8,189.4 694.8,193.8 700.9,197.1 707.0,200.2 713.1,203.4 719.2,204.7 725.2,204.2 731.3,203.2 737.4,203.1 743.5,202.4 749.6,202.1 755.7,200.5 761.8,198.9 767.8,195.4 773.9,191.7" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+<polyline points="238.6,68.1 244.7,68.5 250.8,69.0 256.8,69.4 262.9,69.9 269.0,70.3 275.1,70.7 281.2,71.2 287.2,71.8 293.3,72.7 299.4,73.6 305.5,74.9 311.6,76.2 317.7,77.6 323.8,79.5 329.8,81.1 335.9,82.6 342.0,84.4 348.1,86.1 354.2,87.9 360.2,90.1 366.3,92.4 372.4,94.9 378.5,97.4 384.6,99.9 390.7,102.2 396.8,104.7 402.8,107.1 408.9,109.6 415.0,112.2 421.1,115.1 427.2,117.5 433.2,119.9 439.3,122.3 445.4,124.9 451.5,127.3 457.6,129.9 463.7,132.3 469.8,134.0 475.8,135.7 481.9,137.3 488.0,139.2 494.1,141.1 500.2,142.6 506.2,144.2 512.3,145.3 518.4,146.4 524.5,147.3 530.6,148.5 536.7,149.5 542.8,150.7 548.8,151.8 554.9,152.9 561.0,153.9 567.1,154.7 573.2,155.2 579.2,156.1 585.3,157.3 591.4,158.8 597.5,160.4 603.6,162.1 609.7,163.5 615.8,164.4 621.8,165.6 627.9,166.7 634.0,168.2 640.1,169.7 646.2,171.3 652.2,173.1 658.3,174.8 664.4,176.2 670.5,177.6 676.6,178.6 682.7,179.6 688.8,180.1 694.8,181.0 700.9,181.8 707.0,182.5 713.1,183.5 719.2,184.3 725.2,184.3 731.3,184.2 737.4,183.5 743.5,182.7 749.6,182.3 755.7,182.0 761.8,181.5 767.8,180.7 773.9,180.1" fill="none" stroke="var(--accent-2)" stroke-width="1.5"/>
+<line x1="600" y1="14" x2="615" y2="14" stroke="var(--warn)" stroke-width="1" opacity="0.7"/>
+<text x="619" y="18" fill="var(--text-soft)" font-size="9">MA5</text>
+<line x1="640" y1="14" x2="655" y2="14" stroke="var(--accent-3)" stroke-width="1" opacity="0.7"/>
+<text x="659" y="18" fill="var(--text-soft)" font-size="9">MA10</text>
+<line x1="680" y1="14" x2="700" y2="14" stroke="var(--accent)" stroke-width="1.5"/>
+<text x="704" y="18" fill="var(--text-soft)" font-size="9">MA20</text>
+<line x1="740" y1="14" x2="760" y2="14" stroke="var(--accent-2)" stroke-width="1.5"/>
+<text x="764" y="18" fill="var(--text-soft)" font-size="9">MA60</text>
+</svg></div>
+
+      <div class="grid g2" style="margin-top:8px">
+        <div class="panel"><div class="panel-hd">技术指标</div><div class="panel-bd" style="font-size:12px">
+          <div class="kv"><span class="dim">MA20</span><span class="code">93.98</span></div>
+          <div class="kv"><span class="dim">MA60</span><span class="code">96.76</span></div>
+          <div class="kv"><span class="dim">BB上轨</span><span class="code">106.98</span></div>
+          <div class="kv"><span class="dim">BB下轨</span><span class="code">80.98</span></div>
+          <div class="kv"><span class="dim">20日最高</span><span class="code">109.80</span></div>
+          <div class="kv"><span class="dim">20日最低</span><span class="code">84.63</span></div>
+        </div></div>
+        <div class="panel"><div class="panel-hd">历史信号</div><div class="panel-bd"><table><thead><tr><th>日期</th><th>策略</th><th>操作</th><th class="ta-r">价格</th><th>状态</th></tr></thead><tbody><tr><td>2026-06-09</td><td class="dim">双均线趋势跟踪</td><td><span class="tag t-sell">SELL</span></td><td class="ta-r code">¥95.39</td><td><span class="tag t-block">blocked</span></td></tr></tbody></table></div></div>
+      </div>
+    </div></div>
+</main>
+<script>function toggleTheme(){var d=document.documentElement;var n=d.getAttribute("data-theme")==="dark"?"light":"dark";d.setAttribute("data-theme",n);try{localStorage.setItem("theme",n)}catch(e){}}</script>
+<script>
+(function(){
+  var tip=null;
+  function fmt(v){return v||'—'}
+  function show(ev){
+    var t=ev.target;
+    var d=t.getAttribute('data-date');if(!d)return;
+    var o=t.getAttribute('data-o'),h=t.getAttribute('data-h'),l=t.getAttribute('data-l'),
+        c=t.getAttribute('data-c'),p=parseFloat(t.getAttribute('data-pct')),v=t.getAttribute('data-vol');
+    var cls=(p>=0?'up':'dn');
+    tip.innerHTML='<div class="kt-date">'+d+' <span class="'+cls+'">'+(p>=0?'+':'')+p.toFixed(2)+'%</span></div>'
+      +'<div class="kt-row"><span>开</span><b>'+fmt(o)+'</b><span>高</span><b>'+fmt(h)+'</b></div>'
+      +'<div class="kt-row"><span>低</span><b>'+fmt(l)+'</b><span>收</span><b>'+fmt(c)+'</b></div>'
+      +'<div class="kt-row"><span>量</span><b>'+fmt(v)+'</b></div>';
+    tip.style.display='block';
+    tip.style.left=(ev.clientX+12)+'px';
+    tip.style.top=(ev.clientY-10)+'px';
+    if(tip.getBoundingClientRect().right>window.innerWidth){tip.style.left=(ev.clientX-160)+'px';}
+  }
+  function hide(){if(tip)tip.style.display='none';}
+  document.addEventListener('DOMContentLoaded',function(){
+    var svgs=document.querySelectorAll('svg[data-kline]');
+    if(!svgs.length)return;
+    tip=document.createElement('div');tip.className='kline-tip';document.body.appendChild(tip);
+    svgs.forEach(function(svg){
+      svg.querySelectorAll('rect[data-date]').forEach(function(r){
+        r.addEventListener('mousemove',show);
+        r.addEventListener('mouseleave',hide);
+        r.addEventListener('click',show);
+        r.addEventListener('touchstart',function(ev){show(ev);ev.preventDefault();});
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

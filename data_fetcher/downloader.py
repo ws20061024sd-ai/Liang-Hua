@@ -116,8 +116,8 @@ def fetch_hs300_constituents(force_refresh: bool = False) -> pd.DataFrame:
                 'code': df['成分券代码'].astype(str).str.zfill(6),
                 'name': df['成分券名称']
             })
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"   ⚠️ 中证指数源失败，切换东财备用: {e}")
         # 备用：东财接口
         df = ak.index_stock_cons(symbol="000300")
         return pd.DataFrame({
@@ -247,7 +247,7 @@ def download_stock_history(code: str, start_date: str, end_date: str) -> pd.Data
                     '换手率': 'turnover',
                 })
         except Exception as e:
-            pass  # 静默失败，由上层重试逻辑统一处理
+            print(f"   ⚠️ {code} 数据源均失败: {e}")  # 由上层重试逻辑统一处理
 
     if df is None or df.empty:
         return None
@@ -526,8 +526,8 @@ def verify_data_quality() -> dict:
         ).fetchone()[0]
         if fin_stocks > 0 and fin_stocks < settings.FINANCIAL_MIN_STOCKS:
             issues.append(f"估值数据覆盖不足（{fin_stocks}/{settings.FINANCIAL_MIN_STOCKS}只）")
-    except:
-        pass  # 表不存在时跳过
+    except Exception as e:
+        print(f"   ⚠️ [质量检查] 估值覆盖检查跳过: {e}")
 
     # 7. 检查 PE 异常值残留
     try:
@@ -537,8 +537,8 @@ def verify_data_quality() -> dict:
         ).fetchone()[0]
         if pe_bad > 0:
             issues.append(f"PE 异常值残留 {pe_bad} 条（需运行 fix_financial_data）")
-    except:
-        pass
+    except Exception as e:
+        print(f"   ⚠️ [质量检查] PE 异常值检查跳过: {e}")
 
     conn.close()
 

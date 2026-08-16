@@ -95,7 +95,7 @@ def print_signals(aggregated: list[dict], rejected: list[dict], capital: float):
 
             if pos['actionable']:
                 print(f"     建议：{pos['shares']}股 = ¥{pos['amount']:,.0f}（占{pos['pct']:.1%}）")
-                print(f"     🛑 止损：¥{pos['stop_loss']:.2f}（-{pos['stop_loss_pct']:.0%}）")
+                print(f"     🛑 参考止损：¥{pos['stop_loss']:.2f}（-{pos['stop_loss_pct']:.0%}，持仓实际按移动止损追踪）")
                 if pos.get('warning'):
                     print(f"     ⚠️ {pos['warning']}")
             else:
