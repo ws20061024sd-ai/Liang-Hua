@@ -128,22 +128,18 @@ def compute_index_amount():
     return {d: a for d, a in df if a}
 
 def backfill_amount():
-    """将全市场成交额写入 index_daily.amount（已有数据则跳过）"""
+    """将全市场成交额写入 index_daily.amount（只回填 amount=0/IS NULL 的行）"""
     conn = sqlite3.connect(DB)
-    # 检查是否已有 amount 数据
-    has_amount = conn.execute(
-        "SELECT COUNT(*) FROM index_daily WHERE amount > 0"
-    ).fetchone()[0]
-    if has_amount > 100:
-        print(f"  ℹ️ index_daily 已有 {has_amount} 天成交额，跳过回填")
-        conn.close()
-        return
-
     amt_map = compute_index_amount()
+    # 只处理缺失成交额的行（新插入的行 amount=0）；历史已有成交额的行不动
+    zero_rows = conn.execute(
+        "SELECT date FROM index_daily WHERE amount IS NULL OR amount = 0"
+    ).fetchall()
     updated = 0
-    for date, amt in amt_map.items():
-        conn.execute("UPDATE index_daily SET amount = ? WHERE date = ?", (amt, date))
-        if conn.total_changes > 0:
+    for (date,) in zero_rows:
+        amt = amt_map.get(date)
+        if amt:
+            conn.execute("UPDATE index_daily SET amount = ? WHERE date = ?", (amt, date))
             updated += 1
     conn.commit()
     conn.close()
