@@ -41,7 +41,7 @@ def get_positions() -> list[dict]:
     if recent_dates:
         dates_in = ','.join('?' * len(recent_dates))
         pending_sell_excl = (
-            f" AND NOT (strategy='移动止损' AND action='SELL' "
+            f" AND NOT (strategy='{settings.STOP_LOSS_STRATEGY}' AND action='SELL' "
             f"AND date IN ({dates_in}))"
         )
         date_params = [d[0] for d in recent_dates]

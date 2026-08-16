@@ -18,7 +18,11 @@ from data_fetcher.cleaner import get_stock_data
 
 
 def _load_local_index(days: int = 90) -> pd.DataFrame | None:
-    """从本地 index_daily 表读取沪深300指数（run.py 每日下载，不依赖网络）"""
+    """从本地 index_daily 表读取沪深300指数（run.py 每日下载，不依赖网络）
+
+    新鲜度检查：最新日期超过 INDEX_MAX_STALE_DAYS 天视为陈旧（update_index
+    连续失败时），返回 None 走网络兜底——不能把数天前的"强势"当成今天。
+    """
     try:
         import sqlite3
         from config import settings
@@ -33,8 +37,13 @@ def _load_local_index(days: int = 90) -> pd.DataFrame | None:
     if df is None or df.empty:
         return None
     df['date'] = pd.to_datetime(df['date'])
+    df = df.sort_values('date').reset_index(drop=True)
     df['close'] = df['close'].astype(float)
-    return df.sort_values('date').reset_index(drop=True)
+    stale_days = settings.INDEX_MAX_STALE_DAYS
+    if (pd.Timestamp.now() - df['date'].iloc[-1]).days > stale_days:
+        print(f"⚠️ [大盘择时] 本地指数数据陈旧（最新 {df['date'].iloc[-1].date()}），走网络兜底")
+        return None
+    return df
 
 
 def _fetch_index_data(days: int = 90) -> pd.DataFrame | None:

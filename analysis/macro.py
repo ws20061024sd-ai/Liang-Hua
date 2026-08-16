@@ -102,7 +102,8 @@ def _fetch_indices(data_date: str = None) -> list[dict]:
                 print(f"   ⚠️ [宏观] 指数 {symbol} 解析失败: {e}")
 
         return results
-    except Exception:
+    except Exception as e:
+        print(f"⚠️ [宏观] 指数全景分析失败，返回空: {e}")
         return []
 
 

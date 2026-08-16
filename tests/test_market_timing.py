@@ -101,7 +101,7 @@ def test_uses_local_index_daily_first(tmp_path, monkeypatch):
         np.random.uniform(3700, 3800, 60),
         np.linspace(3800, 4000, 30),
     ])
-    dates = pd.date_range('2026-01-01', periods=len(closes))
+    dates = pd.date_range(end=pd.Timestamp.now(), periods=len(closes), freq='B')
     for d, c in zip(dates, closes):
         conn.execute("INSERT INTO index_daily (date, close) VALUES (?, ?)",
                      (d.strftime('%Y-%m-%d'), float(c)))
@@ -119,3 +119,41 @@ def test_uses_local_index_daily_first(tmp_path, monkeypatch):
     r = market_timing.get_market_regime()
     assert r['regime'] == 'strong', f"应使用本地指数数据，实际 {r['regime']}"
     assert r['index_close'] is not None
+
+
+def test_stale_local_index_falls_back(tmp_path, monkeypatch):
+    """本地 index_daily 陈旧（超过 INDEX_MAX_STALE_DAYS）→ 不应采用，走兜底"""
+    from config import settings
+    db_path = str(tmp_path / "test.db")
+    monkeypatch.setattr(settings, "DB_PATH", db_path)
+    conn = sqlite3.connect(db_path)
+    conn.execute("""
+        CREATE TABLE index_daily (
+            date TEXT PRIMARY KEY, open REAL, close REAL,
+            high REAL, low REAL, volume REAL, amount REAL
+        )
+    """)
+    # 最新的数据是 10 天前（陈旧）——但数据量充足，会被陈旧采用
+    np.random.seed(42)
+    closes = np.concatenate([
+        np.random.uniform(3700, 3800, 60),
+        np.linspace(3800, 4000, 30),
+    ])
+    end = pd.Timestamp.now() - pd.Timedelta(days=10)
+    dates = pd.date_range(end=end, periods=len(closes), freq='B')
+    for d, c in zip(dates, closes):
+        conn.execute("INSERT INTO index_daily (date, close) VALUES (?, ?)",
+                     (d.strftime('%Y-%m-%d'), float(c)))
+    conn.commit()
+    conn.close()
+
+    # 所有真实数据路径都不可用（daily_kline 无指数、网络失败）→
+    # 若返回保守状态，说明陈旧本地数据未被采用
+    monkeypatch.setattr(market_timing, '_load_local_index', _ORIG_LOCAL_INDEX)
+    monkeypatch.setattr(market_timing, '_fetch_index_data', lambda days=90: None)
+    monkeypatch.setattr(market_timing, 'get_stock_data', lambda code, days=90: None)
+
+    r = market_timing.get_market_regime()
+    assert r['regime'] == 'shaky', \
+        f"陈旧本地数据不应被采用（应保守兜底），实际 {r['regime']}"
+    assert r['index_close'] is None

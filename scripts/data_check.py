@@ -158,13 +158,15 @@ def check_financial_data(conn: sqlite3.Connection):
 
     print(f"  股票: {fin_total} | PE有效: {pe_ok} ({pe_rate:.0%}) | PB有效: {pb_ok} ({pb_rate:.0%})")
 
+    # 财务数据仅影响多因子排行，不影响当日买卖信号——覆盖率不足只 warning
+    # 不阻断（否则财务下载失败时连止损提醒都会被拦掉，2026-08-16 审查补修2）
     if pe_rate < t['pe_min_coverage']:
-        fail(f"PE覆盖率 {pe_rate:.0%} < {t['pe_min_coverage']:.0%}")
+        warn(f"PE覆盖率 {pe_rate:.0%} < {t['pe_min_coverage']:.0%}（仅影响多因子排行）")
     else:
         ok(f"PE覆盖率达标 ({pe_rate:.0%} ≥ {t['pe_min_coverage']:.0%})")
 
     if pb_rate < t['pb_min_coverage']:
-        fail(f"PB覆盖率 {pb_rate:.0%} < {t['pb_min_coverage']:.0%}")
+        warn(f"PB覆盖率 {pb_rate:.0%} < {t['pb_min_coverage']:.0%}（仅影响多因子排行）")
     else:
         ok(f"PB覆盖率达标 ({pb_rate:.0%} ≥ {t['pb_min_coverage']:.0%})")
 

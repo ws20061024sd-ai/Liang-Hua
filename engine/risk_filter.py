@@ -48,7 +48,7 @@ def filter_signals(
         # 卖出信号豁免：只拦物理上无法卖出（跌停/停牌），
         # 不套用 ST/涨停/股价/流动性等买入限制——持仓股涨到50元以上、
         # 变ST、涨停都是更需要卖出提醒的时刻，不能因此漏掉离场时机
-        if sig.get('action') != 'BUY':
+        if sig.get('action') == 'SELL':
             pct = snap.get('pct_change', 0) or 0
             if pct <= -9.8:
                 sig['reject_reason'] = '跌停，卖出信号无法执行'

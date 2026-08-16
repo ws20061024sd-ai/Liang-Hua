@@ -292,8 +292,10 @@ def main():
             msg += f"> ⚠️ {status_note}\n\n"
         msg += "---\n> 量化自动推送"
         send(msg)
-        # 写占位记录，防止 21:10 健康检查误报"run.py 崩溃"（审查问题9）
-        write_no_signal_record(max_date or today_s)
+        # 写占位记录，防止 21:10 健康检查误报"run.py 崩溃"（审查问题9）。
+        # 必须用今天日期：占位记录语义是"run.py 今天跑过了"——数据延迟时
+        # max_date 是昨天，写它会再次触发误报（审查补修4）
+        write_no_signal_record(today_s)
         log.info("无信号推送完成")
         return
 

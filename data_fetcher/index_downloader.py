@@ -81,7 +81,7 @@ def update_index():
     conn.close()
     print(f"   ✅ 指数 +{len(rows)} 条 ({df['date'].iloc[0]} ~ {df['date'].iloc[-1]})")
 
-    # 新行 amount=0，回填当日全市场成交额（backfill_amount 内部有跳过保护）
+    # 新行 amount=0，回填当日全市场成交额（只回填缺失行，历史行不动）
     backfill_amount()
 
 def store_index_data(df):

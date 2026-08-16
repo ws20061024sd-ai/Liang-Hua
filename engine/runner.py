@@ -153,6 +153,6 @@ def _generate_stop_signals(batch_data: dict) -> list[dict]:
             'strength': 1.0,  # 止损信号最高强度
             'reason': s['reason'],
             'price': s['current'],
-            'strategy': '移动止损',
+            'strategy': settings.STOP_LOSS_STRATEGY,
         })
     return signals

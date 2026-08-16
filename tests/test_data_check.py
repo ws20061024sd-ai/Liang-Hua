@@ -45,7 +45,7 @@ def conn(tmp_path):
 
 
 def test_coverage_denominator_is_total_stock_pool(conn):
-    """只有 100 只有财务数据（PE 全有效）→ 覆盖率应为 33%，阻断"""
+    """只有 100 只有财务数据（PE 全有效）→ 覆盖率应为 33%，warning 不阻断"""
     for i in range(100):
         code = f"{i:06d}"
         conn.execute(
@@ -56,8 +56,10 @@ def test_coverage_denominator_is_total_stock_pool(conn):
 
     dc.check_financial_data(conn)
 
-    assert dc.errors, "100/300 覆盖率不足应阻断（fail）"
-    assert any("PE覆盖率" in e for e in dc.errors)
+    # 财务数据只影响多因子排行，不影响当日买卖信号——覆盖率不足降为 warning，
+    # 不能因此阻断信号管线（否则财务下载失败时连止损提醒都发不出去）
+    assert not dc.errors, f"覆盖率不足应仅 warning：{dc.errors}"
+    assert any("PE覆盖率" in w for w in dc.warnings)
 
 
 def test_full_financial_coverage_passes(conn):

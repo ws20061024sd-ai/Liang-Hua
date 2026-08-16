@@ -41,6 +41,7 @@ BB_STD_DEV = 2.0             # 标准差倍数
 
 # 风控参数
 TRAILING_STOP = 0.05         # 移动止损（从最高点回落5%止损）
+STOP_LOSS_STRATEGY = '移动止损'  # 止损信号的 strategy 名称（position_tracker/runner 共用）
 STOP_CONFIRM_DAYS = 3        # 移动止损 SELL 的确认期（交易日）：期内视为"待确认"，
                              # 持仓保留、止损继续提醒——用户没执行时不会漏掉离场时机
 
@@ -55,6 +56,9 @@ MAX_STOCK_PRICE = 50            # ¥10,000本金50%仓位÷100股
 
 # 成分股列表刷新周期（天）：沪深300每半年调整，缓存超期自动调API刷新
 CONSTITUENT_REFRESH_DAYS = 30
+
+# 本地指数数据最大陈旧天数：index_daily 最新日期超此间隔视为陈旧，走网络兜底
+INDEX_MAX_STALE_DAYS = 3
 
 # 最小日均成交额（元），低于此值的股票流动性太差
 MIN_DAILY_AMOUNT = 20_000_000   # 2000万

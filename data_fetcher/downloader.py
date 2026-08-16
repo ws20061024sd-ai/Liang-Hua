@@ -165,13 +165,24 @@ def fetch_hs300_constituents(force_refresh: bool = False) -> pd.DataFrame:
 
 
 def save_stock_info(conn, stocks: pd.DataFrame):
-    """保存股票基本信息到数据库（记录更新时间，供缓存刷新判断）"""
+    """保存股票基本信息到数据库（记录更新时间，供缓存刷新判断）
+
+    同步模式：删除不在新成分列表中的旧行——已调出沪深300的股票
+    必须离开股票池，否则会继续产生买卖信号（审查问题3 + 补修）。
+    注意：降级路径传入的 stocks 是本地缓存（= 当前池），NOT IN 为空，
+    不会误删；仅 API 刷新成功时列表变化，才会删调出股。
+    """
     today = pd.Timestamp.now().strftime('%Y-%m-%d')
+    codes = [str(r) for r in stocks['code'].tolist()]
+    if codes:
+        placeholders = ','.join('?' * len(codes))
+        conn.execute(
+            f"DELETE FROM stock_info WHERE code NOT IN ({placeholders})", codes)
     for _, row in stocks.iterrows():
         conn.execute("""
             INSERT OR REPLACE INTO stock_info (code, name, updated_at)
             VALUES (?, ?, ?)
-        """, (row['code'], row['name'], today))
+        """, (str(row['code']), row['name'], today))
     conn.commit()
 
 
