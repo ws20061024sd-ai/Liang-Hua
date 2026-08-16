@@ -131,14 +131,16 @@ def check_financial_data(conn: sqlite3.Connection):
         "SELECT COUNT(DISTINCT code) FROM daily_kline WHERE date=?", (max_daily,)
     ).fetchone()[0]
 
+    # 只统计"当日股票池内"的股票（JOIN daily_kline），财务数据里有但已调出池子的不算
     rows = conn.execute("""
         SELECT f.code, f.pe, f.pb
         FROM financial_data f
+        JOIN daily_kline d ON f.code = d.code AND d.date = ?
         WHERE f.date = (
             SELECT MAX(f2.date) FROM financial_data f2
             WHERE f2.code = f.code AND f2.date <= ?
         )
-    """, (max_daily,)).fetchall()
+    """, (max_daily, max_daily)).fetchall()
 
     if not rows:
         fail("financial_data 无数据")
@@ -147,7 +149,9 @@ def check_financial_data(conn: sqlite3.Connection):
     # PE 有效口径与 web/generate.py _health() 一致：亏损股(pe<0)/微利失真(pe>500) 不算有效覆盖
     pe_ok = sum(1 for _, pe, _ in rows if pe is not None and 0 <= pe <= 500)
     pb_ok = sum(1 for _, _, pb in rows if pb is not None)
-    fin_total = len(rows)
+    # 分母 = 当日股票池总数：300只里只有100只有财务数据时，覆盖率是 33% 而非 100%，
+    # 真实反映数据缺失，避免"分母自洽"掩盖问题
+    fin_total = total_stocks
 
     pe_rate = pe_ok / fin_total if fin_total > 0 else 0
     pb_rate = pb_ok / fin_total if fin_total > 0 else 0
