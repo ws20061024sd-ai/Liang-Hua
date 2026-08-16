@@ -275,17 +275,19 @@ def _health(conn):
     dc=int(_q(conn,"SELECT COUNT(DISTINCT code) FROM daily_kline WHERE date=?",(ld,)).iloc[0,0])
     nl=int(_q(conn,"SELECT COUNT(*) FROM daily_kline WHERE date=? AND pct_change IS NULL",(ld,)).iloc[0,0])
     tr=int(_q(conn,"SELECT COUNT(*) FROM daily_kline").iloc[0,0])
-    # financial_data 分批入库，各股最新日期不同——用逐股最新日期统计（与 data_check.py 一致）
-    # PE 排除异常值（亏损股 pe<0 / 微利失真 pe>500 不算有效覆盖）
+    # financial_data 分批入库，各股最新日期不同——用逐股最新日期统计
+    # （与 data_check.py 一致）：JOIN 当日 daily_kline 限定池内股票，
+    # 分母 = 当日股票池总数 dc——300只里只有100只有数据时显示33%而非100%
     f=_q(conn,"""SELECT COUNT(*) as t,
         SUM(CASE WHEN pe IS NOT NULL AND pe>=? AND pe<=? THEN 1 ELSE 0 END)as pe,
         SUM(CASE WHEN pb IS NOT NULL THEN 1 ELSE 0 END)as pb
         FROM (SELECT f.code,f.pe,f.pb FROM financial_data f
+              JOIN daily_kline d ON f.code=d.code AND d.date=?
               WHERE f.date=(SELECT MAX(f2.date) FROM financial_data f2
                             WHERE f2.code=f.code AND f2.date<=?))""",
-        (settings.PE_MIN_VALID,settings.PE_MAX_VALID,ld,))
-    pep=round(int(f['pe'].iloc[0])/int(f['t'].iloc[0])*100)if int(f['t'].iloc[0])else 0
-    pbp=round(int(f['pb'].iloc[0])/int(f['t'].iloc[0])*100)if int(f['t'].iloc[0])else 0
+        (settings.PE_MIN_VALID,settings.PE_MAX_VALID,ld,ld,))
+    pep=round(int(f['pe'].iloc[0])/dc*100)if dc else 0
+    pbp=round(int(f['pb'].iloc[0])/dc*100)if dc else 0
     # ROE查达标季度（最新季度财报未到披露截止日，覆盖低是正常的）
     lr=_q(conn,"SELECT MAX(date) FROM financial_roe").iloc[0,0]
     qr=_q(conn,"SELECT date FROM financial_roe GROUP BY date HAVING COUNT(DISTINCT code)>=? ORDER BY date DESC LIMIT 1",(settings.ROE_MIN_STOCKS,))
@@ -437,7 +439,8 @@ def _render_heatmap(rows):
 
 
 def _signals_all(conn):
-    df=_q(conn,"SELECT date,code,name,strategy,action,price,strength,status,reason,filter_reason FROM signal_history ORDER BY date DESC,id DESC LIMIT 200")
+    # 排除 action='HOLD' 的 no_signal 占位记录（无信号日防误报写入，不属真实信号）
+    df=_q(conn,"SELECT date,code,name,strategy,action,price,strength,status,reason,filter_reason FROM signal_history WHERE action!='HOLD' ORDER BY date DESC,id DESC LIMIT 200")
     return[{'d':str(r['date']),'c':r['code'],'n':r['name'],'s':r['strategy'],'a':r['action'],
         'p':round(float(r['price']),2)if r['price']else 0,'st':r['status'],
         'strength':round(float(r['strength']),3)if r['strength']else 0,

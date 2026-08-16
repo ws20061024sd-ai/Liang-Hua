@@ -14,6 +14,15 @@ import pandas as pd
 from config import settings
 
 
+def _limit_pct(code: str, is_st: int) -> float:
+    """按板块计算涨跌停阈值：科创板(688)/创业板(300,301) 20%，ST 5%，主板 10%"""
+    if is_st:
+        return settings.LIMIT_PCT_ST
+    if str(code).startswith(('688', '300', '301')):
+        return settings.LIMIT_PCT_CHI_NEXT
+    return settings.LIMIT_PCT_MAIN
+
+
 def filter_signals(
     signals: list[dict],
     stock_snapshot: pd.DataFrame
@@ -48,10 +57,12 @@ def filter_signals(
         # 卖出信号豁免：只拦物理上无法卖出（跌停/停牌），
         # 不套用 ST/涨停/股价/流动性等买入限制——持仓股涨到50元以上、
         # 变ST、涨停都是更需要卖出提醒的时刻，不能因此漏掉离场时机
+        limit = _limit_pct(code, snap.get('is_st', 0)) * 100  # pct_change 是百分比数值
+
         if sig.get('action') == 'SELL':
             pct = snap.get('pct_change', 0) or 0
-            if pct <= -9.8:
-                sig['reject_reason'] = '跌停，卖出信号无法执行'
+            if pct <= -limit:
+                sig['reject_reason'] = f'跌停（-{limit:.0f}%板），卖出信号无法执行'
                 rejected.append(sig)
                 continue
             if snap.get('volume', 0) is None or snap.get('volume', 0) == 0:
@@ -67,16 +78,16 @@ def filter_signals(
             rejected.append(sig)
             continue
 
-        # 规则2: 涨停过滤
+        # 规则2: 涨停过滤（阈值按板块：主板10%/双创20%/ST 5%）
         pct = snap.get('pct_change', 0) or 0
-        if pct >= 9.8:
-            sig['reject_reason'] = '涨停，无法买入'
+        if pct >= limit:
+            sig['reject_reason'] = f'涨停（+{limit:.0f}%板），无法买入'
             rejected.append(sig)
             continue
 
         # 规则3: 跌停过滤
-        if pct <= -9.8:
-            sig['reject_reason'] = '跌停，流动性风险'
+        if pct <= -limit:
+            sig['reject_reason'] = f'跌停（-{limit:.0f}%板），流动性风险'
             rejected.append(sig)
             continue
 

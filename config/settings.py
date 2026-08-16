@@ -57,11 +57,19 @@ MAX_STOCK_PRICE = 50            # ¥10,000本金50%仓位÷100股
 # 成分股列表刷新周期（天）：沪深300每半年调整，缓存超期自动调API刷新
 CONSTITUENT_REFRESH_DAYS = 30
 
+# 成分股 API 结果最少数量：低于此视为部分列表，拒绝接受（防止误删股票池）
+MIN_CONSTITUENTS = 250
+
 # 本地指数数据最大陈旧天数：index_daily 最新日期超此间隔视为陈旧，走网络兜底
 INDEX_MAX_STALE_DAYS = 3
 
 # 最小日均成交额（元），低于此值的股票流动性太差
 MIN_DAILY_AMOUNT = 20_000_000   # 2000万
+
+# 涨跌停阈值（按板块）：科创板(688)/创业板(300,301) 20%，主板 10%，ST 5%
+LIMIT_PCT_MAIN = 0.10
+LIMIT_PCT_CHI_NEXT = 0.20
+LIMIT_PCT_ST = 0.05
 
 # 仓位控制参数（按资金档位）
 # 格式: (资金上限, 单票上限%, 止损%, 最大持仓数)

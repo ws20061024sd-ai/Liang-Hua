@@ -107,6 +107,53 @@ class TestFilterSignals:
         assert "停牌" in rejected[0]["reject_reason"]
 
 
+class TestLimitThresholdByBoard:
+    """涨跌停阈值按板块计算：创业板/科创板 20%、ST 5%、主板 10%"""
+
+    def test_chinext_12pct_buy_passes(self):
+        """创业板 +12% 不是涨停（20%板），BUY 不应被误拦"""
+        sig = _make_signal(code="300750", action="BUY")
+        snap = _make_snapshot([{"code": "300750", "pct_change": 12.0}])
+        passed, rejected = filter_signals([sig], snap)
+
+        assert len(passed) == 1, "创业板 +12% 不应被当涨停拦截"
+        assert len(rejected) == 0
+
+    def test_star_18pct_sell_passes(self):
+        """科创板 +18% 卖出信号不应被当涨停（20%板）拦截"""
+        sig = _make_signal(code="688981", action="SELL")
+        snap = _make_snapshot([{"code": "688981", "pct_change": 18.0}])
+        passed, rejected = filter_signals([sig], snap)
+
+        assert len(passed) == 1, "科创板 +18% SELL 不应被拦"
+        assert len(rejected) == 0
+
+    def test_st_5pct_limit_down_sell_blocked(self):
+        """ST 股 -5% 是跌停，SELL 应被拦（卖不出）"""
+        sig = _make_signal(code="600000", action="SELL")
+        snap = _make_snapshot([{"code": "600000", "pct_change": -5.0, "is_st": 1}])
+        passed, rejected = filter_signals([sig], snap)
+
+        assert len(passed) == 0, "ST -5% 跌停 SELL 应被拦"
+        assert "跌停" in rejected[0]["reject_reason"]
+
+    def test_main_board_9pct_sell_passes(self):
+        """主板 -9% 未跌停（10%板），SELL 不应被拦"""
+        sig = _make_signal(code="600000", action="SELL")
+        snap = _make_snapshot([{"code": "600000", "pct_change": -9.0}])
+        passed, rejected = filter_signals([sig], snap)
+
+        assert len(passed) == 1, "主板 -9% SELL 不应被拦"
+
+    def test_main_board_9pct_buy_passes(self):
+        """主板 +9% 未涨停，BUY 不应被误拦"""
+        sig = _make_signal(code="000001", action="BUY")
+        snap = _make_snapshot([{"code": "000001", "pct_change": 9.0}])
+        passed, rejected = filter_signals([sig], snap)
+
+        assert len(passed) == 1, "主板 +9% BUY 不应被拦"
+
+
 class TestSellSignalExemption:
     """卖出信号只拦物理上无法卖出的情况（跌停/停牌），不套用买入限制"""
 

@@ -143,12 +143,19 @@ def fetch_hs300_constituents(force_refresh: bool = False) -> pd.DataFrame:
     except (TimeoutError, Exception) as e:
         print(f"   ⚠️ API 调用失败: {e}")
 
-    # ── API成功 → 返回 + 更新缓存 ──
-    if result is not None and not result.empty:
-        print(f"   获取到 {len(result)} 只成分股")
+    # ── API成功（数量校验通过）→ 更新缓存（保存+删调出股+时间戳）+ 返回 ──
+    min_n = getattr(settings, 'MIN_CONSTITUENTS', 250)
+    if _accept_result(result, min_n):
+        print(f"   获取到 {len(result)} 只成分股，更新股票池缓存")
+        conn = get_db_connection()
+        save_stock_info(conn, result, refresh=True)
+        conn.close()
         return result
 
-    # ── API失败 → 降级到本地缓存 ──
+    if result is not None:
+        print(f"   ⚠️ API 结果仅 {len(result)} 只（<{min_n}），视为部分列表，降级本地缓存")
+
+    # ── API失败/部分 → 降级到本地缓存（不更新缓存、不删除旧股）──
     conn = get_db_connection()
     cached_count = conn.execute("SELECT COUNT(*) FROM stock_info").fetchone()[0]
     if cached_count >= 200:
@@ -164,14 +171,23 @@ def fetch_hs300_constituents(force_refresh: bool = False) -> pd.DataFrame:
     )
 
 
-def save_stock_info(conn, stocks: pd.DataFrame):
-    """保存股票基本信息到数据库（记录更新时间，供缓存刷新判断）
+def _accept_result(df: pd.DataFrame, min_n: int) -> bool:
+    """API 结果是否可接受：数量不足（部分列表）拒绝，防止误删股票池"""
+    return df is not None and not df.empty and len(df) >= min_n
 
-    同步模式：删除不在新成分列表中的旧行——已调出沪深300的股票
-    必须离开股票池，否则会继续产生买卖信号（审查问题3 + 补修）。
-    注意：降级路径传入的 stocks 是本地缓存（= 当前池），NOT IN 为空，
-    不会误删；仅 API 刷新成功时列表变化，才会删调出股。
+
+def save_stock_info(conn, stocks: pd.DataFrame, refresh: bool = False):
+    """保存股票基本信息到数据库
+
+    refresh=True（API 刷新成功）：同步删除不在新成分列表中的旧行——
+    已调出沪深300的股票必须离开股票池（否则继续产生信号）；
+    并更新 updated_at 供缓存刷新判断。
+    refresh=False（缓存/降级路径）：不写库——API 失败时不得把缓存
+    标记为"刚刚刷新过"（否则再等 30 天才重试），也不得删除旧股
+    （部分列表会误删，审查风险 A/B）。
     """
+    if not refresh:
+        return
     today = pd.Timestamp.now().strftime('%Y-%m-%d')
     codes = [str(r) for r in stocks['code'].tolist()]
     if codes:
@@ -336,9 +352,8 @@ def download_all(force_update: bool = False):
     """
     conn = get_db_connection()
 
-    # 获取成分股列表
+    # 获取成分股列表（缓存维护已在 fetch 内部完成：API 成功才保存/删除/更新时间戳）
     stocks = fetch_hs300_constituents()
-    save_stock_info(conn, stocks)
 
     today = pd.Timestamp.now().strftime('%Y-%m-%d')
     start_default = pd.Timestamp.now() - pd.DateOffset(years=settings.YEARS_OF_DATA)
@@ -516,7 +531,8 @@ def verify_data_quality() -> dict:
         sector_count = conn.execute(
             "SELECT COUNT(DISTINCT name) FROM sector_history WHERE date=?", (max_date,)
         ).fetchone()[0]
-    except:
+    except Exception as e:
+        print(f"   ⚠️ [质量检查] 行业数据检查跳过: {e}")
         sector_count = 0
     if sector_count < settings.MIN_SECTOR_COUNT and sector_count > 0:
         issues.append(f"行业数据不足（{sector_count}/90个行业）")
