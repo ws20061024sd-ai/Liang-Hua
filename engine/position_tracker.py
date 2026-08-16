@@ -30,12 +30,31 @@ def get_positions() -> list[dict]:
     """
     conn = sqlite3.connect(DB)
 
-    df = pd.read_sql_query("""
+    # 移动止损 SELL 确认期：最近 N 个交易日内的"移动止损 SELL"视为待确认执行
+    # （用户可能没卖出），不算平仓——持仓保留、止损继续提醒，避免漏掉离场时机。
+    # 普通卖出（MA死叉等）仍立即平仓。交易日窗口取自 daily_kline（真实交易日历）。
+    confirm_days = settings.STOP_CONFIRM_DAYS
+    recent_dates = conn.execute(
+        "SELECT DISTINCT date FROM daily_kline ORDER BY date DESC LIMIT ?",
+        (confirm_days,)
+    ).fetchall()
+    if recent_dates:
+        dates_in = ','.join('?' * len(recent_dates))
+        pending_sell_excl = (
+            f" AND NOT (strategy='移动止损' AND action='SELL' "
+            f"AND date IN ({dates_in}))"
+        )
+        date_params = [d[0] for d in recent_dates]
+    else:
+        pending_sell_excl = ""
+        date_params = []
+
+    df = pd.read_sql_query(f"""
         SELECT date, code, name, action, price, strategy, status
         FROM signal_history
-        WHERE status = 'passed' AND action IN ('BUY', 'SELL')
+        WHERE status = 'passed' AND action IN ('BUY', 'SELL'){pending_sell_excl}
         ORDER BY code, date DESC
-    """, conn)
+    """, conn, params=date_params)
     conn.close()
 
     if df.empty:

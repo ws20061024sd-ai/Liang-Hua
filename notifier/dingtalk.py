@@ -132,6 +132,9 @@ def format_signals(aggregated: list[dict], rejected: list[dict],
         lines.append("💡 小资金提示：优先ETF | 严格止损-3%")
     if strat_count > 1:
         lines.append("💡 ⭐⭐双策略确认信号优先关注")
+    # 信号性质声明：持仓/止损均为信号推断，未执行请留意后续提醒
+    lines.append("> ⚠️ 信号为参考建议，持仓基于信号推断（默认已执行）；"
+                 "止损提醒会在确认期内持续，未卖出请关注次日提醒")
 
     return "\n".join(lines)
 
