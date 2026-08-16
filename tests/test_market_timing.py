@@ -1,17 +1,22 @@
 """
 大盘择时测试 —— 覆盖四档状态分类，重点验证回调场景不误判 weak
 """
+import sqlite3
 import pandas as pd
 import numpy as np
 import pytest
 from engine import market_timing
 
+# 保存真实本地读取实现（autouse fixture 会打桩掉它，本地表测试需要恢复）
+_ORIG_LOCAL_INDEX = market_timing._load_local_index
+
 
 @pytest.fixture(autouse=True)
 def _stub_stock_data(monkeypatch):
-    """打桩 get_stock_data + _fetch_index_data，避免真实数据库/网络依赖"""
+    """打桩本地查库 + 网络拉取，避免真实数据库/网络依赖"""
     def _fake(code, days=90):
         return market_timing._last_df
+    monkeypatch.setattr(market_timing, '_load_local_index', lambda days=90: None)
     monkeypatch.setattr(market_timing, 'get_stock_data', _fake)
     monkeypatch.setattr(market_timing, '_fetch_index_data', lambda days=90: None)
 
@@ -77,3 +82,40 @@ def test_filter_by_regime_does_not_block():
     assert len(passed) == 1, "v3 不应拦截信号"
     assert len(blocked) == 0
     assert passed[0]['strength'] < 0.8, "weak 市应降权"
+
+
+def test_uses_local_index_daily_first(tmp_path, monkeypatch):
+    """本地 index_daily 有足够数据时优先使用，不依赖网络"""
+    from config import settings
+    db_path = str(tmp_path / "test.db")
+    monkeypatch.setattr(settings, "DB_PATH", db_path)
+    conn = sqlite3.connect(db_path)
+    conn.execute("""
+        CREATE TABLE index_daily (
+            date TEXT PRIMARY KEY, open REAL, close REAL,
+            high REAL, low REAL, volume REAL, amount REAL
+        )
+    """)
+    np.random.seed(42)
+    closes = np.concatenate([
+        np.random.uniform(3700, 3800, 60),
+        np.linspace(3800, 4000, 30),
+    ])
+    dates = pd.date_range('2026-01-01', periods=len(closes))
+    for d, c in zip(dates, closes):
+        conn.execute("INSERT INTO index_daily (date, close) VALUES (?, ?)",
+                     (d.strftime('%Y-%m-%d'), float(c)))
+    conn.commit()
+    conn.close()
+
+    # 恢复真实本地读取（autouse fixture 默认打桩为 None）
+    monkeypatch.setattr(market_timing, '_load_local_index', _ORIG_LOCAL_INDEX)
+    # 网络路径打桩为抛错：若仍能返回强市，说明用的是本地数据
+    def _boom(*a, **k):
+        raise AssertionError("不应调用网络拉取")
+    monkeypatch.setattr(market_timing, '_fetch_index_data', _boom)
+    monkeypatch.setattr(market_timing, 'get_stock_data', _boom)
+
+    r = market_timing.get_market_regime()
+    assert r['regime'] == 'strong', f"应使用本地指数数据，实际 {r['regime']}"
+    assert r['index_close'] is not None

@@ -17,8 +17,28 @@ import numpy as np
 from data_fetcher.cleaner import get_stock_data
 
 
+def _load_local_index(days: int = 90) -> pd.DataFrame | None:
+    """从本地 index_daily 表读取沪深300指数（run.py 每日下载，不依赖网络）"""
+    try:
+        import sqlite3
+        from config import settings
+        conn = sqlite3.connect(settings.DB_PATH)
+        df = pd.read_sql_query(
+            "SELECT date, close FROM index_daily ORDER BY date DESC LIMIT ?",
+            conn, params=(days,))
+        conn.close()
+    except Exception as e:
+        print(f"⚠️ [大盘择时] 本地指数读取失败: {e}")
+        return None
+    if df is None or df.empty:
+        return None
+    df['date'] = pd.to_datetime(df['date'])
+    df['close'] = df['close'].astype(float)
+    return df.sort_values('date').reset_index(drop=True)
+
+
 def _fetch_index_data(days: int = 90) -> pd.DataFrame | None:
-    """从 AKShare 实时拉取沪深300指数日线数据"""
+    """从 AKShare 实时拉取沪深300指数日线数据（本地无数据时的兜底）"""
     try:
         import akshare as ak
         df = ak.stock_zh_index_daily(symbol='sh000300')
@@ -26,8 +46,8 @@ def _fetch_index_data(days: int = 90) -> pd.DataFrame | None:
             df['close'] = df['close'].astype(float)
             df['date'] = pd.to_datetime(df['date'])
             return df.tail(days).reset_index(drop=True)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"⚠️ [大盘择时] 实时拉取失败: {e}")
     return None
 
 
@@ -48,9 +68,14 @@ def get_market_regime() -> dict:
             'detail': '...',
         }
     """
-    df = get_stock_data("000300", days=90)
+    # 优先读本地 index_daily 表（run.py 每日已下载，网络断开也可用）
+    df = _load_local_index(days=90)
 
-    # 本地数据库可能没存指数数据，fallback 到 AKShare 实时拉取
+    # 兜底1：daily_kline 表（旧库兼容）
+    if df is None or len(df) < 60:
+        df = get_stock_data("000300", days=90)
+
+    # 兜底2：AKShare 实时拉取（本地数据不足时）
     if df is None or len(df) < 60:
         df = _fetch_index_data(days=90)
 
