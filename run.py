@@ -292,6 +292,8 @@ def main():
             msg += f"> ⚠️ {status_note}\n\n"
         msg += "---\n> 量化自动推送"
         send(msg)
+        # 写占位记录，防止 21:10 健康检查误报"run.py 崩溃"（审查问题9）
+        write_no_signal_record(max_date or today_s)
         log.info("无信号推送完成")
         return
 
@@ -350,6 +352,22 @@ def main():
                  f"通过{len(passed)}条 拦截{len(rejected)}条 汇总{len(aggregated)}条")
         if not ok:
             log.error("钉钉推送失败！请检查网络或 Webhook 配置")
+
+
+def write_no_signal_record(signal_date: str):
+    """无信号日写入占位记录（status='no_signal'），防止健康检查误报"""
+    from engine.signal_store import init_signal_table, save_signals
+    init_signal_table()
+    save_signals([{
+        'date': signal_date,
+        'stock_code': '000000',
+        'stock_name': '无信号',
+        'strategy': '系统',
+        'action': 'HOLD',
+        'strength': 0,
+        'reason': '今日无交易信号（占位，防止健康检查误报）',
+        'price': 0,
+    }], status='no_signal')
 
 
 def get_tier_label(capital: float) -> str:
