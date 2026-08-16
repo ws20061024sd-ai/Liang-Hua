@@ -107,6 +107,64 @@ class TestFilterSignals:
         assert "停牌" in rejected[0]["reject_reason"]
 
 
+class TestSellSignalExemption:
+    """卖出信号只拦物理上无法卖出的情况（跌停/停牌），不套用买入限制"""
+
+    def test_sell_on_limit_up_passes(self):
+        """涨停日卖出信号应通过（涨停是卖出好时机，不是买入限制）"""
+        sig = _make_signal(action="SELL")
+        snap = _make_snapshot([{"pct_change": 10.02}])  # 涨停
+        passed, rejected = filter_signals([sig], snap)
+
+        assert len(passed) == 1, "涨停日 SELL 不应被拦"
+        assert len(rejected) == 0
+
+    def test_sell_high_price_passes(self):
+        """高价股卖出信号应通过（持仓涨到50元以上更需要卖出提醒）"""
+        sig = _make_signal(action="SELL", price=51.0)
+        snap = _make_snapshot([{"close": 51.0}])
+        passed, rejected = filter_signals([sig], snap)
+
+        assert len(passed) == 1, "高价股 SELL 不应被拦"
+        assert len(rejected) == 0
+
+    def test_sell_st_passes(self):
+        """ST 股卖出信号应通过（持仓变 ST 更要提醒离场）"""
+        sig = _make_signal(action="SELL")
+        snap = _make_snapshot([{"is_st": 1}])
+        passed, rejected = filter_signals([sig], snap)
+
+        assert len(passed) == 1, "ST 股 SELL 不应被拦"
+        assert len(rejected) == 0
+
+    def test_sell_low_liquidity_passes(self):
+        """低流动性卖出信号应通过（流动性差更需要提前离场）"""
+        sig = _make_signal(action="SELL")
+        snap = _make_snapshot([{"amount": 5_000_000}])  # 低于 2000 万
+        passed, rejected = filter_signals([sig], snap)
+
+        assert len(passed) == 1, "低流动性 SELL 不应被拦"
+        assert len(rejected) == 0
+
+    def test_sell_on_limit_down_rejected(self):
+        """跌停日卖出信号应被拦（跌停封死无法卖出）"""
+        sig = _make_signal(action="SELL")
+        snap = _make_snapshot([{"pct_change": -10.01}])
+        passed, rejected = filter_signals([sig], snap)
+
+        assert len(passed) == 0, "跌停 SELL 应被拦"
+        assert "跌停" in rejected[0]["reject_reason"]
+
+    def test_sell_zero_volume_rejected(self):
+        """停牌日卖出信号应被拦（无法成交）"""
+        sig = _make_signal(action="SELL")
+        snap = _make_snapshot([{"volume": 0}])
+        passed, rejected = filter_signals([sig], snap)
+
+        assert len(passed) == 0
+        assert "停牌" in rejected[0]["reject_reason"]
+
+
 class TestCalculatePosition:
     """仓位计算测试"""
 
