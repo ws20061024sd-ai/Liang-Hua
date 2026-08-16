@@ -30,7 +30,7 @@ fi
 # 3. 安装/更新依赖
 echo "📦 安装依赖..."
 source "$VENV_DIR/bin/activate"
-pip install -q akshare baostock pandas numpy requests
+pip install -q -r requirements.txt
 echo "   ✅ akshare baostock pandas numpy requests"
 
 # 4. 创建 settings_local.py（如果不存在）

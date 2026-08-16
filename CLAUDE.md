@@ -62,7 +62,7 @@ run.py  ───  Main entry: download → fix data → quality check → strat
   ├── analysis/        Independent daily report pipeline (macro/sector/stock/industry)
   ├── backtest/        Local backtest using same strategy code as production
   ├── scripts/         Health check + automated DB backup
-  └── tests/           26 unit tests covering core logic
+  └── tests/           71 unit tests covering core logic
 ```
 
 **Data flow**: `AKShare → downloader.py → SQLite (daily_kline + signal_history + sector_history) → strategies → risk filters → signal_aggregator → DingTalk`
@@ -118,7 +118,7 @@ print(f'Date:{maxd} | Stocks:{cnt}/300 | NULL:{nulls}')
 - **数据校验必须先于策略运行** — `python scripts/data_check.py --block`，阻断则不推送信号
 - **聚宽回测 = 真理，本地回测 = 方向验证** — 上线决策必须经聚宽确认
 - **因子公式/权重必须三处同步** — `engine/factors.py` ↔ `backtest/local_factor_backtest.py` ↔ 聚宽策略
-- **修改因子/权重后必须**: 本地回测(5个TOP_N) → pytest(26个) → 聚宽验证(如变化>5pp)
+- **修改因子/权重后必须**: 本地回测(5个TOP_N) → pytest(71个) → 聚宽验证(如变化>5pp)
 - **`except Exception: pass` 禁止** — 必须至少 print 到 stderr
 - **禁止在策略/因子文件中硬编码参数** — 必须在 settings.py 或文件头部常量区
 - **新数据源必须**: 单只验证 → 10只验证 → 全量 → 覆盖率≥85% → 人工核对 → 文档记录
@@ -127,7 +127,7 @@ print(f'Date:{maxd} | Stocks:{cnt}/300 | NULL:{nulls}')
 
 ```bash
 python scripts/data_check.py --block   # 数据健康检查（阻断模式）
-python -m pytest tests/ -v             # 26个核心逻辑测试
+python -m pytest tests/ -v             # 71个核心逻辑测试
 PYTHONPATH=. python backtest/local_factor_backtest.py  # 本地回测（5个TOP_N，40秒）
 ```
 
@@ -138,7 +138,7 @@ PYTHONPATH=. python backtest/local_factor_backtest.py  # 本地回测（5个TOP_
 - **Data sources must have fallbacks** — Sina primary, Eastmoney backup, THS for industries
 - **Before deploying to server**: run locally + run tests (`python -m pytest tests/ -v`) + run data check (`python scripts/data_check.py --block`), then `git push` + server `git pull`
 - **After deploying**: check `crontab -l` on server ONLY (Mac crontab must remain empty)
-- **Server cron MUST include**: run.py (21:00) + report.py (21:05) + health_check.py (21:10) + backup (21:15)
+- **Server cron MUST include**: run.py (21:00) + report.py (21:05) + health_check.py (21:10) + backup (21:15) + generate.py+coscmd (21:20)
 - **Strategy changes require backtest first** — use `backtest/local_factor_backtest.py` for direction, JoinQuant for final confirmation
 - **All report components must use the same data date** — pass `data_date` explicitly, never query MAX(date) independently
 - **pct_change must never be NULL in production data** — `fix_pct_change()` runs automatically, verify with health check
@@ -170,7 +170,7 @@ PYTHONPATH=. python backtest/local_factor_backtest.py  # 本地回测（5个TOP_
 ## Known Deployments
 
 - **Server**: Tencent Cloud `VM-0-17-opencloudos`, path `/root/Liang-Hua/`, Python 3.11
-- **Cron**: `0 21 * * 1-5` (run.py), `5 21 * * 1-5` (report.py), `10 21 * * 1-5` (health check), `15 21 * * 1-5` (DB backup)
+- **Cron**: `0 21 * * 1-5` (run.py), `5 21 * * 1-5` (report.py), `10 21 * * 1-5` (health check), `15 21 * * 1-5` (DB backup), `20 21 * * 1-5` (generate.py + coscmd 双路径上传)
 - **Mac local**: crontab MUST be empty (`crontab -r` already done)
 - **DingTalk webhook**: configured in `config/settings_local.py` (gitignored, keyword filter: "量化")
 - **DB backups**: `data/backups/stocks_YYYYMMDD.db`, auto-retained 7 days

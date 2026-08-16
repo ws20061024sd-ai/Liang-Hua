@@ -47,15 +47,16 @@ def update_index():
 
     today = pd.Timestamp.now()
     if last_date:
-        last_dt = pd.Timestamp(last_date)
-        if last_dt >= today:
+        # 按日期比较（last_date 是 'YYYY-MM-DD'，与 now 的时刻比较会永不命中"已最新"）
+        if last_date >= today.strftime('%Y-%m-%d'):
             print("   ✅ 指数数据已是最新")
             return
+        lag_days = (today - pd.Timestamp(last_date)).days
         # 只差几天的话直接全量重下（指数只有一条时间序列，很快）
-        if (today - last_dt).days <= 7:
-            print(f"   📡 指数数据落后 {(today - last_dt).days} 天，增量下载...")
+        if lag_days <= 7:
+            print(f"   📡 指数数据落后 {lag_days} 天，增量下载...")
         else:
-            print(f"   📡 指数数据落后 {(today - last_dt).days} 天，全量刷新...")
+            print(f"   📡 指数数据落后 {lag_days} 天，全量刷新...")
 
     import akshare as ak
     df = ak.stock_zh_index_daily(symbol="sh000300")
