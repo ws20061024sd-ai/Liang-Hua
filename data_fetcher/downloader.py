@@ -31,7 +31,8 @@ def init_database():
             name        TEXT,
             market      TEXT,
             listing_date TEXT,
-            is_st       INTEGER DEFAULT 0
+            is_st       INTEGER DEFAULT 0,
+            updated_at  TEXT
         )
     """)
 
@@ -63,21 +64,41 @@ def init_database():
     print("✅ 数据库表结构已就绪")
 
 
+def _cache_stale(max_updated: str | None, force: bool, refresh_days: int) -> bool:
+    """成分股缓存是否过期：强制刷新、无更新时间记录（旧库）、或超期未刷新"""
+    if force:
+        return True
+    if not max_updated:
+        return True  # 旧库无 updated_at 记录 → 触发一次刷新补写
+    last = pd.Timestamp(max_updated)
+    return (pd.Timestamp.now() - last).days > refresh_days
+
+
 def fetch_hs300_constituents(force_refresh: bool = False) -> pd.DataFrame:
     """
-    获取沪深300成分股列表（优先本地缓存，避免每次调API）
+    获取沪深300成分股列表（优先本地缓存，超 CONSTITUENT_REFRESH_DAYS 天自动刷新）
 
-    沪深300成分股每半年调整一次（6月/12月），没必要每次运行都调API。
+    沪深300成分股每半年调整一次（6月/12月），没必要每次运行都调API，
+    但也不能永久冻结——缓存超期后自动调 API 刷新（2026-08-16 审查问题3）。
     首次运行调用API成功后存入 stock_info 表，后续直接从表里读。
 
     API调用加了30秒超时保护，超时或失败时自动降级到本地缓存。
     """
-    # ── 优先读本地缓存（stock_info 表）──
+    # ── 优先读本地缓存（stock_info 表），超期则刷新 ──
     conn = get_db_connection()
+    # 旧库兼容：补 updated_at 列（幂等，已存在时忽略）
+    try:
+        conn.execute("ALTER TABLE stock_info ADD COLUMN updated_at TEXT")
+        conn.commit()
+    except Exception as e:
+        if 'duplicate column' not in str(e).lower():
+            print(f"⚠️ [成分股] 加列 updated_at 失败: {e}")
     cached_count = conn.execute("SELECT COUNT(*) FROM stock_info").fetchone()[0]
+    max_updated = conn.execute("SELECT MAX(updated_at) FROM stock_info").fetchone()[0]
     conn.close()
 
-    if cached_count >= 200 and not force_refresh:
+    refresh_days = getattr(settings, 'CONSTITUENT_REFRESH_DAYS', 30)
+    if cached_count >= 200 and not _cache_stale(max_updated, force_refresh, refresh_days):
         conn = get_db_connection()
         df = pd.read_sql_query("SELECT code, name FROM stock_info ORDER BY code", conn)
         conn.close()
@@ -144,12 +165,13 @@ def fetch_hs300_constituents(force_refresh: bool = False) -> pd.DataFrame:
 
 
 def save_stock_info(conn, stocks: pd.DataFrame):
-    """保存股票基本信息到数据库"""
+    """保存股票基本信息到数据库（记录更新时间，供缓存刷新判断）"""
+    today = pd.Timestamp.now().strftime('%Y-%m-%d')
     for _, row in stocks.iterrows():
         conn.execute("""
-            INSERT OR REPLACE INTO stock_info (code, name)
-            VALUES (?, ?)
-        """, (row['code'], row['name']))
+            INSERT OR REPLACE INTO stock_info (code, name, updated_at)
+            VALUES (?, ?, ?)
+        """, (row['code'], row['name'], today))
     conn.commit()
 
 
