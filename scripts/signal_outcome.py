@@ -157,6 +157,57 @@ def summary_l1(conn, source: str | None = None) -> list[dict]:
             'avg_excess': round(d['ex_sum'] / d['total'], 2) if d['total'] else None})
     return sorted(result, key=lambda r: -(r['avg_excess'] or 0))
 
+# ── Task 6: 仪表盘「信号效果」页统计查询 ──────────────────────────────────
+# 页面统计口径 = l1_10d + l2_close 两种结算流；kind='l2_state' 状态快照行
+# （单行 JSON 聚合，code/strategy 等全 NULL）不是结算记录，永不参与统计
+# （审查遗留 Minor n）。
+
+def summary_l2(conn, source: str | None = None) -> list[dict]:
+    """分策略 L2 平仓汇总（kind='l2_close' 结算记录）
+
+    返回 [{'strategy', 'n', 'win_rate', 'avg_pnl', 'avg_hold', 'cum'}]
+    （按等权累计 SUM(pnl) 降序）：胜率 = pnl>0 笔数占比；平均持仓 = AVG(hold_days)
+    """
+    q = """SELECT strategy, COUNT(*), SUM(CASE WHEN pnl>0 THEN 1 ELSE 0 END),
+        AVG(pnl), AVG(hold_days), SUM(pnl)
+        FROM signal_outcome WHERE kind='l2_close'"""
+    params = []
+    if source:
+        q += " AND source=?"
+        params.append(source)
+    q += " GROUP BY strategy"
+    rows = conn.execute(q, params).fetchall()
+    out = []
+    for strategy, n, wins, avg_pnl, avg_hold, cum in rows:
+        out.append({'strategy': strategy, 'n': n,
+            'win_rate': round((wins or 0) / n * 100, 1) if n else 0.0,
+            'avg_pnl': round(avg_pnl, 2) if avg_pnl is not None else 0.0,
+            'avg_hold': round(avg_hold, 1) if avg_hold is not None else 0.0,
+            'cum': round(cum, 1) if cum is not None else 0.0})
+    return sorted(out, key=lambda r: r['cum'], reverse=True)
+
+def recent_settlements(conn, source: str | None = None,
+                       limit: int = 10) -> list[dict]:
+    """最近结算列表（与页面统计口径一致：l1_10d 到期 + l2_close 平仓，
+    日期降序取最新 limit 条；l2_state 快照行日期最新也不混入）
+
+    返回 [{'date', 'code', 'name', 'strategy', 'kind', 'action', 'pnl',
+           'excess', 'exit_reason', 'hold_days', 'source'}]（同日期按 id 新在前）
+    """
+    q = """SELECT date, code, name, strategy, kind, action, pnl, excess,
+        exit_reason, hold_days, source
+        FROM signal_outcome WHERE kind IN ('l1_10d','l2_close')"""
+    params = []
+    if source:
+        q += " AND source=?"
+        params.append(source)
+    q += " ORDER BY date DESC, id DESC LIMIT ?"
+    params.append(limit)
+    return [{'date': r[0], 'code': r[1], 'name': r[2], 'strategy': r[3],
+             'kind': r[4], 'action': r[5], 'pnl': r[6], 'excess': r[7],
+             'exit_reason': r[8], 'hold_days': r[9], 'source': r[10]}
+            for r in conn.execute(q, params).fetchall()]
+
 # ── Task 3: L2 等权账本撮合 ──────────────────────────────────────────────
 
 class Ledger:

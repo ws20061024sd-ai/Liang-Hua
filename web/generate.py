@@ -193,7 +193,8 @@ KLINE_TOOLTIP_JS = '''<script>
 def _nav(active=''):
     links = [('index.html','信号'),('market.html','市场'),
              ('history.html','历史'),('strategy.html','策略'),
-             ('factors.html','因子'),('signals.html','日志')]
+             ('factors.html','因子'),('signals.html','日志'),
+             ('outcome.html','效果')]
     items = ''.join(f'<a href="{h}"{" class=active" if h==active else ""}>{n}</a>' for h,n in links)
     toggle = '<button onclick="toggleTheme()" class="theme-btn" aria-label="切换主题">'
     toggle += '<svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
@@ -938,6 +939,146 @@ def page_signals(sigs):
     return _page('信号日志','signals.html',body)
 
 
+def _outcome_tabs(cur: str | None = None) -> str:
+    """信号效果页来源切换：合并/真实信号/历史回放 → 3 个静态页互为入口。
+
+    为何保留分来源视图：真实(real)与回放(replay)是两套独立账本，且回放窗口
+    （最近 1 年）覆盖了真实信号起始日至今的重叠段——合并统计会把重叠期同源
+    信号各计一次。默认页仍是合并（outcome.html），表头注各来源构成。
+    """
+    def tab(href, label, key):
+        if key == cur:
+            return f'<span class="tag t-pass">{label}</span>'
+        return (f'<a href="{href}" style="color:var(--accent);text-decoration:none">'
+                f'{label}</a>')
+    return ('<div class="panel"><div class="panel-bd" style="padding:8px 16px;'
+            'display:flex;gap:14px;align-items:center">'
+            '<span class="dim" style="font-size:11px">来源</span>'
+            f'{tab("outcome.html","合并",None)}'
+            f'{tab("outcome_real.html","真实信号","real")}'
+            f'{tab("outcome_replay.html","历史回放","replay")}'
+            '</div></div>')
+
+
+def page_outcome(conn, source: str | None = None) -> str:
+    """信号效果页：L1 10日窗口命中率 + L2 等权账本 + 最近结算
+
+    source=None → 合并展示（面板表头注真实/回放来源构成）；'real'/'replay' →
+    单来源视图（build() 生成 outcome_real.html / outcome_replay.html）。
+    统计按 kind 过滤（l1_10d / l2_close）——kind='l2_state' 状态快照行
+    （单行 JSON 聚合，code/strategy 全 NULL）永不参与（审查遗留 Minor n）。
+    结算表未建（首次部署未跑过结算）时降级为提示，不让 build() 崩。
+    """
+    from scripts import signal_outcome as so
+    if source is None:
+        src_desc = '合并展示——真实信号 + 历史回放（表头注各来源构成）'
+    else:
+        src_desc = {'real': '仅真实信号——钉钉实际推送（signal_history 自部署日起积累）',
+                    'replay': '仅历史回放——回放引擎按生产策略补齐近一年样本'}
+        src_desc = src_desc.get(source, f'来源: {source}')
+    body = [f'<div class="hero"><h2> 信号效果</h2><p>{src_desc} · '
+            'L1 10日窗口命中率 · L2 BUY→平仓完整周期</p></div>',
+            _outcome_tabs(source)]
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table'"
+                    " AND name='signal_outcome'").fetchone() is None:
+        body.append('<div class="panel"><div class="panel-bd"><div class="empty">'
+                    '暂无结算数据——服务器运行 scripts/signal_outcome.py'
+                    '（每日结算或 --replay 回放补齐历史）后出现</div></div></div>')
+        return _page('信号效果', 'outcome.html', '\n'.join(body))
+
+    # 合并视图：表头注各来源构成（l1_10d / l2_close 分开计数）
+    comp = {}
+    if source is None:
+        for kind, s, n in conn.execute(
+                "SELECT kind, source, COUNT(*) FROM signal_outcome"
+                " WHERE kind IN ('l1_10d','l2_close') GROUP BY kind, source"):
+            comp[(kind, s)] = n
+
+    def comp_note(kind: str) -> str:
+        if not comp:
+            return ''
+        return (f'<span class="dim" style="font-size:10px;text-transform:none;'
+                f'letter-spacing:0">真实 {comp.get((kind, "real"), 0)} 条 · '
+                f'回放 {comp.get((kind, "replay"), 0)} 条</span>')
+
+    # ── L1 表：10日窗口预测力 ──
+    body.append(f'<div class="panel"><div class="panel-hd">L1 信号预测力'
+                f'（10日窗口·命中=跑赢沪深300）{comp_note("l1_10d")}'
+                f'</div><div class="panel-bd">')
+    rows = so.summary_l1(conn, source)
+    if not rows:
+        body.append('<div class="empty">暂无结算数据（回放或每日结算后出现）</div>')
+    else:
+        body.append('<table><tr><th>策略</th><th>信号数</th><th>胜率</th>'
+                    '<th class="ta-r">平均超额</th></tr>')
+        for r in rows:
+            wr = r['win_rate'] if r['win_rate'] is not None else 0
+            flag = '✅' if wr >= 55 else ('⚠️' if wr < 45 else '❓')
+            ex = r['avg_excess']
+            ex_str = f'{ex}%' if ex is not None else '—'
+            cls = 'up' if (ex or 0) > 0 else ('dn' if (ex or 0) < 0 else 'dim')
+            body.append(f'<tr><td>{r["strategy"]}</td><td>{r["total"]}</td>'
+                        f'<td>{wr}% {flag}</td>'
+                        f'<td class="ta-r {cls}">{ex_str}</td></tr>')
+        body.append('</table>')
+    body.append('</div></div>')
+
+    # ── L2 表：等权账本 ──
+    body.append(f'<div class="panel"><div class="panel-hd">L2 等权账本'
+                f'（BUY→平仓完整周期）{comp_note("l2_close")}'
+                f'</div><div class="panel-bd">')
+    rows2 = so.summary_l2(conn, source)
+    if not rows2:
+        body.append('<div class="empty">暂无平仓交易</div>')
+    else:
+        body.append('<table><tr><th>策略</th><th>笔数</th><th>胜率</th>'
+                    '<th class="ta-r">平均收益</th><th class="ta-r">平均持仓(天)</th>'
+                    '<th class="ta-r">等权累计</th></tr>')
+        for r in rows2:
+            cum_cls = 'up' if r['cum'] > 0 else ('dn' if r['cum'] < 0 else 'dim')
+            body.append(f'<tr><td>{r["strategy"]}</td><td>{r["n"]}</td>'
+                        f'<td>{r["win_rate"]}%</td>'
+                        f'<td class="ta-r">{r["avg_pnl"]}%</td>'
+                        f'<td class="ta-r">{r["avg_hold"]}</td>'
+                        f'<td class="ta-r {cum_cls}">{r["cum"]}%</td></tr>')
+        body.append('</table>')
+    body.append('</div></div>')
+
+    # ── 最近结算 ──
+    recent = so.recent_settlements(conn, source=source)
+    if recent:
+        reason_map = {'sell': 'SELL信号平仓', 'stop_loss': '移动止损平仓',
+                      'timeout': '持仓到期平仓'}
+        rows3 = ''
+        for r in recent:
+            if r['kind'] == 'l1_10d':
+                ktag = '<span class="tag t-pass">L1·10日</span>'
+                if r['excess'] is not None:
+                    e_cls = 'up' if r['excess'] >= 0 else 'dn'
+                    note = (f'超额 <span class="{e_cls}">'
+                            f'{r["excess"]:+.2f}%</span>')
+                else:
+                    note = '—'
+            else:
+                ktag = '<span class="tag t-warn">L2平仓</span>'
+                note = reason_map.get(r['exit_reason'], '—')
+            pnl = r['pnl'] if r['pnl'] is not None else 0.0
+            pnl_cls = 'up' if pnl >= 0 else 'dn'
+            src_label = {'real': '真实'}.get(r['source'], r['source'] or '—')
+            rows3 += (f'<tr><td>{r["date"]}</td><td class="code">{r["code"]}</td>'
+                      f'<td>{r["name"]}</td><td>{r["strategy"]}</td><td>{ktag}</td>'
+                      f'<td class="ta-r {pnl_cls}">{pnl:+.1f}%</td>'
+                      f'<td>{note}</td><td class="dim">{src_label}</td></tr>')
+        body.append(f'<div class="panel"><div class="panel-hd">最近结算'
+                    f'（L1·10日 到期 + L2 平仓）<span class="dim" '
+                    f'style="font-size:10px;text-transform:none;letter-spacing:0">'
+                    f'最新 {len(recent)} 条</span></div><div class="panel-bd">'
+                    f'<table><tr><th>日期</th><th>代码</th><th>名称</th><th>策略</th>'
+                    f'<th>类型</th><th class="ta-r">收益</th><th>说明</th>'
+                    f'<th>来源</th></tr>{rows3}</table></div></div>')
+    return _page('信号效果', 'outcome.html', '\n'.join(body))
+
+
 def page_health(h):
     """运维页"""
     body=f'''<div class="hero"><h2> 数据健康</h2><p>运维数据——平时不需要看</p></div>
@@ -1093,6 +1234,10 @@ def build():
         ('factors.html',page_factors(fs,sigs)),
         ('signals.html',page_signals(sigs)),
         ('health.html',page_health(h)),
+        # 信号效果页：合并默认（表头注来源构成）+ 真实/回放单来源视图（tab 互跳）
+        ('outcome.html',page_outcome(conn)),
+        ('outcome_real.html',page_outcome(conn,'real')),
+        ('outcome_replay.html',page_outcome(conn,'replay')),
     ]
 
     # 股票详情页：为信号历史中出现过的所有股票生成（点击链接时页面始终最新，
