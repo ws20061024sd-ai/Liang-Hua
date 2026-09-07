@@ -52,6 +52,7 @@ STOP_CONFIRM_DAYS = 3        # 移动止损 SELL 的确认期（交易日）：�
 OUTCOME_WINDOWS = [5, 10, 20]      # L1 观察窗口（交易日）
 OUTCOME_MAX_HOLD_DAYS = 60         # L2 到期强制平仓（交易日）
 REPLAY_YEARS = 1                   # 回放年数
+REPLAY_MIN_HISTORY = 60            # 回放起点最少历史行数（MA60 慢线需 ≥60 行才有交叉可言）
 
 # ============================================================
 # 股票池设置
