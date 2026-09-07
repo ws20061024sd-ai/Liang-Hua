@@ -204,7 +204,8 @@ class Ledger:
                 continue  # 当日无行情（停牌）→ 跳过
             cur = float(row.iloc[0]['close'])
             for i, pos in enumerate(opens):
-                peak_rows = kdf[kdf['date'] >= pos['buy_date']]
+                # 峰值只取 [buy_date, 当日]，杜绝把 DB 里未来日期的更高价当成当前峰值
+                peak_rows = kdf[(kdf['date'] >= pos['buy_date']) & (kdf['date'] <= date)]
                 if peak_rows.empty:
                     continue
                 peak = float(peak_rows['close'].max())

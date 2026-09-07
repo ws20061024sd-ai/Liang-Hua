@@ -82,3 +82,19 @@ def test_stop_loss_triggers(env):
     # 当前 close 9.5 < 10.45 → 触发
     evs = ledger.check_stop_loss(conn, "2026-08-10")
     assert len(evs) == 1 and evs[0]['exit_reason'] == 'stop_loss'
+
+def test_stop_loss_no_lookahead_future_peak(env):
+    """DB 存在未来更高价也不触发止损（回放不偷看未来）"""
+    conn, dates = env
+    # 08-10 当日价 11.2（正常，与既有峰值持平）；08-11 是"未来"高价 20，
+    # 推进到 08-10 时不可见——若峰值查询无上界会把它算进去 → 止损线 19 → 错误触发
+    conn.execute("INSERT INTO daily_kline VALUES ('000001','2026-08-10',11.2,11.2,11.2,11.2,1e7,1e8,0,0)")
+    conn.execute("INSERT INTO daily_kline VALUES ('000001','2026-08-11',20.0,20.0,20.0,20.0,1e7,1e8,0,0)")
+    conn.commit()
+    ledger = so.Ledger()
+    ledger.on_signal(conn, dates[0], "000001", "测试", "双均线趋势跟踪", "BUY", "replay")
+    ledger.process_pending(conn, dates[1])  # 08-04 开盘 10.5 成交，buy_date=08-03
+    # 修复后峰值 = MAX(08-03..08-10) = 11.2 → 止损线 10.64，11.2 不低于 → 不触发
+    evs = ledger.check_stop_loss(conn, "2026-08-10")
+    assert evs == [], "08-10 当日价格正常，不得因未来(08-11)高价而错误触发止损"
+    assert ledger.positions.get("000001"), "持仓不应被错误平掉"
