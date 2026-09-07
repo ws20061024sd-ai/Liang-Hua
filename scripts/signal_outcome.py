@@ -143,6 +143,142 @@ def summary_l1(conn, source: str | None = None) -> list[dict]:
             'avg_excess': round(d['ex_sum'] / d['total'], 2) if d['total'] else None})
     return sorted(result, key=lambda r: -(r['avg_excess'] or 0))
 
+# ── Task 3: L2 等权账本撮合 ──────────────────────────────────────────────
+
+class Ledger:
+    """L2 等权账本撮合器
+
+    语义：信号在 t 日收盘后产生 → t+1 开盘价成交。
+    事件（pending）在 process_pending 用当日开盘价统一成交。
+    止损/到期在 check_stop_loss/check_timeout 用当日收盘判定 → 次日开盘成交。
+    同 code 多笔持仓 FIFO 配对。
+    """
+
+    def __init__(self):
+        self.positions: dict[str, list[dict]] = {}  # code → [open 记录]
+        self.pending: list[dict] = []               # 待次日开盘成交事件
+
+    def _position(self, code: str, name: str, strategy: str, source: str,
+                  date: str, exec_price: float) -> dict:
+        return {'code': code, 'name': name, 'strategy': strategy,
+                'source': source, 'buy_date': date, 'exec_price': exec_price,
+                'hold_days': 0, 'signal_date': date}
+
+    def on_signal(self, conn, date: str, code: str, name: str, strategy: str,
+                  action: str, source: str) -> list[dict]:
+        """登记一条当日信号：BUY → 排队次日开盘开仓；SELL 无持仓则忽略，
+        有持仓则 FIFO 出队并排队次日开盘平仓（先出队再待成交，符合 FIFO 测试语义）"""
+        if action == 'SELL':
+            opens = self.positions.get(code) or []
+            if not opens:
+                return []
+            pos = opens.pop(0)  # FIFO：平最早开仓的那笔
+            self.pending.append({'kind': 'l2_close', 'date': date, 'code': code,
+                'name': name, 'strategy': strategy, 'source': source,
+                'pos': pos, 'exit_reason': 'sell'})
+        elif action == 'BUY':
+            self._queue_open(date, code, name, strategy, source)
+        return []
+
+    def _queue_open(self, date, code, name, strategy, source):
+        self.pending.append({'kind': 'l2_open', 'date': date, 'code': code,
+            'name': name, 'strategy': strategy, 'source': source,
+            'exit_reason': None})
+
+    def buy(self, conn, date: str, code: str, name: str, strategy: str,
+            source: str) -> None:
+        """BUY 信号 → 排队次日开盘开仓（等价 on_signal 的 BUY 分支）"""
+        self._queue_open(date, code, name, strategy, source)
+
+    def check_stop_loss(self, conn, date: str) -> list[dict]:
+        """移动止损：当日收盘 < 持仓期峰值×(1-TRAILING_STOP) → 排队次日开盘平仓"""
+        triggered = []
+        kdf_cache = {}
+        for code, opens in list(self.positions.items()):
+            kdf = kdf_cache.get(code)
+            if kdf is None:
+                kdf = _kline(conn, code)
+                kdf_cache[code] = kdf
+            row = kdf[kdf['date'] == date]
+            if row.empty:
+                continue  # 当日无行情（停牌）→ 跳过
+            cur = float(row.iloc[0]['close'])
+            for i, pos in enumerate(opens):
+                peak_rows = kdf[kdf['date'] >= pos['buy_date']]
+                if peak_rows.empty:
+                    continue
+                peak = float(peak_rows['close'].max())
+                if cur < peak * (1 - settings.TRAILING_STOP):
+                    pos = opens.pop(i)
+                    self.pending.append({'kind': 'l2_close', 'date': date,
+                        'code': code, 'name': pos['name'],
+                        'strategy': pos['strategy'], 'source': pos['source'],
+                        'pos': pos, 'exit_reason': 'stop_loss'})
+                    triggered.append({'exit_reason': 'stop_loss', 'code': code})
+                    break  # 该 code 当日只触发一笔，其余下次检查
+        return triggered
+
+    def check_timeout(self, conn, date: str) -> list[dict]:
+        """持仓交易日计数 ≥ OUTCOME_MAX_HOLD_DAYS → 排队次日开盘平仓"""
+        out = []
+        for code, opens in list(self.positions.items()):
+            for i, pos in enumerate(opens):
+                pos['hold_days'] += 1
+                if pos['hold_days'] >= settings.OUTCOME_MAX_HOLD_DAYS:
+                    pos = opens.pop(i)
+                    self.pending.append({'kind': 'l2_close', 'date': date,
+                        'code': code, 'name': pos['name'],
+                        'strategy': pos['strategy'], 'source': pos['source'],
+                        'pos': pos, 'exit_reason': 'timeout'})
+                    out.append({'exit_reason': 'timeout', 'code': code})
+                    break
+        return out
+
+    def process_pending(self, conn, date: str) -> list[dict]:
+        """用当日开盘价成交所有待处理事件（开仓/平仓），返回成交事件"""
+        events = []
+        kdf_cache = {}
+        for ev in list(self.pending):
+            kdf = kdf_cache.get(ev['code'])
+            if kdf is None:
+                kdf = _kline(conn, ev['code'])
+                kdf_cache[ev['code']] = kdf
+            op = _open_price_at(kdf, date)
+            if op is None:
+                continue  # 当日无开盘（停牌/数据缺）→ 保留待下次
+            self.pending.remove(ev)
+            if ev['kind'] == 'l2_open':
+                pos = self._position(ev['code'], ev['name'], ev['strategy'],
+                                     ev['source'], ev['date'], op)
+                self.positions.setdefault(ev['code'], []).append(pos)
+                events.append({'kind': 'l2_open', 'date': ev['date'],
+                    'code': ev['code'], 'name': ev['name'],
+                    'strategy': ev['strategy'], 'source': ev['source'],
+                    'exec_price': op, 'signal_date': ev['date']})
+            else:
+                pos = ev['pos']
+                pnl = _pnl_pct(pos['exec_price'], op)
+                events.append({'kind': 'l2_close', 'date': ev['date'],
+                    'code': ev['code'], 'name': ev['name'],
+                    'strategy': pos['strategy'], 'source': ev['source'],
+                    'exec_price': op, 'pnl': round(pnl, 3),
+                    'hold_days': pos['hold_days'], 'exit_reason': ev['exit_reason'],
+                    'signal_date': ev['date']})
+        return events
+
+    def write_events(self, conn, events: list[dict]) -> None:
+        """成交事件写库（幂等：UNIQUE(date, code, strategy, action, kind, source)）"""
+        for ev in events:
+            conn.execute("""INSERT OR IGNORE INTO signal_outcome
+                (date, code, name, strategy, action, source, kind,
+                 exec_price, pnl, hold_days, exit_reason)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                (ev['date'], ev['code'], ev['name'], ev['strategy'],
+                 'BUY' if ev['kind'] == 'l2_open' else 'SELL',
+                 ev['source'], ev['kind'], ev.get('exec_price'),
+                 ev.get('pnl'), ev.get('hold_days'), ev.get('exit_reason')))
+        conn.commit()
+
 if __name__ == '__main__':
     init_outcome_table()
     print("✅ signal_outcome 表已就绪")
