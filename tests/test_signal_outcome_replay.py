@@ -73,6 +73,7 @@ class SpikeFakeSt:
     """记录 000001 每日收到的 df 尾部日期；收盘≥25 元则发 BUY（回放不偷看未来时
     只能从拉升当日 dates[SPIKE_AT] 起触发）"""
     name = "回放Spike测试"
+    version = "1.0"
     records: list = []  # (df 尾部日期, df 长度, decision)
 
     @classmethod
@@ -96,6 +97,7 @@ class SpikeFakeSt:
 class BuySellFakeSt:
     """600000 在指定日发 BUY / SELL（验证 L2 开仓→平仓链路）"""
     name = "回放买卖测试"
+    version = "1.0"
     buy_day = sell_day = None
 
     def run(self, code, name, df):
@@ -113,10 +115,29 @@ class BuySellFakeSt:
                 'strength': 0.8, 'reason': reason, 'price': float(last['close'])}
 
 
+class HoldFakeSt:
+    """000001 在指定日发 HOLD（回放对未知 action 应跳过撮合，不得误平仓）"""
+    name = "回放HOLD测试"
+    version = "1.0"
+    hold_day = None
+
+    def run(self, code, name, df):
+        if code != "000001":
+            return None
+        dstr = str(df.iloc[-1]['date'])[:10]
+        if dstr != HoldFakeSt.hold_day:
+            return None
+        return {'stock_code': code, 'stock_name': name, 'action': 'HOLD',
+                'strength': 0.9, 'reason': '测试持有', 'price': float(df.iloc[-1]['close'])}
+
+
 def _patch_registry(monkeypatch, *fake_classes):
+    """注册表 + ENABLED_STRATEGIES 同步打桩：replay 走 get_enabled_strategies
+    （按 settings.ENABLED_STRATEGIES 过滤），只打注册表会让启用的策略为空"""
     import engine.runner
-    monkeypatch.setattr(engine.runner, "STRATEGY_REGISTRY",
-                        {c.__name__: c for c in fake_classes})
+    names = {c.__name__: c for c in fake_classes}
+    monkeypatch.setattr(engine.runner, "STRATEGY_REGISTRY", names)
+    monkeypatch.setattr(so.settings, "ENABLED_STRATEGIES", list(names))
 
 
 def test_replay_end_to_end(env, monkeypatch):
@@ -183,3 +204,18 @@ def test_replay_day_by_day_no_lookahead(env, monkeypatch):
     cnt = conn.execute(
         "SELECT COUNT(*) FROM signal_outcome WHERE date < ?", (dates[SPIKE_AT],)).fetchone()[0]
     assert cnt == 0
+
+
+def test_replay_unknown_action_not_liquidated(env, monkeypatch, capsys):
+    """HOLD 类未知 action：回放不得按 SELL 误平仓（防御：非 BUY 一律当 SELL 会静默平仓），
+    且应打印跳过告警；L1 窗口样本仍记录"""
+    conn, dates = env
+    _patch_registry(monkeypatch, SpikeFakeSt, HoldFakeSt)
+    SpikeFakeSt.reset()
+    HoldFakeSt.hold_day = dates[75]  # 000001 自 dates[60] 起每日 BUY、持仓在身——HOLD 若按 SELL 处理会误平一笔
+    stats = so.replay(conn)
+    assert "未知 action HOLD" in capsys.readouterr().out, "未知 action 应打印跳过告警"
+    assert stats["signals"] == 31, stats  # 30×Spike BUY + 1×HOLD
+    n_close = conn.execute(
+        "SELECT COUNT(*) FROM signal_outcome WHERE kind='l2_close'").fetchone()[0]
+    assert n_close == 0, "HOLD 不得触发任何平仓（旧逻辑会把 HOLD 当 SELL 误平仓）"

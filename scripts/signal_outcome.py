@@ -370,11 +370,14 @@ def replay(conn) -> dict:
       - 成分股为当前沪深 300 名单（历史成分漂移为已知局限，与现有回测同源）
       - 回放范围 = 最近 REPLAY_YEARS 年（约 250 交易日/年，设计文档定）；更早不回放：
         qfq 前复权除权失真随时间增大，且样本时效性有限
-      - 末日残留 pending 不撮合（信号收盘后产生需次日开盘，库内无次日数据则自然顺延，
-        由后续每日增量任务继续处理）
+      - 末日残留 pending 不撮合：信号/止损在收盘后产生、需次日开盘成交，而回放窗口
+        止于库内最后一日 → 尾部 pending 与窗口末尾 ≤OUTCOME_MAX_HOLD_DAYS 日内开仓
+        的持仓本次运行无平仓样本，属批处理固有边界。收敛路径为滚动窗口周期性重跑
+        回放——窗口向前延伸时，尾部持仓会在重跑中继续撮合/到期（当前没有"每日增量
+        任务接管 replay 尾日 pending"的机制）
     返回统计 dict {signals, l1, l2_close}；重复调用幂等（UNIQUE 去重 + 重算一致）。
     """
-    from engine.runner import STRATEGY_REGISTRY
+    from engine.runner import get_enabled_strategies
     from data_fetcher.cleaner import get_all_stocks, _get_stock_data_from_conn
     from engine.risk_filter import filter_signals
 
@@ -385,6 +388,12 @@ def replay(conn) -> dict:
         return {'signals': 0, 'l1': 0, 'l2_close': 0}
     codes = stocks['code'].tolist()
 
+    # 与生产 run_strategies 同口径：按 settings.ENABLED_STRATEGIES 过滤（而非全注册表）
+    strategies = get_enabled_strategies()
+    if not strategies:
+        print("❌ 回放无启用的策略（settings.ENABLED_STRATEGIES 为空或均不在注册表），退出")
+        return {'signals': 0, 'l1': 0, 'l2_close': 0}
+
     # 预加载全量 K 线（复用生产清洗管道），主循环按日截断——杜绝偷看未来
     kline_all = {}
     for code in codes:
@@ -392,7 +401,6 @@ def replay(conn) -> dict:
         if kdf is not None and not kdf.empty:
             kline_all[code] = kdf
 
-    strategies = [cls() for cls in STRATEGY_REGISTRY.values()]
     dates = _trading_dates(conn)
     # 回放窗口：最近 REPLAY_YEARS 年（按 250 交易日/年估算，见设计文档"约 250 交易日"）
     n_days = min(len(dates), settings.REPLAY_YEARS * 250)
@@ -428,11 +436,16 @@ def replay(conn) -> dict:
             sigs.append((date, code, name, strat, action))
             if action == 'BUY':
                 ledger.buy(conn, date, code, name, strat, 'replay')
-            else:  # SELL
+            elif action == 'SELL':
                 ledger.on_signal(conn, date, code, name, strat, 'SELL', 'replay')
+            else:
+                # 防御：策略基类合法 action 含 HOLD（base_strategy.py），未知 action
+                # 不得静默按 SELL 处理误平仓——只记 L1 窗口样本，跳过 L2 撮合
+                print(f"⚠️ [回放] 未知 action {action}，跳过（{code} {name}）")
 
     # 4) L1 统一结算（同 settle_l1 同核心，仅复用预载数据），末日 pending 不撮合：
-    #    信号收盘后产生需次日开盘，库内无次日数据则自然顺延，由每日增量任务继续处理
+    #    信号收盘后产生需次日开盘成交，本次窗口止于库内最后一日 → 尾部持仓无平仓
+    #    样本属批处理边界，收敛靠滚动窗口周期性重跑回放（窗口延伸时继续撮合/到期）
     for date, code, name, strat, action in sigs:
         kdf = kline_all.get(code)
         if kdf is not None:

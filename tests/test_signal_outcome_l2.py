@@ -98,3 +98,26 @@ def test_stop_loss_no_lookahead_future_peak(env):
     evs = ledger.check_stop_loss(conn, "2026-08-10")
     assert evs == [], "08-10 当日价格正常，不得因未来(08-11)高价而错误触发止损"
     assert ledger.positions.get("000001"), "持仓不应被错误平掉"
+
+
+def test_stop_loss_peak_cache_rise_then_fall(env):
+    """峰值缓存增量分支（max(peak, cur)）：价格先升后落两次检查——
+    第一次价格处高位不触发并缓存峰值；价格跌穿止损线后第二次走缓存分支正确触发"""
+    conn, dates = env
+    ledger = so.Ledger()
+    ledger.on_signal(conn, dates[0], "000001", "测试", "双均线趋势跟踪", "BUY", "replay")
+    ledger.process_pending(conn, dates[1])  # 08-04 开盘 10.5 成交，buy_date=08-03
+    # 第一次检查：08-05 收盘 11.0 = 持仓期最高 → 不触发；峰值经全窗口计算并缓存
+    evs1 = ledger.check_stop_loss(conn, dates[2])
+    assert evs1 == [], "价格处峰值(11.0)不应触发止损"
+    assert ledger.positions["000001"][0]['peak_close'] == 11.0, \
+        "首次检查应缓存峰值，第二次检查才能走 max(peak, cur) 增量分支"
+    # 价格回落：追加 08-10 收盘 9.5 < 止损线(峰值 11.0×0.95=10.45)
+    conn.execute("INSERT INTO daily_kline VALUES ('000001','2026-08-10',9.5,9.5,9.5,9.5,1e7,1e8,0,0)")
+    conn.commit()
+    # 第二次检查：peak 已缓存 → max(11.0, 9.5)=11.0 → 9.5 < 10.45 触发止损
+    evs2 = ledger.check_stop_loss(conn, "2026-08-10")
+    assert len(evs2) == 1 and evs2[0]['exit_reason'] == 'stop_loss', evs2
+    assert not ledger.positions.get("000001"), "触发止损后持仓应已出队"
+    closes = [p for p in ledger.pending if p['kind'] == 'l2_close']
+    assert closes and closes[0]['exit_reason'] == 'stop_loss', "应排队次日开盘平仓"
