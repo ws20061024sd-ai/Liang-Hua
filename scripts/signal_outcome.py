@@ -333,7 +333,9 @@ class Ledger:
         if not self.positions and not self.pending:
             conn.commit()
             return
-        payload = json.dumps({'positions': self.positions,
+        # __v 为快照 schema 版本（v1 是唯一历史格式；旧快照无此字段按 v1 兼容读，
+        # load_state 按它防御未知未来格式，见 load_state 的 __v 检查）
+        payload = json.dumps({'__v': 1, 'positions': self.positions,
                               'pending': self.pending}, ensure_ascii=False)
         conn.execute("""INSERT INTO signal_outcome
             (date, code, name, strategy, action, source, kind, exit_reason)
@@ -359,6 +361,13 @@ class Ledger:
         except (ValueError, TypeError):
             print(f"⚠️ l2_state 快照 JSON 解析失败(date={state_date})，按空账本继续",
                   file=sys.stderr)
+            data = {}
+        if data.get('__v', 1) != 1:
+            # 未知/未来 schema 版本：字段结构不可知，不得按 v1 布局瞎猜 → 按空账本
+            # 继续（缺 __v 的旧快照 = v1 唯一历史格式，视为 v1 兼容加载——服务器在途
+            # 部署可能已落 v1 快照，误清会丢持仓）
+            print(f"⚠️ l2_state 快照 schema 未知(__v={data.get('__v')},"
+                  f" date={state_date})，按空账本继续", file=sys.stderr)
             data = {}
         self.positions = {code: list(opens) for code, opens in
                           (data.get('positions') or {}).items()}
@@ -527,31 +536,99 @@ def _real_signals(conn) -> list[dict]:
     return [{'date': r[0], 'code': r[1], 'name': r[2], 'strategy': r[3],
              'action': r[4]} for r in rows]
 
+def _register_signals_of(conn, ledger, date, sigs) -> int:
+    """登记 date 当日尚未登记过的真实信号，返回新登记条数（幂等补登记）
+
+    仅用于 run_daily 的"状态已推进到 date（==今日）"分支：run.py 下载慢/失败后
+    手动补跑会把当日信号写进 signal_history 而晚于推进（推进时查询不到）——此时
+    只补登记、不推进：当日开盘已在此前进过 process_pending（补登记若再成交会
+    lookahead 到当日开盘），新登记信号的自然成交日 = 下一交易日，与"收盘后出
+    信号 → 次日开盘成交"语义一致。
+
+    "已登记"判定（最简可靠）：outcome 表已存在该信号的成交行，或账本 pending
+    中仍有它未成交的排队事件——
+      BUY  → kind='l2_open' 的行/事件（date/code/strategy/source 全匹配）
+      SELL → exit_reason='sell' 的 l2_close 行/事件（同日同股同策略的止损/到期
+             平仓 exit_reason 不同，不得误判为该 SELL 已处理——否则会吞掉一笔
+             合法平仓）
+    幂等细节：seen 集合随登记动态更新，signal_history 无 UNIQUE 约束、补跑可能
+    重插同日同信号行——重复行只按 (code, strategy) 登记一次。
+    """
+    seen_buy = {tuple(r) for r in conn.execute(
+        "SELECT code, strategy FROM signal_outcome WHERE date=? AND kind='l2_open'"
+        " AND source='real'", (date,))}
+    seen_sell = {tuple(r) for r in conn.execute(
+        "SELECT code, strategy FROM signal_outcome WHERE date=? AND kind='l2_close'"
+        " AND source='real' AND exit_reason='sell'", (date,))}
+    for e in ledger.pending:
+        if e.get('date') != date:
+            continue
+        if e['kind'] == 'l2_open':
+            seen_buy.add((e['code'], e['strategy']))
+        elif e['kind'] == 'l2_close' and e.get('exit_reason') == 'sell':
+            seen_sell.add((e['code'], e['strategy']))
+    n = 0
+    for s in sigs:
+        if s['date'] != date:
+            continue
+        key = (s['code'], s['strategy'])
+        if s['action'] == 'BUY':
+            if key in seen_buy:
+                continue
+            ledger.buy(conn, date, s['code'], s['name'], s['strategy'], 'real')
+            seen_buy.add(key)
+            n += 1
+        elif s['action'] == 'SELL':
+            if key in seen_sell:
+                continue
+            ledger.on_signal(conn, date, s['code'], s['name'],
+                             s['strategy'], 'SELL', 'real')
+            seen_sell.add(key)
+            n += 1
+    return n
+
 def run_daily(conn) -> dict:
     """每日增量结算（无参运行入口 / cron 21:02 调用）
 
-    ① L1：对 signal_history 全部 passed 真实 BUY/SELL 全量尝试 settle_l1
+    ① L1：对 signal_history 全部 passed 真实 BUY/SELL 全量尝试固定窗口结算
        ——"未结算判定"不依赖 l1 行存在与否（窗口未到会自己跳过），INSERT OR
-       IGNORE 幂等兜底，重复运行不重复写。
+       IGNORE 幂等兜底，重复运行不重复写。dates/指数/个股K线一次性预载复用、
+       尾部统一 commit（逐信号 settle_l1 每信号全表重扫——真实库 142 条信号
+       实测 12.7s，预载后亚秒级）。
     ② L2：从 l2_state 快照恢复账本 → 对 (state_date, today] 每个交易日镜像
        replay 的日循环（与回放逐日语义完全一致）：
          1) 今日开盘 process_pending —— 成交此前排队事件（昨日信号/止损单）
          2) 今日收盘 check_stop_loss / check_timeout —— 判定并排队次日开盘
          3) 登记当日新真实信号（收盘后产生 → 排队次日开盘成交）
        → save_state 回写快照。
-    状态日期 == 今日（同日重复运行/行情未更新）→ L2 跳过，天然幂等。
-    已知简化：漏跑 cron 期间的信号只补 L1 不补 L2 登记（真实 L2 样本自部署
-    日起逐日积累，历史样本由 --replay 补齐——两账本互不相干，见 save_state）。
+    状态日期 == 今日（同日重复运行/行情未更新）→ 不推进，但仍补登记当日晚入库
+    的信号（run.py 下载慢/失败后手动补跑，当日信号写入 signal_history 晚于推
+    进——若直接跳过，当日信号永不进 L2 账本）。补登记只排队不成交，无 lookahead。
+    已知简化：状态行清空（账本清空日不落行）期间漏跑 cron 的信号只补 L1 不补
+    L2 登记（真实 L2 样本自部署日起逐日积累，历史样本由 --replay 补齐）。
     """
     init_outcome_table(conn)
     sigs = _real_signals(conn)
-    n_l1 = 0
-    for s in sigs:
-        kinds = settle_l1(conn, s['date'], s['code'], s['name'],
-                          s['strategy'], s['action'], 'real')
-        n_l1 += len(kinds)
-
     dates = _trading_dates(conn)
+
+    # ① L1 固定窗口结算 —— 预载复用（与 replay 同款 _settle_l1_core 批处理）：
+    #    dates/指数收盘映射/个股K线只查一次，循环调核心并 commit=False，尾部统一
+    #    commit。语义与逐信号 settle_l1 完全一致（同一核心、INSERT OR IGNORE 幂等）。
+    n_l1 = 0
+    idx_map = dict(conn.execute(
+        "SELECT date, close FROM index_daily").fetchall())
+    kdf_cache = {}
+    for s in sigs:
+        kdf = kdf_cache.get(s['code'])
+        if kdf is None:
+            kdf = _kline(conn, s['code'])
+            kdf_cache[s['code']] = kdf
+        if kdf.empty:
+            continue
+        n_l1 += len(_settle_l1_core(conn, dates, idx_map, kdf,
+            s['date'], s['code'], s['name'], s['strategy'],
+            s['action'], 'real', commit=False))
+    conn.commit()
     if not dates:
         print(f"✅ 每日结算完成（无行情数据）: L1 +{n_l1}")
         return {'l1': n_l1, 'l2_open': 0, 'l2_close': 0, 'positions': 0}
@@ -587,6 +664,16 @@ def run_daily(conn) -> dict:
             ledger.save_state(conn, d)
             n_open += sum(1 for e in events if e['kind'] == 'l2_open')
             n_close += sum(1 for e in events if e['kind'] == 'l2_close')
+    else:
+        # 状态已推进到今日（同日重复运行/行情未更新）——推进不可重复做，但当日
+        # 信号可能晚入库（run.py 下载慢/失败后手动补跑）→ 幂等补登记，否则当日
+        # 信号永不进 L2 账本（整日样本丢失窗口）。只排队不 process_pending：
+        # 当日开盘已在推进时成交过，新登记信号自然成交日 = 下一交易日。
+        n_late = _register_signals_of(conn, ledger, today, sigs)
+        if n_late:
+            print(f"⚠️ {today} 当日晚到信号补登记 {n_late} 条"
+                  "（下一交易日开盘成交）")
+            ledger.save_state(conn, today)
 
     n_pos = sum(len(v) for v in ledger.positions.values())
     print(f"✅ 每日结算完成: L1 +{n_l1} | L2 开仓 {n_open} 平仓 {n_close}"

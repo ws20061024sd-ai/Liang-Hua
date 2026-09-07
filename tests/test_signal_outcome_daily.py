@@ -6,7 +6,7 @@
 - L2 状态快照：save_state/load_state 往返保留 FIFO 顺序、同 code 同策略多笔持仓
 - 幂等：同日重复 run_daily 不重复成交/登记/写状态
 """
-import sqlite3, sys, os
+import sqlite3, sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pytest
 from scripts import signal_outcome as so
@@ -253,3 +253,116 @@ def test_state_snapshot_keeps_same_code_strategy_multi_positions(env):
     fresh.load_state(conn)
     assert len(fresh.positions["000001"]) == 2, "同 code/strategy 双持仓不得丢"
     assert [p['buy_date'] for p in fresh.positions["000001"]] == [dates[0], dates[1]]
+
+
+# ── 晚到信号补登记（状态已推进到当日 + 当日信号晚入库，审查发现）───────────
+
+def _state_payload(conn):
+    """当前 l2_state 快照的 JSON 负载"""
+    row = conn.execute("SELECT exit_reason FROM signal_outcome WHERE kind='l2_state'"
+        " ORDER BY id DESC LIMIT 1").fetchone()
+    assert row is not None, "应有 l2_state 状态行"
+    return json.loads(row[0])
+
+def test_daily_l2_late_buy_registered_after_state_advanced(env):
+    """状态已推进到 d4（持仓成交在库）后，d4 的 BUY 信号才写入 signal_history
+    （run.py 下载慢/失败后手动补跑的真实场景）→ 补登记排队、自然成交日=下一交易日：
+    当日不得错误成交（不 lookahead 到当日开盘）；同日重复 run_daily 幂等不重复登记"""
+    conn = env
+    dates = so._trading_dates(conn)
+    _clip(conn, dates, 3)
+    _signal(conn, dates[3])                  # BUY@d3
+    so.run_daily(conn)                       # d3 晚：登记 BUY@d3 → 排队
+    _extend(conn, dates, 4)
+    so.run_daily(conn)                       # d4 晚：d3 排队单于 d4 开盘成交 → 持仓
+    assert conn.execute("SELECT COUNT(*) FROM signal_outcome WHERE kind='l2_open'"
+        " AND source='real'").fetchone()[0] == 1, "前置：d3 开仓应已成交在库"
+
+    _signal(conn, dates[4])                  # 晚到：状态推进到 d4 之后 d4 信号才入库
+    so.run_daily(conn)                       # 状态==今日 → 补登记分支：只排队不成交
+    assert conn.execute("SELECT COUNT(*) FROM signal_outcome WHERE kind='l2_open'"
+        " AND source='real'").fetchone()[0] == 1, "补登记不得在当日开盘错误成交"
+    st = _state_payload(conn)
+    opens = [e for e in st['pending'] if e['kind'] == 'l2_open']
+    assert [e['date'] for e in opens] == [dates[4]], \
+        f"晚到 BUY 应补登记进 pending: {st['pending']}"
+
+    so.run_daily(conn)                       # 幂等：同日再跑不重复登记
+    st = _state_payload(conn)
+    assert sum(1 for e in st['pending'] if e['kind'] == 'l2_open'
+               and e['date'] == dates[4]) == 1, "重复 run_daily 不得重复登记"
+
+    _extend(conn, dates, 5)
+    so.run_daily(conn)                       # d5 晚：补登记单于 d5 开盘成交（自然成交日）
+    rows = conn.execute("SELECT date, exec_price FROM signal_outcome"
+        " WHERE kind='l2_open' AND source='real' ORDER BY date").fetchall()
+    assert [r[0] for r in rows] == [dates[3], dates[4]], \
+        f"两笔开仓（d3 正常推进 + d4 补登记）应都在账本: {rows}"
+    assert abs(rows[1][1] - _open_at(conn, dates[5])) < 1e-9, \
+        f"补登记开仓应以 d5 开盘价成交: {rows[1]}"
+
+def test_daily_l2_late_sell_closes_next_open(env):
+    """持仓在库后 SELL@d4 晚入库（状态已推进到 d4）→ 补登记 FIFO 出队排队次日
+    开盘平仓：当日不成交；重跑幂等；自然成交日=d5（exit sell）"""
+    conn = env
+    dates = so._trading_dates(conn)
+    _clip(conn, dates, 3)
+    _signal(conn, dates[3])                  # BUY@d3
+    so.run_daily(conn)
+    _extend(conn, dates, 4)
+    so.run_daily(conn)                       # d4：开盘成交 BUY@d3 → 持仓 1 笔
+
+    _signal(conn, dates[4], action="SELL")   # 晚到 SELL@d4
+    so.run_daily(conn)                       # 状态==今日 → 补登记：出队排队，不成交
+    assert conn.execute("SELECT COUNT(*) FROM signal_outcome WHERE kind='l2_close'"
+        " AND source='real'").fetchone()[0] == 0, "补登记 SELL 当日不得成交"
+    st = _state_payload(conn)
+    sells = [e for e in st['pending'] if e['kind'] == 'l2_close'
+             and e['date'] == dates[4]]
+    assert len(sells) == 1 and sells[0]['exit_reason'] == 'sell', \
+        f"晚到 SELL 应排队 l2_close(sell): {st['pending']}"
+    assert not st['positions'].get('000001'), "FIFO 出队后持仓应清空"
+
+    so.run_daily(conn)                       # 幂等
+    st = _state_payload(conn)
+    assert sum(1 for e in st['pending'] if e['kind'] == 'l2_close'
+               and e['date'] == dates[4]) == 1, "重复 run_daily 不得重复平仓排队"
+
+    _extend(conn, dates, 5)
+    so.run_daily(conn)                       # d5：开盘平仓
+    c = conn.execute("SELECT exec_price, exit_reason FROM signal_outcome"
+        " WHERE kind='l2_close' AND source='real'").fetchone()
+    assert c is not None and c[1] == 'sell', f"应有 sell 平仓: {c}"
+    assert abs(c[0] - _open_at(conn, dates[5])) < 1e-9, \
+        f"补登记 SELL 应以 d5 开盘价平仓: {c}"
+
+
+# ── 快照 schema 版本（Minor 3：__v + 未知版本防御）──────────────────────
+
+def test_load_state_unknown_schema_version_defensive(env):
+    """__v=2（未来 schema）快照 → 不按 v1 字段瞎解析，按空账本继续"""
+    conn = env
+    conn.execute("INSERT INTO signal_outcome (date, source, kind, exit_reason)"
+        " VALUES ('2026-07-20', 'real', 'l2_state', ?)",
+        ('{"__v": 2, "positions": {"000001": [{"exec_price": 99}]},'
+         ' "pending": [{"kind": "l2_open"}]}',))
+    conn.commit()
+    fresh = so.Ledger()
+    assert fresh.load_state(conn) == '2026-07-20'
+    assert fresh.positions == {} and fresh.pending == [], \
+        "未知 schema 版本不得按 v1 字段加载"
+
+def test_load_state_legacy_snapshot_without_version(env):
+    """旧版部署的 v1 快照无 __v 字段（历史唯一格式）→ 兼容加载，不误判为未知"""
+    conn = env
+    dates = so._trading_dates(conn)
+    pos = [{'code': '000001', 'name': '平安', 'strategy': '动量突破策略',
+            'source': 'real', 'buy_date': dates[1], 'exec_price': 10.0,
+            'hold_days': 2, 'signal_date': dates[1]}]
+    conn.execute("INSERT INTO signal_outcome (date, source, kind, exit_reason)"
+        " VALUES (?, 'real', 'l2_state', ?)",
+        (dates[2], json.dumps({'positions': {'000001': pos}, 'pending': []})))
+    conn.commit()
+    fresh = so.Ledger()
+    assert fresh.load_state(conn) == dates[2]
+    assert len(fresh.positions['000001']) == 1, "旧快照应兼容加载"
