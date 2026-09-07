@@ -8,7 +8,7 @@
 
 设计见 docs/superpowers/specs/2026-08-16-signal-outcome-design.md
 """
-import sys, os, sqlite3
+import sys, os, sqlite3, json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
 from config import settings
@@ -310,6 +310,61 @@ class Ledger:
                  ev.get('pnl'), ev.get('hold_days'), ev.get('exit_reason')))
         conn.commit()
 
+    def save_state(self, conn, date: str) -> None:
+        """每日模式状态快照（覆盖写）：当前持仓+排队事件全量 → kind='l2_state' 单行
+
+        字段映射（表结构在 Task 1 已定、不可改列，借用现有列表达、不破坏
+        UNIQUE 与既有行语义——详见代码内注释）：
+          date        = 状态日期（该快照覆盖到的交易日；run_daily 幂等键）
+          source      = 'real'（只对真实信号账本落快照；replay 纯内存不落）
+          kind        = 'l2_state'（与 l1_*/l2_open/l2_close 并列的新结算类型）
+          code/name/strategy/action = NULL（聚合行，不表达单笔交易——
+            避免与 UNIQUE(date, code, strategy, action, kind, source) 撞键：
+            同 code 同 strategy 可同时持多笔（FIFO 堆叠），按笔分行必撞）
+          exit_reason = JSON 负载，含 positions（code→开仓序列表）与
+            pending（排队事件）。此列对 l2_state 行无语义占用（仅 l2_close
+            用它表达平仓原因），其余列（exec_price/hold_days/...）因单行
+            聚合放不下多笔，全部 NULL。
+        replay 与每日模式互不读写对方持仓（replay 全内存账本），互不相干。
+        账本为空（无持仓无排队）时不落行并清掉残留状态行——空快照会让
+        source='real' 的统计/测试把"无事发生的一天"误计为一条记录。
+        """
+        conn.execute("DELETE FROM signal_outcome WHERE kind='l2_state'")
+        if not self.positions and not self.pending:
+            conn.commit()
+            return
+        payload = json.dumps({'positions': self.positions,
+                              'pending': self.pending}, ensure_ascii=False)
+        conn.execute("""INSERT INTO signal_outcome
+            (date, code, name, strategy, action, source, kind, exit_reason)
+            VALUES (?, NULL, NULL, NULL, NULL, 'real', 'l2_state', ?)""",
+            (date, payload))
+        conn.commit()
+
+    def load_state(self, conn) -> str | None:
+        """读最近 l2_state 快照重建 positions/pending；返回状态日期（无则 None）
+
+        重建语义与 replay 的账本完全一致（positions 按 code→列表、FIFO 即
+        列表序；pending 原样恢复排队事件），因此每日模式可直接复用
+        process_pending/check_stop_loss/check_timeout 继续推进。
+        """
+        row = conn.execute(
+            "SELECT date, exit_reason FROM signal_outcome WHERE kind='l2_state'"
+            " ORDER BY id DESC LIMIT 1").fetchone()
+        if row is None:
+            return None
+        state_date, payload = row
+        try:
+            data = json.loads(payload or '{}')
+        except (ValueError, TypeError):
+            print(f"⚠️ l2_state 快照 JSON 解析失败(date={state_date})，按空账本继续",
+                  file=sys.stderr)
+            data = {}
+        self.positions = {code: list(opens) for code, opens in
+                          (data.get('positions') or {}).items()}
+        self.pending = list(data.get('pending') or [])
+        return state_date
+
 # ── Task 4: 回放引擎 ────────────────────────────────────────────────────
 
 def _daily_snapshot(conn, date: str, codes: list[str]) -> pd.DataFrame:
@@ -462,13 +517,88 @@ def replay(conn) -> dict:
     print(f"✅ 回放完成: 信号 {n_sig} 条 | L1 结算 {l1} | L2 平仓 {l2}")
     return {'signals': n_sig, 'l1': l1, 'l2_close': l2}
 
+# ── Task 5: 每日增量结算入口 ─────────────────────────────────────────────
+
+def _real_signals(conn) -> list[dict]:
+    """signal_history 中全部 passed 真实信号（L1 登记源，L2 按日期过滤登记）"""
+    rows = conn.execute("""SELECT date, code, name, strategy, action
+        FROM signal_history WHERE status='passed' AND action IN ('BUY','SELL')
+        ORDER BY date""").fetchall()
+    return [{'date': r[0], 'code': r[1], 'name': r[2], 'strategy': r[3],
+             'action': r[4]} for r in rows]
+
+def run_daily(conn) -> dict:
+    """每日增量结算（无参运行入口 / cron 21:02 调用）
+
+    ① L1：对 signal_history 全部 passed 真实 BUY/SELL 全量尝试 settle_l1
+       ——"未结算判定"不依赖 l1 行存在与否（窗口未到会自己跳过），INSERT OR
+       IGNORE 幂等兜底，重复运行不重复写。
+    ② L2：从 l2_state 快照恢复账本 → 对 (state_date, today] 每个交易日镜像
+       replay 的日循环（与回放逐日语义完全一致）：
+         1) 今日开盘 process_pending —— 成交此前排队事件（昨日信号/止损单）
+         2) 今日收盘 check_stop_loss / check_timeout —— 判定并排队次日开盘
+         3) 登记当日新真实信号（收盘后产生 → 排队次日开盘成交）
+       → save_state 回写快照。
+    状态日期 == 今日（同日重复运行/行情未更新）→ L2 跳过，天然幂等。
+    已知简化：漏跑 cron 期间的信号只补 L1 不补 L2 登记（真实 L2 样本自部署
+    日起逐日积累，历史样本由 --replay 补齐——两账本互不相干，见 save_state）。
+    """
+    init_outcome_table(conn)
+    sigs = _real_signals(conn)
+    n_l1 = 0
+    for s in sigs:
+        kinds = settle_l1(conn, s['date'], s['code'], s['name'],
+                          s['strategy'], s['action'], 'real')
+        n_l1 += len(kinds)
+
+    dates = _trading_dates(conn)
+    if not dates:
+        print(f"✅ 每日结算完成（无行情数据）: L1 +{n_l1}")
+        return {'l1': n_l1, 'l2_open': 0, 'l2_close': 0, 'positions': 0}
+    today = dates[-1]
+
+    ledger = Ledger()
+    state_date = ledger.load_state(conn)
+    n_open = n_close = 0
+    if state_date != today:
+        # 逐日推进窗口：从状态日期之后到今日（含）；无状态/状态日期失效 = 仅今日
+        # （与 replay 的逐日循环同构：缺跑的日子会被顺延补齐，成交价取窗口内
+        #  首个可用开盘价——与回放"逐日推进、当日无数据顺延"行为一致）
+        loop = ([d for d in dates if d > state_date] if state_date in dates
+                else [today])
+        for d in loop:
+            # 1) 今日开盘：成交此前排队事件（昨日信号/止损单）
+            events = ledger.process_pending(conn, d)
+            if events:
+                ledger.write_events(conn, events)
+            # 2) 今日收盘：止损/到期判定 → 排队次日开盘
+            ledger.check_stop_loss(conn, d)
+            ledger.check_timeout(conn, d)
+            # 3) 今日收盘后：登记当日新真实信号 → 排队次日开盘
+            for s in sigs:
+                if s['date'] != d:
+                    continue
+                if s['action'] == 'BUY':
+                    ledger.buy(conn, d, s['code'], s['name'], s['strategy'], 'real')
+                elif s['action'] == 'SELL':
+                    ledger.on_signal(conn, d, s['code'], s['name'],
+                                     s['strategy'], 'SELL', 'real')
+            # 每日落一次状态：崩溃后重跑只会从未推进的那天继续，不重复登记
+            ledger.save_state(conn, d)
+            n_open += sum(1 for e in events if e['kind'] == 'l2_open')
+            n_close += sum(1 for e in events if e['kind'] == 'l2_close')
+
+    n_pos = sum(len(v) for v in ledger.positions.values())
+    print(f"✅ 每日结算完成: L1 +{n_l1} | L2 开仓 {n_open} 平仓 {n_close}"
+          f" | 当前持仓 {n_pos}")
+    return {'l1': n_l1, 'l2_open': n_open, 'l2_close': n_close, 'positions': n_pos}
+
 if __name__ == '__main__':
-    if '--replay' in sys.argv:
-        conn = sqlite3.connect(DB)
-        try:
+    conn = sqlite3.connect(DB)
+    try:
+        if '--replay' in sys.argv:
             replay(conn)
-        finally:
-            conn.close()
-    else:
-        init_outcome_table()
-        print("✅ signal_outcome 表已就绪")
+        else:
+            run_daily(conn)
+    finally:
+        conn.close()
