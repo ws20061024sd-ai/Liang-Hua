@@ -160,6 +160,7 @@ PYTHONPATH=. python backtest/local_factor_backtest.py  # 本地回测（5个TOP_
 | `docs/架构/项目复盘与经验整理.md` | Problems encountered, solutions, deployment checklist |
 | `docs/架构/半自动化交易方案.md` | Original design blueprint (historical reference) |
 | `docs/架构/服务器部署指南.md` | Server setup guide with exact commands |
+| `docs/架构/信号效果验证系统说明.md` | 信号效果验证系统（L1/L2/回放/每日结算）完整说明——语义口径、表结构、运行方式、已知局限 |
 | `docs/策略/策略回测报告.md` | Backtest results — 3 strategies × 3 timing modes |
 | `docs/策略/回测指标完全解释.md` | Beginner's guide to backtest metrics |
 | `docs/策略/002_多因子选股_回测分析报告.md` | 002 strategy detailed analysis |
