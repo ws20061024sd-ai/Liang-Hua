@@ -70,6 +70,9 @@ cat << 'CRON'
 # 21:00 — 数据更新 + 信号生成 + 推送
 0 21 * * 1-5 cd /root/Liang-Hua && ./venv/bin/python run.py >> logs/cron.log 2>&1
 
+# 21:02 — 信号效果结算（L1窗口/L2账本推进）
+2 21 * * 1-5 cd /root/Liang-Hua && ./venv/bin/python scripts/signal_outcome.py >> logs/signal_outcome.log 2>&1
+
 # 21:05 — 市场日报
 5 21 * * 1-5 cd /root/Liang-Hua && ./venv/bin/python analysis/report.py >> logs/report.log 2>&1
 
