@@ -168,3 +168,65 @@ def test_page_outcome_brief_fixture_rows(conn):
     assert '100.0%' in html  # L1 命中 1/1 · L2 盈利 1/1
     assert '3.0%' in html    # L2 平均收益/等权累计
     assert '真实 1 条 · 回放 0 条' in html  # 合并视图来源构成注记
+
+
+# ── 审查发现 F1/F2：L1 按 BUY/SELL 拆行 + SELL 反向命中与翻转呈现 ─────────
+
+def test_summary_l1_sell_reverse_hits_split(conn):
+    """summary_l1 按 (strategy, action) 拆行、SELL 反向命中计入胜率
+
+    审查发现：原来把 BUY/SELL 混在同一行统计——命中判定各自方向正确（SELL
+    超额<0 才算命中），但 SELL 全对的策略会显示"胜率 100% + 平均超额为负"
+    的矛盾观感。现在每策略至多两行（BUY/SELL 各一），各行的 total/win_rate/
+    avg_excess 只统计本方向；avg_excess 保留原始符号（SELL 负值 = 回避的跌幅，
+    翻转在展示层做）。
+    """
+    _row(conn, '2026-08-01', '000001', '平安', '双均线趋势跟踪', 'BUY', 'real',
+         'l1_10d', 2.0, 2.0)            # BUY 命中
+    _row(conn, '2026-08-02', '000002', '万科', '双均线趋势跟踪', 'BUY', 'real',
+         'l1_10d', -5.0, -5.0)          # BUY 未中
+    _row(conn, '2026-08-03', '000003', '茅台', '双均线趋势跟踪', 'SELL', 'real',
+         'l1_10d', -3.0, -3.0)          # SELL 命中（回避下跌 → 超额<0）
+    _row(conn, '2026-08-04', '000004', '招行', '双均线趋势跟踪', 'SELL', 'real',
+         'l1_10d', -1.0, -1.0)          # SELL 命中
+    _row(conn, '2026-08-05', '000005', '五粮液', '双均线趋势跟踪', 'SELL', 'real',
+         'l1_10d', 2.0, 2.0)            # SELL 未中（卖出后仍跑赢大盘）
+    conn.commit()
+    rows = so.summary_l1(conn)
+    by_act = {r['action']: r for r in rows if r['strategy'] == '双均线趋势跟踪'}
+    assert set(by_act) == {'BUY', 'SELL'}  # 拆行而非合并成一行
+    assert all('action' in r for r in rows)
+    assert by_act['BUY']['total'] == 2 and by_act['BUY']['win_rate'] == 50.0
+    assert by_act['BUY']['avg_excess'] == -1.5  # 只统计本方向行
+    s = by_act['SELL']
+    assert s['total'] == 3 and s['win_rate'] == 66.7  # 3 中命中 2（超额<0 才计）
+    assert s['avg_excess'] == -0.67  # 原始符号保留：负 = 回避的跌幅
+
+
+def test_page_outcome_l1_sell_flipped_display(conn):
+    """L1 表渲染：SELL 行超额翻转（正数 = 回避的跌幅）+ 颜色随翻转值 + 方向标注
+
+    全命中的 SELL 行（超额<0）不再显示"胜率 100% + 负超额绿色"的矛盾观感——
+    超额列显示翻转后的正数（up=红=好，与 ✅ 同向）；BUY 行保持原符号；
+    未中 SELL 行翻转后为负（dn=绿=差）。原始负值不得泄漏到展示。
+    """
+    _row(conn, '2026-08-01', '000001', '平安', '双均线趋势跟踪', 'SELL', 'real',
+         'l1_10d', -2.0, -2.0)          # SELL 命中
+    _row(conn, '2026-08-02', '000002', '万科', '双均线趋势跟踪', 'SELL', 'real',
+         'l1_10d', -0.5, -0.5)          # SELL 命中
+    _row(conn, '2026-08-03', '000003', '茅台', '双均线趋势跟踪', 'BUY', 'real',
+         'l1_10d', 3.0, 3.0)            # BUY 命中 → 原样 +3.0%
+    _row(conn, '2026-08-04', '000004', '招行', '均值回归', 'SELL', 'replay',
+         'l1_10d', 1.0, 1.0)            # SELL 未中 → 翻转展示 -1.0%
+    conn.commit()
+    html = page_outcome(conn)
+    # SELL 全命中行：胜率 100% + 超额翻转正值 1.25%（up 红）——矛盾观感消除
+    assert 'ta-r up">1.25%' in html, 'SELL 超额应翻转为正且红色'
+    assert '-1.25%' not in html, '原始负超额不得出现在 L1 展示'
+    assert 'ta-r up">3.0%' in html, 'BUY 行保持原符号'
+    assert 'ta-r dn">-1.0%' in html, 'SELL 未中翻转后为负（dn 绿）'
+    # 方向列标注：SELL 行注明"回避跌幅"、表头含方向列与口径注记
+    # （口径注记 + SELL 方向单元格各出现一次"回避跌幅"）
+    assert '<span class="tag t-sell">SELL</span>' in html
+    assert 'tag t-buy">BUY</span>' in html
+    assert '方向' in html and html.count('回避跌幅') >= 2

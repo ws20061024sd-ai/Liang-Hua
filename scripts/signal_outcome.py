@@ -128,34 +128,32 @@ def settle_l1(conn, date: str, code: str, name: str, strategy: str,
                            kdf, date, code, name, strategy, action, source)
 
 def summary_l1(conn, source: str | None = None) -> list[dict]:
-    """分策略 L1 汇总（胜率按 BUY 超额>0、SELL 超额<0 计命中）
+    """分策略×方向 L1 汇总（10 日窗口）——按 (strategy, action) 拆行
 
-    返回 [{'strategy', 'total', 'win_rate', 'avg_excess'}] 按 10 日窗口
+    返回 [{'strategy', 'action', 'total', 'win_rate', 'avg_excess'}]，
+    每策略至多两行（BUY/SELL 各一）。命中判定按方向：BUY 超额>0 命中、
+    SELL 超额<0（回避下跌）命中；avg_excess 只统计本方向行并保留原始符号
+    （SELL 行负值 = 回避的跌幅，翻转为正呈现是展示层的职责——见审查 F1：
+    原来把反向语义的 BUY/SELL 混在同一行，SELL 全对的策略会显示"胜率 100%
+    + 平均超额为负"的矛盾观感）。
     """
-    q = """SELECT strategy, action, kind, COUNT(*) as n,
-        AVG(excess) as avg_ex, SUM(CASE WHEN
-            (action='BUY' AND excess>0) OR (action='SELL' AND excess<0)
-            THEN 1 ELSE 0 END) as hit
+    q = """SELECT strategy, action, COUNT(*) as n,
+        AVG(excess) as avg_ex,
+        SUM(CASE WHEN (action='BUY' AND excess>0) OR (action='SELL' AND excess<0)
+        THEN 1 ELSE 0 END) as hit
         FROM signal_outcome WHERE kind='l1_10d'"""
     params = []
     if source:
         q += " AND source=?"
         params.append(source)
     q += " GROUP BY strategy, action"
-    rows = conn.execute(q, params).fetchall()
-    out = {}
-    for strategy, action, kind, n, avg_ex, hit in rows:
-        d = out.setdefault(strategy, {'strategy': strategy, 'total': 0,
-                                      'win_rate': None, 'avg_excess': None})
-        d['total'] += n
-        d['hit_count'] = d.get('hit_count', 0) + (hit or 0)
-        d['ex_sum'] = d.get('ex_sum', 0.0) + (avg_ex or 0) * n
-    result = []
-    for s, d in out.items():
-        result.append({'strategy': s, 'total': d['total'],
-            'win_rate': round(d['hit_count'] / d['total'] * 100, 1) if d['total'] else None,
-            'avg_excess': round(d['ex_sum'] / d['total'], 2) if d['total'] else None})
-    return sorted(result, key=lambda r: -(r['avg_excess'] or 0))
+    out = []
+    for strategy, action, n, avg_ex, hit in conn.execute(q, params).fetchall():
+        out.append({'strategy': strategy, 'action': action, 'total': n,
+            'win_rate': round((hit or 0) / n * 100, 1) if n else None,
+            'avg_excess': round(avg_ex, 2) if avg_ex is not None else None})
+    # 同策略 BUY/SELL 两行相邻排（便于对照），方向语义不可直接比超额、不再按它排名
+    return sorted(out, key=lambda r: (r['strategy'], r['action']))
 
 # ── Task 6: 仪表盘「信号效果」页统计查询 ──────────────────────────────────
 # 页面统计口径 = l1_10d + l2_close 两种结算流；kind='l2_state' 状态快照行

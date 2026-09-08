@@ -1001,24 +1001,40 @@ def page_outcome(conn, source: str | None = None) -> str:
                 f'letter-spacing:0">真实 {comp.get((kind, "real"), 0)} 条 · '
                 f'回放 {comp.get((kind, "replay"), 0)} 条</span>')
 
-    # ── L1 表：10日窗口预测力 ──
+    # ── L1 表：10日窗口预测力（BUY/SELL 拆行，SELL 超额翻转呈现——审查 F1）──
+    # SELL 命中 = 回避下跌（个股跌得比沪深300多 → 超额<0 才是命中）。若沿用
+    # 原始符号，SELL 全对的策略行会显示"胜率100% + 平均超额为负(绿)"的自相矛盾
+    # 观感。故 SELL 行超额列取相反数（正数 = 回避的跌幅，永远正=好），颜色随
+    # 翻转后的值渲染；方向列与面板表头注明该口径。
+    def _l1_ex_display(action: str, excess):
+        """SELL 行超额翻转为正（回避的跌幅）；BUY 行原样"""
+        return -excess if action == 'SELL' and excess is not None else excess
+
     body.append(f'<div class="panel"><div class="panel-hd">L1 信号预测力'
                 f'（10日窗口·命中=跑赢沪深300）{comp_note("l1_10d")}'
+                f'<span class="dim" style="font-size:10px;text-transform:none;'
+                f'letter-spacing:0">SELL行超额=回避跌幅(正=好)</span>'
                 f'</div><div class="panel-bd">')
     rows = so.summary_l1(conn, source)
     if not rows:
         body.append('<div class="empty">暂无结算数据（回放或每日结算后出现）</div>')
     else:
-        body.append('<table><tr><th>策略</th><th>信号数</th><th>胜率</th>'
-                    '<th class="ta-r">平均超额</th></tr>')
+        body.append('<table><tr><th>策略</th><th>方向</th><th>信号数</th>'
+                    '<th>胜率</th><th class="ta-r">平均超额</th></tr>')
         for r in rows:
             wr = r['win_rate'] if r['win_rate'] is not None else 0
             flag = '✅' if wr >= 55 else ('⚠️' if wr < 45 else '❓')
-            ex = r['avg_excess']
+            sell = r['action'] == 'SELL'
+            ex = _l1_ex_display(r['action'], r['avg_excess'])
             ex_str = f'{ex}%' if ex is not None else '—'
             cls = 'up' if (ex or 0) > 0 else ('dn' if (ex or 0) < 0 else 'dim')
-            body.append(f'<tr><td>{r["strategy"]}</td><td>{r["total"]}</td>'
-                        f'<td>{wr}% {flag}</td>'
+            if sell:
+                act_tag = ('<span class="tag t-sell">SELL</span>'
+                           '<span class="dim" style="font-size:10px">回避跌幅</span>')
+            else:
+                act_tag = '<span class="tag t-buy">BUY</span>'
+            body.append(f'<tr><td>{r["strategy"]}</td><td>{act_tag}</td>'
+                        f'<td>{r["total"]}</td><td>{wr}% {flag}</td>'
                         f'<td class="ta-r {cls}">{ex_str}</td></tr>')
         body.append('</table>')
     body.append('</div></div>')
