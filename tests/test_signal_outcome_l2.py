@@ -69,6 +69,79 @@ def test_fifo_pairing(env):
     assert len(ledger.positions["000001"]) == 1, "FIFO 应移除最早开仓"
     assert ledger.positions["000001"][0]['strategy'] == "B策略"
 
+def test_same_day_double_close_both_persisted(env):
+    """最终审查 I-1：同日同股同策略两笔平仓（SELL 信号 FIFO 平第 1 笔 + 移动止损
+    平第 2 笔）都必须落库——旧 UNIQUE(date,code,strategy,action,kind,source) 下
+    两事件元组相同（strategy=被平 BUY 的 strategy），第二笔被 INSERT OR IGNORE
+    静默丢弃，而内存账本已 pop + 快照已持久化 → 真实平仓永久丢失"""
+    conn, dates = env
+    M = "双均线趋势跟踪"
+    ledger = so.Ledger()
+    # 同策略同 code 两笔持仓（连续补仓）：A@d1 成交 d2 开盘 10.5，B@d2 成交 d3 开盘 11.0
+    ledger.on_signal(conn, dates[0], "000001", "平安", M, "BUY", "replay")
+    ledger.process_pending(conn, dates[1])
+    ledger.on_signal(conn, dates[1], "000001", "平安", M, "BUY", "replay")
+    ledger.process_pending(conn, dates[2])
+    assert len(ledger.positions["000001"]) == 2, "前置：应有两笔持仓"
+
+    # d4 收盘暴跌 9.5 < 峰值 11.0×0.95=10.45 → 移动止损平掉第 1 笔（FIFO 首笔）
+    conn.execute("UPDATE daily_kline SET close=9.5 WHERE code='000001' AND date=?",
+                 (dates[3],))
+    conn.commit()
+    ledger.check_stop_loss(conn, dates[3])
+    # 同日 SELL 信号（收盘后）FIFO 平掉剩余第 2 笔——两事件同键（date/code/strategy）
+    ledger.on_signal(conn, dates[3], "000001", "平安", M, "SELL", "replay")
+    queued = [p for p in ledger.pending if p['kind'] == 'l2_close']
+    assert len(queued) == 2 and {p['exit_reason'] for p in queued} == \
+        {'stop_loss', 'sell'}, f"前置：应有两笔待成交平仓: {queued}"
+
+    # d5 开盘 11.2 统一成交 → 两笔都必须写库
+    events = ledger.process_pending(conn, dates[4])
+    assert len(events) == 2
+    ledger.write_events(conn, events)
+    rows = conn.execute("SELECT exit_reason, exec_price, strategy FROM signal_outcome"
+        " WHERE kind='l2_close' ORDER BY id").fetchall()
+    assert len(rows) == 2, \
+        f"同日双平仓不得静默丢行——旧 UNIQUE 只会落 1 行: {rows}"
+    assert {r[0] for r in rows} == {'stop_loss', 'sell'}, rows
+    assert all(abs(r[1] - 11.2) < 1e-9 and r[2] == M for r in rows), rows
+
+
+def test_same_day_double_sell_cross_strategy_both_persisted(env):
+    """复审发现 I-1 残余：同日同股**两笔 'sell' 平仓**——同 strategy M1 两笔在仓
+    （补仓），当日 M1 与 M2 各发一条 SELL（FIFO 不校验 SELL 策略，文档化语义）→
+    M1 的 SELL 平 A、M2 的 SELL 平 C（同为 M1 的仓）→ 两事件 (date, code, M1,
+    SELL, l2_close, source, 'sell') 在 v2 键（含 exit_reason）下仍同键 →
+    第二笔被 OR IGNORE 静默丢弃。v3 以被平仓的开仓日 open_date 做位置级区分"""
+    conn, dates = env
+    M1, M2 = "双均线趋势跟踪", "动量突破"
+    ledger = so.Ledger()
+    # 同 strategy M1 两笔持仓（连续补仓）：A@d1 成交 d2 开盘 10.5，C@d2 成交 d3 开盘 11.0
+    ledger.on_signal(conn, dates[0], "000001", "平安", M1, "BUY", "replay")
+    ledger.process_pending(conn, dates[1])
+    ledger.on_signal(conn, dates[1], "000001", "平安", M1, "BUY", "replay")
+    ledger.process_pending(conn, dates[2])
+    assert len(ledger.positions["000001"]) == 2, "前置：应有两笔持仓"
+
+    # d4：M1 SELL FIFO 平 A；M2 同日 SELL（FIFO 出队不校验信号策略）平掉 C
+    ledger.on_signal(conn, dates[3], "000001", "平安", M1, "SELL", "replay")
+    ledger.on_signal(conn, dates[3], "000001", "平安", M2, "SELL", "replay")
+    queued = [p for p in ledger.pending if p['kind'] == 'l2_close']
+    assert len(queued) == 2, f"前置：两笔 SELL 都应出队排队: {queued}"
+
+    # d5 开盘 11.2 统一成交 → 两笔都必须写库（v2 键下同 exit_reason 仍会撞）
+    events = ledger.process_pending(conn, dates[4])
+    assert len(events) == 2
+    ledger.write_events(conn, events)
+    rows = conn.execute("SELECT exit_reason, strategy, open_date FROM signal_outcome"
+        " WHERE kind='l2_close' ORDER BY id").fetchall()
+    assert len(rows) == 2, \
+        f"同日同 strategy 两笔 sell 平仓不得静默丢行: {rows}"
+    assert all(r[0] == 'sell' and r[1] == M1 for r in rows), rows
+    assert {r[2] for r in rows} == {dates[0], dates[1]}, \
+        f"open_date 应区分两笔持仓（d1/d2）: {rows}"
+
+
 def test_stop_loss_triggers(env):
     """持仓后价格从峰值回落超 TRAILING_STOP → 止损平仓事件"""
     conn, dates = env

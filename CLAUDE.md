@@ -31,7 +31,7 @@ python -m engine.factor_engine  # Multi-factor scoring (monthly stock ranking)
 python web/generate.py        # Generate dashboard static HTML (web/output/)
 
 # Testing
-python -m pytest tests/ -v  # Run all tests (109 cases)
+python -m pytest tests/ -v  # Run all tests (115 cases)
 
 # Backtest
 python backtest/simple_backtest.py
@@ -64,7 +64,7 @@ run.py  ───  Main entry: download → fix data → quality check → strat
   ├── analysis/        Independent daily report pipeline (macro/sector/stock/industry)
   ├── backtest/        Local backtest using same strategy code as production
   ├── scripts/         Health check + automated DB backup
-  └── tests/           109 unit tests covering core logic
+  └── tests/            115 unit tests covering core logic
 ```
 
 **Data flow**: `AKShare → downloader.py → SQLite (daily_kline + signal_history + sector_history) → strategies → risk filters → signal_aggregator → DingTalk`
@@ -120,7 +120,7 @@ print(f'Date:{maxd} | Stocks:{cnt}/300 | NULL:{nulls}')
 - **数据校验必须先于策略运行** — `python scripts/data_check.py --block`，阻断则不推送信号
 - **聚宽回测 = 真理，本地回测 = 方向验证** — 上线决策必须经聚宽确认
 - **因子公式/权重必须三处同步** — `engine/factors.py` ↔ `backtest/local_factor_backtest.py` ↔ 聚宽策略
-- **修改因子/权重后必须**: 本地回测(5个TOP_N) → pytest(109个) → 聚宽验证(如变化>5pp)
+- **修改因子/权重后必须**: 本地回测(5个TOP_N) → pytest(115个) → 聚宽验证(如变化>5pp)
 - **`except Exception: pass` 禁止** — 必须至少 print 到 stderr
 - **禁止在策略/因子文件中硬编码参数** — 必须在 settings.py 或文件头部常量区
 - **新数据源必须**: 单只验证 → 10只验证 → 全量 → 覆盖率≥85% → 人工核对 → 文档记录
@@ -129,7 +129,7 @@ print(f'Date:{maxd} | Stocks:{cnt}/300 | NULL:{nulls}')
 
 ```bash
 python scripts/data_check.py --block   # 数据健康检查（阻断模式）
-python -m pytest tests/ -v             # 109个核心逻辑测试
+python -m pytest tests/ -v             # 115个核心逻辑测试
 PYTHONPATH=. python backtest/local_factor_backtest.py  # 本地回测（5个TOP_N，40秒）
 ```
 

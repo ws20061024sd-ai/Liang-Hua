@@ -15,12 +15,17 @@ from config import settings
 
 DB = settings.DB_PATH
 
-def init_outcome_table(conn=None):
-    """创建结算结果表（幂等）"""
-    own = conn is None
-    if own:
-        conn = sqlite3.connect(DB)
-    conn.execute("""
+# v3 表结构：UNIQUE 纳入 exit_reason + open_date（最终审查 I-1 + 复审残余）。
+# 问题：l2_close 行的 strategy 取被平仓 BUY 的 strategy（process_pending），
+# 同日同股同策略两笔平仓在旧键下同元组 → 第二笔被 INSERT OR IGNORE 静默丢弃而
+# 账本已 pop + 快照已持久化 = 真实平仓永久丢失。
+#   v2 曾只加 exit_reason（sell/stop_loss/timeout 互异）；复审发现残余：跨策略
+#   FIFO 下（SELL 出队不校验信号策略，spec 文档化）两策略同日各发 SELL 可把同一
+#   strategy 的两笔分别平掉 → 两事件同 (date, code, strategy, SELL, l2_close,
+#   source, 'sell') 仍撞键。v3 加被平仓的开仓日 open_date 做**位置级**区分：
+#   同 code 同 strategy 的任意两笔持仓开仓日必不同（每日每策略每 code 至多一条
+#   BUY；重复信号行由 run_daily 登记按 (code, strategy) 去重防住）→ 彻底根除。
+_OUTCOME_DDL = """
         CREATE TABLE IF NOT EXISTS signal_outcome (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT, code TEXT, name TEXT,
@@ -29,12 +34,62 @@ def init_outcome_table(conn=None):
             ref_price REAL, exec_price REAL, exit_price REAL,
             pnl REAL, excess REAL, hold_days INTEGER,
             exit_reason TEXT, status TEXT DEFAULT 'done',
-            UNIQUE(date, code, strategy, action, kind, source)
+            open_date TEXT DEFAULT '',
+            UNIQUE(date, code, strategy, action, kind, source,
+                   exit_reason, open_date)
         )
-    """)
+    """
+
+def init_outcome_table(conn=None):
+    """创建结算结果表（幂等；已建的 v1 表自动迁移到 v2）"""
+    own = conn is None
+    if own:
+        conn = sqlite3.connect(DB)
+    conn.execute(_OUTCOME_DDL)
+    _migrate_outcome_schema(conn)
     conn.commit()
     if own:
         conn.close()
+
+def _migrate_outcome_schema(conn) -> None:
+    """v1/v2 → v3 schema 迁移：UNIQUE 约束纳入 exit_reason + open_date
+    （见 _OUTCOME_DDL 注释：I-1 双平仓撞键 + 复审跨策略双 SELL 残余）
+
+    SQLite 无法 ALTER UNIQUE 约束 → 重建表：CREATE 新表 → INSERT SELECT →
+    DROP 旧表 → RENAME，保留全部现有行。历史行的 exit_reason NULL 归一为
+    ''——SQLite UNIQUE 将 NULL 视为互异，不归一则新键对历史行不生效、
+    INSERT OR IGNORE 幂等（L1 重复结算去重）会被破坏；open_date 新列走
+    DEFAULT ''（历史 l2_close 行的开仓日已不可考，其去重退化为
+    (…, exit_reason, '') 即 v2 语义——旧键下可能撞的平仓当时已被丢行，
+    无从恢复，新事件起全部带位置级 open_date）。l2_state 行 exit_reason
+    = JSON 负载（非 NULL）原样保留。幂等：唯一索引同时含 exit_reason 与
+    open_date 则直接返回。
+    """
+    unique = [r for r in conn.execute(
+        "PRAGMA index_list('signal_outcome')").fetchall() if r[3] == 'u']
+    if not unique:
+        return  # 表无 UNIQUE 约束索引（异常形态）——不做猜测性重建
+    # UNIQUE 约束自动索引的 index_info 只给列序（cid）不给列名 → 经 table_info 映射
+    col_by_cid = {r[0]: r[1] for r in conn.execute(
+        "PRAGMA table_info('signal_outcome')").fetchall()}
+    cols = [col_by_cid[r[1]] for r in conn.execute(
+        f'PRAGMA index_info("{unique[0][1]}")').fetchall()]
+    if 'exit_reason' in cols and 'open_date' in cols:
+        return  # 已是 v3
+    tmp = 'signal_outcome_tmp'
+    conn.execute(f'DROP TABLE IF EXISTS {tmp}')
+    conn.execute(_OUTCOME_DDL.replace('signal_outcome', tmp, 1))
+    conn.execute(f"""INSERT INTO {tmp}
+            (id, date, code, name, strategy, action, source, kind,
+             ref_price, exec_price, exit_price, pnl, excess, hold_days,
+             exit_reason, status)
+        SELECT id, date, code, name, strategy, action, source, kind,
+             ref_price, exec_price, exit_price, pnl, excess, hold_days,
+             COALESCE(exit_reason, ''), status FROM signal_outcome""")
+    conn.execute('DROP TABLE signal_outcome')
+    conn.execute(f'ALTER TABLE {tmp} RENAME TO signal_outcome')
+    print("✅ signal_outcome 表 v1/v2→v3 迁移完成（UNIQUE 纳入 exit_reason +"
+          " open_date）", file=sys.stderr)
 
 def _trading_dates(conn) -> list[str]:
     """daily_kline 去重日期（升序）——真实交易日历"""
@@ -103,9 +158,11 @@ def _settle_l1_core(conn, dates: list[str], idx_map: dict, kdf: pd.DataFrame,
         pnl = round(_pnl_pct(ref_price, float(row.iloc[0]['close'])), 3)
         excess = round(pnl - _pnl_pct(idx_ref, idx_row), 3)
         conn.execute("""INSERT OR IGNORE INTO signal_outcome
-            (date, code, name, strategy, action, source, kind, ref_price, pnl, excess)
-            VALUES (?,?,?,?,?,?,?,?,?,?)""",
-            (date, code, name, strategy, action, source, f'l1_{n}d', ref_price, pnl, excess))
+            (date, code, name, strategy, action, source, kind, ref_price, pnl, excess,
+             exit_reason)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (date, code, name, strategy, action, source, f'l1_{n}d', ref_price, pnl, excess,
+             ''))  # '' 幂等占位：NULL 在 UNIQUE 中互异，会破坏 OR IGNORE 去重
         written.append(f'l1_{n}d')
     if commit:
         conn.commit()
@@ -343,20 +400,25 @@ class Ledger:
                     'strategy': pos['strategy'], 'source': ev['source'],
                     'exec_price': op, 'pnl': round(pnl, 3),
                     'hold_days': pos['hold_days'], 'exit_reason': ev['exit_reason'],
+                    'open_date': pos['buy_date'],  # v3 位置级 UNIQUE 区分键
                     'signal_date': ev['date']})
         return events
 
     def write_events(self, conn, events: list[dict]) -> None:
-        """成交事件写库（幂等：UNIQUE(date, code, strategy, action, kind, source)）"""
+        """成交事件写库（幂等：v3 UNIQUE(date, code, strategy, action, kind, source,
+        exit_reason, open_date)。l2_open 行 exit_reason/open_date 写 '' 占位
+        （NULL 在 UNIQUE 中互异，会破坏 OR IGNORE 去重）；l2_close 行写平仓原因
+        （sell/stop_loss/timeout）+ 被平仓的开仓日（v3 位置级区分键，I-1/复审）"""
         for ev in events:
             conn.execute("""INSERT OR IGNORE INTO signal_outcome
                 (date, code, name, strategy, action, source, kind,
-                 exec_price, pnl, hold_days, exit_reason)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                 exec_price, pnl, hold_days, exit_reason, open_date)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (ev['date'], ev['code'], ev['name'], ev['strategy'],
                  'BUY' if ev['kind'] == 'l2_open' else 'SELL',
                  ev['source'], ev['kind'], ev.get('exec_price'),
-                 ev.get('pnl'), ev.get('hold_days'), ev.get('exit_reason')))
+                 ev.get('pnl'), ev.get('hold_days'), ev.get('exit_reason') or '',
+                 ev.get('open_date') or ''))
         conn.commit()
 
     def save_state(self, conn, date: str) -> None:
@@ -368,20 +430,24 @@ class Ledger:
           source      = 'real'（只对真实信号账本落快照；replay 纯内存不落）
           kind        = 'l2_state'（与 l1_*/l2_open/l2_close 并列的新结算类型）
           code/name/strategy/action = NULL（聚合行，不表达单笔交易——
-            避免与 UNIQUE(date, code, strategy, action, kind, source) 撞键：
-            同 code 同 strategy 可同时持多笔（FIFO 堆叠），按笔分行必撞）
+            避免与 UNIQUE(date, code, strategy, action, kind, source,
+            exit_reason, open_date) 撞键：同 code 同 strategy 可同时持多笔
+            （FIFO 堆叠），按笔分行必撞；v3 键虽已纳入 exit_reason+open_date，
+            l2_state 的 exit_reason=JSON 负载也不与任何 l2_close 行同构）
           exit_reason = JSON 负载，含 positions（code→开仓序列表）与
             pending（排队事件）。此列对 l2_state 行无语义占用（仅 l2_close
             用它表达平仓原因），其余列（exec_price/hold_days/...）因单行
             聚合放不下多笔，全部 NULL。
         replay 与每日模式互不读写对方持仓（replay 全内存账本），互不相干。
-        账本为空（无持仓无排队）时不落行并清掉残留状态行——空快照会让
-        source='real' 的统计/测试把"无事发生的一天"误计为一条记录。
+        账本为空（无持仓无排队）也**必须落空水印行**（date=已处理到的交易日，
+        positions/pending 均为空）——state_date 是 run_daily 判断推进窗口与
+        补登记范围的唯一锚点；旧语义"空账本不落行"会让 state_date 归 None，而
+        None 同时表达"从未部署"，跨日晚到信号竞态（最终审查 I-2）在空仓日会
+        因此重演（复审确认）。空水印行不参与任何统计：页面/汇总全部按 kind
+        过滤（l1_10d/l2_close），l2_state 永不入统计，无"无事发生的一天被误计
+        为记录"之虞。
         """
         conn.execute("DELETE FROM signal_outcome WHERE kind='l2_state'")
-        if not self.positions and not self.pending:
-            conn.commit()
-            return
         # __v 为快照 schema 版本（v1 是唯一历史格式；旧快照无此字段按 v1 兼容读，
         # load_state 按它防御未知未来格式，见 load_state 的 __v 检查）
         payload = json.dumps({'__v': 1, 'positions': self.positions,
@@ -426,7 +492,12 @@ class Ledger:
 # ── Task 4: 回放引擎 ────────────────────────────────────────────────────
 
 def _daily_snapshot(conn, date: str, codes: list[str]) -> pd.DataFrame:
-    """当日全股票快照（供 filter_signals）：code/close/pct_change/volume/amount/is_st"""
+    """当日全股票快照（供 filter_signals）：code/close/pct_change/volume/amount/is_st
+
+    is_st 取 stock_info 当前状态过滤历史日信号——ST 标记漂移属已知局限，与
+    "当前沪深300成分股回看历史"的幸存者偏差同源（最终审查 Minor l），仅影响
+    回放样本的风控通过率，不改变结算语义。
+    """
     rows = []
     for code in codes:
         row = conn.execute("""SELECT d.close, d.pct_change, d.volume, d.amount, s.is_st
@@ -480,7 +551,8 @@ def replay(conn) -> dict:
 
     已知简化（与生产差异，已确认可接受）：
       - 不含大盘择时降权：v3 择时只按 regime 调 strength 权重，等权验证不受影响
-      - 成分股为当前沪深 300 名单（历史成分漂移为已知局限，与现有回测同源）
+      - 成分股为当前沪深 300 名单（历史成分漂移为已知局限，与现有回测同源）；
+        is_st 亦取当前状态过滤历史日（漂移同源，见 _daily_snapshot）
       - 回放范围 = 最近 REPLAY_YEARS 年（约 250 交易日/年，设计文档定）；更早不回放：
         qfq 前复权除权失真随时间增大，且样本时效性有限
       - 末日残留 pending 不撮合：信号/止损在收盘后产生、需次日开盘成交，而回放窗口
@@ -588,11 +660,14 @@ def _real_signals(conn) -> list[dict]:
 def _register_signals_of(conn, ledger, date, sigs) -> int:
     """登记 date 当日尚未登记过的真实信号，返回新登记条数（幂等补登记）
 
-    仅用于 run_daily 的"状态已推进到 date（==今日）"分支：run.py 下载慢/失败后
-    手动补跑会把当日信号写进 signal_history 而晚于推进（推进时查询不到）——此时
-    只补登记、不推进：当日开盘已在此前进过 process_pending（补登记若再成交会
-    lookahead 到当日开盘），新登记信号的自然成交日 = 下一交易日，与"收盘后出
-    信号 → 次日开盘成交"语义一致。
+    用于 run_daily 两个补登记场景：① 状态==今日（同日重复运行，e24af24）：
+    run.py 下载慢/失败后手动补跑会把当日信号写进 signal_history 而晚于推进
+    （推进时查询不到）——只补登记不推进，当日开盘已在此前进过 process_pending，
+    补登记若再成交会 lookahead 到当日开盘；② 状态日（最终审查 I-2 跨日竞态）：
+    状态推进到 state_date 当晚 run.py 未写完当日信号，信号次日才入库且
+    catch-up 循环只登记 >state_date 的信号——循环结束后对其补登记（本 run 已
+    处理过 state_date 之后的开盘，同样不回溯成交）。两种场景的新登记信号
+    自然成交日 = 下一交易日，与"收盘后出信号 → 次日开盘成交"语义一致。
 
     "已登记"判定（最简可靠）：outcome 表已存在该信号的成交行，或账本 pending
     中仍有它未成交的排队事件——
@@ -653,8 +728,12 @@ def run_daily(conn) -> dict:
     状态日期 == 今日（同日重复运行/行情未更新）→ 不推进，但仍补登记当日晚入库
     的信号（run.py 下载慢/失败后手动补跑，当日信号写入 signal_history 晚于推
     进——若直接跳过，当日信号永不进 L2 账本）。补登记只排队不成交，无 lookahead。
-    已知简化：状态行清空（账本清空日不落行）期间漏跑 cron 的信号只补 L1 不补
-    L2 登记（真实 L2 样本自部署日起逐日积累，历史样本由 --replay 补齐）。
+    状态日期 < 今日（最终审查 I-2 跨日竞态）→ catch-up 循环只登记 >状态日的信号；
+    若状态日当晚 run.py 未写完当日信号（次日才入库），循环后对状态日当天未登记
+    信号同样补登记——排队自然成交日 = 下一交易日（不回溯状态日之后已处理的开盘）。
+    状态行 = 已处理到哪天的水印：账本为空也落空水印行（save_state），故空仓日的
+    竞态与持仓日同路径补登记；state_date 仅首次部署（表无状态行）为 None。
+    首次部署语义：仅登记当日信号，更早的历史 L2 由 --replay 补齐。
     """
     init_outcome_table(conn)
     sigs = _real_signals(conn)
@@ -700,19 +779,30 @@ def run_daily(conn) -> dict:
             # 2) 今日收盘：止损/到期判定 → 排队次日开盘
             ledger.check_stop_loss(conn, d)
             ledger.check_timeout(conn, d)
-            # 3) 今日收盘后：登记当日新真实信号 → 排队次日开盘
-            for s in sigs:
-                if s['date'] != d:
-                    continue
-                if s['action'] == 'BUY':
-                    ledger.buy(conn, d, s['code'], s['name'], s['strategy'], 'real')
-                elif s['action'] == 'SELL':
-                    ledger.on_signal(conn, d, s['code'], s['name'],
-                                     s['strategy'], 'SELL', 'real')
+            # 3) 今日收盘后：登记当日新真实信号 → 排队次日开盘。复用
+            # _register_signals_of（按 (code, strategy) 去重）：signal_history 无
+            # UNIQUE 约束、run.py 补跑可重插同日同信号行——重复登记会让同
+            # (date, code, strategy) 出现两笔同开仓日持仓，v3 键仍无法区分其
+            # 同日双平仓（复审 Important 残余），必须在此防住
+            _register_signals_of(conn, ledger, d, sigs)
             # 每日落一次状态：崩溃后重跑只会从未推进的那天继续，不重复登记
             ledger.save_state(conn, d)
             n_open += sum(1 for e in events if e['kind'] == 'l2_open')
             n_close += sum(1 for e in events if e['kind'] == 'l2_close')
+        # state_date 跨日晚到信号补登记（最终审查 I-2 竞态）：状态推进到
+        # state_date 那晚若 run.py 尚未写完当日信号（21:00 起跑、下载 300 只超
+        # 2 分钟即落入窗口），该日信号次日才入库——catch-up 循环只登记
+        # >state_date 的信号，不补则 state_date 整日真实信号永不进 L2 账本。
+        # 补登记在循环后执行：state_date 之后的开盘已处理过，不回溯成交；排队
+        # 事件自然成交日 = 下一交易日（下次 run 的 process_pending 成交）。
+        # seen 集合（库内已成交行 + pending 存活事件）防重，与状态==今日分支
+        # 的 _register_signals_of 同幂等语义，重复运行不重复登记。
+        if state_date is not None:
+            n_late = _register_signals_of(conn, ledger, state_date, sigs)
+            if n_late:
+                print(f"⚠️ {state_date} 跨日晚到信号补登记 {n_late} 条"
+                      "（下一交易日开盘成交）")
+                ledger.save_state(conn, today)
     else:
         # 状态已推进到今日（同日重复运行/行情未更新）——推进不可重复做，但当日
         # 信号可能晚入库（run.py 下载慢/失败后手动补跑）→ 幂等补登记，否则当日

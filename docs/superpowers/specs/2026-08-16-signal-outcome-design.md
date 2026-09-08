@@ -52,14 +52,15 @@ signal_history（只读：真实信号来源）
    - BUY：超额 > 0 = 命中（涨但没跑赢大盘 = 平庸不命中）
    - SELL：超额 < 0 = 命中（反向验证）
 5. **汇总**：分策略 × 窗口：条数/胜率（命中比例）/平均超额
-6. **边界**：信号后不足 N 交易日 → 已到期窗口结算，未到期留空待续；停牌/退市查不到 → 标记跳过（status='skipped'）
+6. **边界**：信号后不足 N 交易日 → 已到期窗口结算，未到期留空待续；停牌/退市查不到（该日无行情行）→ **放弃该样本不落行**（结算核心 `continue` 跳过；与早期"标记 status='skipped'"的设想不同——落行会制造大量无用记录，实际等价于只统计已结算行）
 
 ## L2 等权动态账本规则
 
 1. **成交假设**：信号日收盘产生信号 → **次日开盘价成交**为成本（更接近现实可执行价）。一字板买不进等滑点不模拟（标注局限）
 2. **持仓跟踪**：每个 BUY 等权 1 份进入模型持仓，记录成本/日期
 3. **平仓条件**：
-   - 卖出信号：出现 SELL（任意策略，含移动止损）→ 平仓（同股多笔 FIFO 配对）
+   - 卖出信号：出现 SELL（任意策略）→ 平仓（同股多笔 FIFO 配对）
+   - 移动止损：**Ledger 自算实现（spec 外补入）**——生产信号里没有"止损卖出"（止损是用户在券商 App 手动执行的，signal_history 只存策略 BUY/SELL，且 replay 回放生产策略根本不会产出止损信号），故 Ledger 按统一参数 `TRAILING_STOP=5%` 自算移动止损（收盘跌破持仓期峰值 ×(1-5%) → 次日开盘平，`check_stop_loss`）。real 模式因此**双机制并存**：生产 SELL（含用户手动止损触发的卖出）落 `exit_reason='sell'`，Ledger 自算止损落 `exit_reason='stop_loss'`——**exit_reason 归属不对称**（同为"止损卖出"，来源不同落码不同），统计止损有效性时需按此口径解读
    - 强制平仓：持有 ≥ `OUTCOME_MAX_HOLD_DAYS=60` 交易日 → 平仓
    - 没有持仓的 SELL **不执行**（现实中也无法卖）——SELL 独立检验由 L1 承担
 4. **每笔记录**：买入日/成本/平仓日/平仓价/收益%/持仓天数/平仓原因/策略
@@ -97,6 +98,12 @@ signal_history（只读：真实信号来源）
 - L2 表：策略笔数/胜率/平均收益/平均持仓/等权累计 + 止损统计
 - 最近结算列表（最新 10 条）
 
+**初版范围裁决（有意决策，待二期）**：页面初版仅展示 **10 日窗口**（`l1_10d`；
+5/20 日窗口照常结算入库但不展示，OUTCOME_WINDOWS 全部保留）；L2 表**不做止损
+统计面板**（触发次数/平均止损幅度——止损口径不对称问题见上节，留二期设计）；
+**样本 <30 的"样本不足"提示未实现**（spec 风险节原承诺的降级展示未落地）。
+三项均为"先上线、后补强"决策，二期按需排期。
+
 ## 表结构（signal_outcome）
 
 ```sql
@@ -106,17 +113,26 @@ CREATE TABLE signal_outcome (
     code TEXT, name TEXT,
     strategy TEXT, action TEXT,  -- BUY/SELL（L2 只从 BUY 起）
     source TEXT,            -- 'real' | 'replay'
-    kind TEXT,              -- 'l1_5d'|'l1_10d'|'l1_20d'|'l2_close'（结算类型）
+    kind TEXT,              -- 'l1_5d'|'l1_10d'|'l1_20d'|'l2_open'|'l2_close'
+                            -- 或 'l2_state'（状态快照行，单行 JSON 聚合，Task5 补入）
     ref_price REAL,         -- 信号日收盘（L1 基准）
     exec_price REAL,        -- L2 成交价（次日开盘）或 NULL
     exit_price REAL,        -- L2 平仓价或 NULL
     pnl REAL,               -- 收益%（L1 窗口收益 / L2 持仓收益）
     excess REAL,            -- 超额收益%（对沪深300）
     hold_days INTEGER,      -- L2 持仓天数或 NULL
-    exit_reason TEXT,       -- L2 平仓原因：'sell'|'stop_loss'|'timeout' 或 NULL
-    status TEXT DEFAULT 'done',  -- 'done'|'pending'|'skipped'
-    -- source 进 UNIQUE：回放日期与真实信号重叠（如 6-09~7-10）时互不冲突
-    UNIQUE(date, code, strategy, action, kind, source)
+    exit_reason TEXT,       -- L2 平仓原因：'sell'|'stop_loss'|'timeout'；l1_*/l2_open
+                            -- 行写 '' 占位（NULL 在 UNIQUE 中互异会破坏 OR IGNORE 幂等）；
+                            -- l2_state 行 = JSON 负载（positions+pending）
+    status TEXT DEFAULT 'done',  -- 仅 'done' 使用（停牌放弃样本不落行，见 L1 边界注）
+    open_date TEXT DEFAULT '',   -- v3：被平仓 BUY 的开仓日（l2_close 位置级区分键）；
+                                 -- 其余行 ''（历史行开仓日不可考，走默认退化为旧键语义）
+    -- v3（最终审查 I-1 + 复审残余）：exit_reason + open_date 进 UNIQUE——l2_close
+    -- 的 strategy=被平 BUY 的 strategy，同键下同日 SELL+止损/跨策略双 SELL 平同
+    -- strategy 双仓都会撞键静默丢行；同 strategy 双仓开仓日必不同（每日每策略
+    -- 每 code 至多一条 BUY + 登记按 (code,strategy) 去重）→ open_date 根除。
+    -- v1/v2 表由 _migrate_outcome_schema 重建迁移（保留全部行）
+    UNIQUE(date, code, strategy, action, kind, source, exit_reason, open_date)
 )
 ```
 
@@ -146,5 +162,5 @@ CREATE TABLE signal_outcome (
 - qfq 前复权在 1 年回放内失真小但存在
 - 当前成分股回看历史存在幸存者偏差（回放局限，与现有回测同源）
 - 无滑点/手续费/一字板买不进模拟——L2 收益偏乐观，作为策略对比的相对值使用
-- 双均线信号低频，回放后若样本 <30 笔，效果页显示"样本不足"不硬凑结论
+- 双均线信号低频，回放后若样本 <30 笔的"样本不足"提示**未实现，待二期**（见页面节初版范围裁决——样本 <30 时页面照常出表，解读需自行留意小样本）
 - ST 标记缺失不影响验证（结算只看价格）

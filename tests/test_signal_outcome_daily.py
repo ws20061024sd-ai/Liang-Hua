@@ -112,8 +112,10 @@ def test_run_daily_recent_signal_partial(env):
         'BUY', 0.8, '测试', 10.0, 'passed')""", (sig_date,))
     conn.commit()
     so.run_daily(conn)
-    cnt = conn.execute("SELECT COUNT(*) FROM signal_outcome WHERE source='real'").fetchone()[0]
-    assert cnt == 0, "窗口未到不应写入任何记录"
+    # 注：空账本状态水印行（kind='l2_state'）每 run 必落——结算记录计数须排除
+    cnt = conn.execute("SELECT COUNT(*) FROM signal_outcome WHERE source='real'"
+        " AND kind != 'l2_state'").fetchone()[0]
+    assert cnt == 0, "窗口未到不应写入任何结算记录"
 
 def test_run_daily_l1_idempotent(env):
     """重复 run_daily → L1 不重复写（INSERT OR IGNORE 幂等）"""
@@ -121,12 +123,12 @@ def test_run_daily_l1_idempotent(env):
     dates = so._trading_dates(conn)
     _signal(conn, dates[0])
     so.run_daily(conn)
-    cnt1 = conn.execute(
-        "SELECT COUNT(*) FROM signal_outcome WHERE source='real'").fetchone()[0]
+    cnt1 = conn.execute("SELECT COUNT(*) FROM signal_outcome WHERE source='real'"
+        " AND kind != 'l2_state'").fetchone()[0]
     assert cnt1 == 3, f"三窗口都应结算: {cnt1}"
     so.run_daily(conn)
-    cnt2 = conn.execute(
-        "SELECT COUNT(*) FROM signal_outcome WHERE source='real'").fetchone()[0]
+    cnt2 = conn.execute("SELECT COUNT(*) FROM signal_outcome WHERE source='real'"
+        " AND kind != 'l2_state'").fetchone()[0]
     assert cnt2 == cnt1, "重复 run_daily 不得重复写 L1"
 
 
@@ -335,6 +337,89 @@ def test_daily_l2_late_sell_closes_next_open(env):
     assert c is not None and c[1] == 'sell', f"应有 sell 平仓: {c}"
     assert abs(c[0] - _open_at(conn, dates[5])) < 1e-9, \
         f"补登记 SELL 应以 d5 开盘价平仓: {c}"
+
+
+# ── 跨日晚到信号补登记（最终审查 I-2 竞态：状态已越过信号日 ≥1 天）─────────
+
+def test_daily_l2_cross_day_late_signal_fills_two_days_later(env):
+    """真实竞态：d2 晚 run_daily 推进状态到 d2 时 d2 信号尚未入库（run.py 慢、
+    21:05 才写入），次日（d3）才可见——此时 state(d2) < today(d3)，catch-up 循环
+    只登记 >state_date 的信号，d2 信号永不进 L2 账本（整日样本丢失窗口）。
+    修复：对 state_date 那天的未登记信号补登记——排队不回溯成交（d3 开盘已在
+    catch-up 处理过），自然成交日 = 下一交易日（d4 开盘成交）；重复运行幂等"""
+    conn = env
+    dates = so._trading_dates(conn)
+    # 前置：让状态推进到 d2，且 d2 晚账本非空（持仓在身 → 快照把 state_date 钉在 d2）
+    _clip(conn, dates, 0)
+    _signal(conn, dates[0])              # BUY@d0 正常入库
+    so.run_daily(conn)                   # d0 晚：登记 BUY@d0 → 排队
+    _extend(conn, dates, 1)
+    so.run_daily(conn)                   # d1 晚：d0 排队单于 d1 开盘成交 → 持仓
+    _extend(conn, dates, 2)
+    so.run_daily(conn)                   # d2 晚：竞态——d2 信号未入库，状态推进到 d2
+    st = _state_payload(conn)
+    assert len(st['positions'].get('000001', [])) == 1, \
+        f"前置：持仓应在（快照钉在 d2）: {st['positions']}"
+
+    _signal(conn, dates[2])              # d2 的 BUY 晚到一天（d3 才入库）
+    _extend(conn, dates, 3)
+    so.run_daily(conn)                   # d3 晚：state(d2) < today(d3) → 补登记
+    assert conn.execute("SELECT COUNT(*) FROM signal_outcome WHERE kind='l2_open'"
+        " AND source='real'").fetchone()[0] == 1, "补登记不得在 d3 开盘回溯成交"
+    st = _state_payload(conn)
+    assert [e['date'] for e in st['pending'] if e['kind'] == 'l2_open'] == \
+        [dates[2]], f"d2 晚到 BUY 应补登记进 pending: {st['pending']}"
+
+    so.run_daily(conn)                   # 幂等：同日重跑不重复登记
+    st = _state_payload(conn)
+    assert sum(1 for e in st['pending'] if e['kind'] == 'l2_open'
+               and e['date'] == dates[2]) == 1, "重复 run_daily 不得重复补登记"
+
+    _extend(conn, dates, 4)
+    so.run_daily(conn)                   # d4 晚：补登记单于 d4 开盘成交（自然成交日）
+    rows = conn.execute("SELECT date, exec_price FROM signal_outcome"
+        " WHERE kind='l2_open' AND source='real' ORDER BY date").fetchall()
+    assert [r[0] for r in rows] == [dates[0], dates[2]], \
+        f"两笔开仓（d0 正常推进 + d2 补登记）都应成交: {rows}"
+    assert abs(rows[1][1] - _open_at(conn, dates[4])) < 1e-9, \
+        f"补登记开仓应以 d4（X+2）开盘价成交: {rows[1]}"
+    assert abs(rows[0][1] - _open_at(conn, dates[1])) < 1e-9, f"正常推进不受扰: {rows[0]}"
+
+
+def test_daily_l2_cross_day_late_signal_empty_ledger_day(env):
+    """复审 I-2 残余变体：竞态日账本为空（无持仓无 pending）——save_state 旧语义
+    空账本不落行 → state_date 归 None → 补登记守卫（state_date is not None）跳过，
+    晚到信号同样永不进 L2。修复：空账本也落状态行（date=已处理日水印）→ 空仓日
+    竞态与持仓日同路径补登记，X 日信号晚到一天在 X+2 开盘成交"""
+    conn = env
+    dates = so._trading_dates(conn)
+    _clip(conn, dates, 2)
+    so.run_daily(conn)                   # d2 晚：空账本推进到 d2（无任何信号）
+    st = _state_payload(conn)
+    assert st['positions'] == {} and st['pending'] == [], \
+        f"前置：d2 应为空账本水印行: {st}"
+
+    _signal(conn, dates[2])              # d2 的 BUY 晚到一天（d3 才入库）
+    _extend(conn, dates, 3)
+    so.run_daily(conn)                   # d3 晚：state(d2) < today(d3) → 补登记
+    assert conn.execute("SELECT COUNT(*) FROM signal_outcome WHERE kind='l2_open'"
+        " AND source='real'").fetchone()[0] == 0, "空账本日竞态的晚到信号也不得回溯成交"
+    st = _state_payload(conn)
+    assert [e['date'] for e in st['pending'] if e['kind'] == 'l2_open'] == \
+        [dates[2]], f"晚到 BUY 应补登记进 pending: {st['pending']}"
+
+    so.run_daily(conn)                   # 幂等：同日重跑不重复登记
+    st = _state_payload(conn)
+    assert sum(1 for e in st['pending'] if e['kind'] == 'l2_open'
+               and e['date'] == dates[2]) == 1, "重复 run_daily 不得重复补登记"
+
+    _extend(conn, dates, 4)
+    so.run_daily(conn)                   # d4 晚：补登记单于 d4 开盘成交
+    rows = conn.execute("SELECT date, exec_price FROM signal_outcome"
+        " WHERE kind='l2_open' AND source='real'").fetchall()
+    assert [r[0] for r in rows] == [dates[2]], f"空仓日竞态的晚到信号应成交: {rows}"
+    assert abs(rows[0][1] - _open_at(conn, dates[4])) < 1e-9, \
+        f"应以 d4（X+2）开盘价成交: {rows[0]}"
 
 
 # ── 快照 schema 版本（Minor 3：__v + 未知版本防御）──────────────────────
