@@ -206,6 +206,30 @@ def test_replay_day_by_day_no_lookahead(env, monkeypatch):
     assert cnt == 0
 
 
+def test_replay_rerun_no_duplicates_after_legacy_open_date_wipe(env, monkeypatch):
+    """v3 幂等回归：迁移遗留行（open_date=''，历史开仓日不可考）与新算行
+    （open_date=真实开仓日）键不同——纯 UNIQUE 去重会把旧行重放成双份（本地
+    真实库实证 2699→5471）。回放产物为纯派生数据 → 每次重跑先清后算重写"""
+    conn, dates = env
+    _patch_registry(monkeypatch, SpikeFakeSt, BuySellFakeSt)
+    SpikeFakeSt.reset()
+    BuySellFakeSt.buy_day = dates[71]
+    BuySellFakeSt.sell_day = dates[75]
+    so.replay(conn)
+    n1 = conn.execute("SELECT COUNT(*) FROM signal_outcome WHERE source='replay'"
+        ).fetchone()[0]
+    # 模拟 v1→v3 迁移遗留：历史回放行 open_date 全被抹成 ''（迁移无法回填）
+    conn.execute("UPDATE signal_outcome SET open_date='' WHERE source='replay'")
+    conn.commit()
+    so.replay(conn)
+    n2 = conn.execute("SELECT COUNT(*) FROM signal_outcome WHERE source='replay'"
+        ).fetchone()[0]
+    assert n2 == n1, f"重跑不得复制行: {n1} → {n2}"
+    back = conn.execute("SELECT COUNT(*) FROM signal_outcome WHERE source='replay'"
+        " AND kind='l2_close' AND open_date != ''").fetchone()[0]
+    assert back >= 1, "重写后 l2_close 应带真实 open_date"
+
+
 def test_replay_unknown_action_not_liquidated(env, monkeypatch, capsys):
     """HOLD 类未知 action：回放不得按 SELL 误平仓（防御：非 BUY 一律当 SELL 会静默平仓），
     且应打印跳过告警；L1 窗口样本仍记录"""

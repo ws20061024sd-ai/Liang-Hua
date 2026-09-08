@@ -277,6 +277,10 @@ class Ledger:
     def __init__(self):
         self.positions: dict[str, list[dict]] = {}  # code → [open 记录]
         self.pending: list[dict] = []               # 待次日开盘成交事件
+        # 已登记真实信号键集合 (date, action, code, strategy)——补登记幂等的权威
+        # 依据：DB 反推不可靠（l2_close 落库 strategy=被平仓位的策略，与 SELL 信号
+        # 自身策略不同，见 _register_signals_of），跨 run 由 save_state 持久化
+        self.processed: set[tuple] = set()
 
     def _position(self, code: str, name: str, strategy: str, source: str,
                   date: str, exec_price: float) -> dict:
@@ -449,9 +453,13 @@ class Ledger:
         """
         conn.execute("DELETE FROM signal_outcome WHERE kind='l2_state'")
         # __v 为快照 schema 版本（v1 是唯一历史格式；旧快照无此字段按 v1 兼容读，
-        # load_state 按它防御未知未来格式，见 load_state 的 __v 检查）
-        payload = json.dumps({'__v': 1, 'positions': self.positions,
-                              'pending': self.pending}, ensure_ascii=False)
+        # load_state 按它防御未知未来格式，见 load_state 的 __v 检查）。
+        # v2：加 processed（已登记真实信号键，SELL 补登记幂等的权威依据——DB 反推
+        # 的 strategy 与被平仓位一致而非 SELL 信号自身，会 seen 错配致幻影二次平仓）
+        payload = json.dumps({'__v': 2, 'positions': self.positions,
+                              'pending': self.pending,
+                              'processed': sorted(self.processed)},
+                             ensure_ascii=False)
         conn.execute("""INSERT INTO signal_outcome
             (date, code, name, strategy, action, source, kind, exit_reason)
             VALUES (?, NULL, NULL, NULL, NULL, 'real', 'l2_state', ?)""",
@@ -477,16 +485,19 @@ class Ledger:
             print(f"⚠️ l2_state 快照 JSON 解析失败(date={state_date})，按空账本继续",
                   file=sys.stderr)
             data = {}
-        if data.get('__v', 1) != 1:
+        ver = data.get('__v', 1)
+        if ver not in (1, 2):
             # 未知/未来 schema 版本：字段结构不可知，不得按 v1 布局瞎猜 → 按空账本
             # 继续（缺 __v 的旧快照 = v1 唯一历史格式，视为 v1 兼容加载——服务器在途
             # 部署可能已落 v1 快照，误清会丢持仓）
-            print(f"⚠️ l2_state 快照 schema 未知(__v={data.get('__v')},"
+            print(f"⚠️ l2_state 快照 schema 未知(__v={ver},"
                   f" date={state_date})，按空账本继续", file=sys.stderr)
             data = {}
         self.positions = {code: list(opens) for code, opens in
                           (data.get('positions') or {}).items()}
         self.pending = list(data.get('pending') or [])
+        # v2 起带 processed；v1 旧快照无此键 → 空集（补登记 seen 回退 DB 反推）
+        self.processed = {tuple(k) for k in (data.get('processed') or [])}
         return state_date
 
 # ── Task 4: 回放引擎 ────────────────────────────────────────────────────
@@ -567,6 +578,11 @@ def replay(conn) -> dict:
     from engine.risk_filter import filter_signals
 
     init_outcome_table(conn)
+    # 先清后算：回放是确定性全量计算，重跑=刷新。不能依赖 INSERT OR IGNORE 幂等
+    # ——v3 键含 open_date，schema 迁移遗留行(open_date='')与重放新行键不同，
+    # 旧行会残留、重跑行数翻倍（最终审查修复时实证 2699→5471）
+    conn.execute("DELETE FROM signal_outcome WHERE source='replay'")
+    conn.commit()
     stocks = get_all_stocks()
     if stocks.empty:
         print("❌ 股票池为空，无法回放")
@@ -669,45 +685,51 @@ def _register_signals_of(conn, ledger, date, sigs) -> int:
     处理过 state_date 之后的开盘，同样不回溯成交）。两种场景的新登记信号
     自然成交日 = 下一交易日，与"收盘后出信号 → 次日开盘成交"语义一致。
 
-    "已登记"判定（最简可靠）：outcome 表已存在该信号的成交行，或账本 pending
-    中仍有它未成交的排队事件——
-      BUY  → kind='l2_open' 的行/事件（date/code/strategy/source 全匹配）
-      SELL → exit_reason='sell' 的 l2_close 行/事件（同日同股同策略的止损/到期
-             平仓 exit_reason 不同，不得误判为该 SELL 已处理——否则会吞掉一笔
-             合法平仓）
-    幂等细节：seen 集合随登记动态更新，signal_history 无 UNIQUE 约束、补跑可能
-    重插同日同信号行——重复行只按 (code, strategy) 登记一次。
+    "已登记"判定的权威依据 = 账本 processed 键集合（(date, action, code, strategy)，
+    以 SELL 信号自身 strategy 记录，跨 run 由快照持久化）——DB 反推不可靠：
+    l2_close 行落库的 strategy 是**被平仓位的策略**（on_signal 平仓时取
+    pos['strategy']），与 SELL 信号的 strategy 不同；若 SELL 由另一策略发出、
+    平掉 A 策略建的仓，DB 反推 (code, A) 永远匹配不上信号键 (code, B) → 重复
+    登记 → 幻影二次平仓。processed 为空（v1 旧快照/首次）时回退 DB 反推 +
+    pending 存活事件（并集只会更保守：多拦不漏，最多漏登记一次）。
     """
-    seen_buy = {tuple(r) for r in conn.execute(
-        "SELECT code, strategy FROM signal_outcome WHERE date=? AND kind='l2_open'"
-        " AND source='real'", (date,))}
-    seen_sell = {tuple(r) for r in conn.execute(
-        "SELECT code, strategy FROM signal_outcome WHERE date=? AND kind='l2_close'"
-        " AND source='real' AND exit_reason='sell'", (date,))}
+    seen_buy = {(d, 'BUY', c, st) for (d, c, st) in conn.execute(
+        "SELECT date, code, strategy FROM signal_outcome WHERE date=? "
+        "AND kind='l2_open' AND source='real'", (date,))}
+    seen_sell = {(d, 'SELL', c, st) for (d, c, st) in conn.execute(
+        "SELECT date, code, strategy FROM signal_outcome WHERE date=? "
+        "AND kind='l2_close' AND source='real' AND exit_reason='sell'", (date,))}
+    proc_date = {k for k in ledger.processed if k[0] == date}
+    seen_buy |= proc_date
+    seen_sell |= proc_date
     for e in ledger.pending:
         if e.get('date') != date:
             continue
         if e['kind'] == 'l2_open':
-            seen_buy.add((e['code'], e['strategy']))
+            seen_buy.add((date, 'BUY', e['code'], e['strategy']))
         elif e['kind'] == 'l2_close' and e.get('exit_reason') == 'sell':
-            seen_sell.add((e['code'], e['strategy']))
+            seen_sell.add((date, 'SELL', e['code'], e['strategy']))
     n = 0
     for s in sigs:
         if s['date'] != date:
             continue
-        key = (s['code'], s['strategy'])
+        code, strategy = s['code'], s['strategy']
         if s['action'] == 'BUY':
+            key = (date, 'BUY', code, strategy)
             if key in seen_buy:
                 continue
-            ledger.buy(conn, date, s['code'], s['name'], s['strategy'], 'real')
+            ledger.buy(conn, date, code, s['name'], strategy, 'real')
             seen_buy.add(key)
+            ledger.processed.add(key)
             n += 1
         elif s['action'] == 'SELL':
+            key = (date, 'SELL', code, strategy)
             if key in seen_sell:
                 continue
-            ledger.on_signal(conn, date, s['code'], s['name'],
-                             s['strategy'], 'SELL', 'real')
+            ledger.on_signal(conn, date, code, s['name'],
+                             strategy, 'SELL', 'real')
             seen_sell.add(key)
+            ledger.processed.add(key)
             n += 1
     return n
 

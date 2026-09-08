@@ -422,20 +422,81 @@ def test_daily_l2_cross_day_late_signal_empty_ledger_day(env):
         f"应以 d4（X+2）开盘价成交: {rows[0]}"
 
 
+def test_daily_no_phantom_close_after_cross_strategy_sell(env):
+    """复审幻影回归：X 日两策略同日 SELL（FIFO 各平掉 M1 的两笔，跨策略消费），
+    次日正常运行不得把已消费的 SELL 当"晚到未登记"再次出队（l2_close 行 strategy
+    = 被平 BUY 的策略 ≠ SELL 信号策略，DB 反推 seen 会错配 → 幻影第三次平仓）"""
+    conn = env
+    dates = so._trading_dates(conn)
+
+    def sig(d, action, strategy):
+        conn.execute("""INSERT INTO signal_history (date, code, name, strategy,
+            action, strength, reason, price, status) VALUES (?, '000001', '平安',
+            ?, ?, 0.8, '测试', 10.0, 'passed')""", (d, strategy, action))
+        conn.commit()
+
+    # 三笔持仓：A(M1)@d0、B(M1)@d1、C(M2)@d2（逐日正常登记、次日开盘成交）
+    _clip(conn, dates, 0)
+    sig(dates[0], "BUY", "双均线趋势跟踪")
+    so.run_daily(conn)
+    for i in (1, 2):
+        _extend(conn, dates, i)
+        sig(dates[i], "BUY", "双均线趋势跟踪" if i < 2 else "动量突破")
+        so.run_daily(conn)
+    # C@d2 需 d3 开盘才成交——先补到 d3 让三笔全部落仓
+    _extend(conn, dates, 3)
+    so.run_daily(conn)
+    assert len(_state_payload(conn)['positions']['000001']) == 3, "前置：三笔持仓"
+    # X=d3：M1 与 M2 同日各发 SELL——FIFO：M1 SELL 平 A、M2 SELL 平 B
+    # （跨策略消费：l2_close 行 strategy=被平仓位 M1 ≠ SELL 信号策略，DB 反推
+    # seen 必错配 → 靠 processed 权威键防幻影）；C(M2) 仍在仓。
+    # 模拟"晚到"：状态已推进到 d3 后信号才写入（补登记路径，天然覆盖跨日错配）
+    sig(dates[3], "SELL", "双均线趋势跟踪")
+    sig(dates[3], "SELL", "动量突破")
+    so.run_daily(conn)
+    _extend(conn, dates, 4)
+    so.run_daily(conn)             # d4：两笔 SELL 于 d4 开盘成交 + 补登记检查
+    rows = conn.execute("SELECT strategy FROM signal_outcome WHERE kind='l2_close'"
+        " AND source='real' ORDER BY id").fetchall()
+    assert len(rows) == 2, f"两笔 SELL 只应产生两行平仓（不得幻影第三笔）: {rows}"
+    _extend(conn, dates, 5)
+    so.run_daily(conn)
+    rows = conn.execute("SELECT strategy, exit_reason FROM signal_outcome"
+        " WHERE kind='l2_close' AND source='real' ORDER BY id").fetchall()
+    assert len(rows) == 2 and all(r[1] == 'sell' for r in rows), \
+        f"次日运行也不得幻影第三次平仓（C(M2) 应仍持仓）: {rows}"
+    st = _state_payload(conn)
+    held = [p['strategy'] for p in st['positions'].get('000001', [])]
+    assert held == ['动量突破'], f"C(M2) 应仍在仓: {st['positions']}"
+
+
 # ── 快照 schema 版本（Minor 3：__v + 未知版本防御）──────────────────────
 
 def test_load_state_unknown_schema_version_defensive(env):
-    """__v=2（未来 schema）快照 → 不按 v1 字段瞎解析，按空账本继续"""
+    """__v=3（未来 schema）快照 → 不按 v1 字段瞎解析，按空账本继续"""
     conn = env
     conn.execute("INSERT INTO signal_outcome (date, source, kind, exit_reason)"
         " VALUES ('2026-07-20', 'real', 'l2_state', ?)",
-        ('{"__v": 2, "positions": {"000001": [{"exec_price": 99}]},'
+        ('{"__v": 3, "positions": {"000001": [{"exec_price": 99}]},'
          ' "pending": [{"kind": "l2_open"}]}',))
     conn.commit()
     fresh = so.Ledger()
     assert fresh.load_state(conn) == '2026-07-20'
     assert fresh.positions == {} and fresh.pending == [], \
         "未知 schema 版本不得按 v1 字段加载"
+
+def test_load_state_v2_snapshot_with_processed(env):
+    """__v=2 快照（含 processed 权威键）→ 正常加载并恢复 processed"""
+    conn = env
+    conn.execute("INSERT INTO signal_outcome (date, source, kind, exit_reason)"
+        " VALUES ('2026-07-20', 'real', 'l2_state', ?)",
+        ('{"__v": 2, "positions": {}, "pending": [],'
+         ' "processed": [["2026-07-20", "SELL", "000001", "动量突破"]]}',))
+    conn.commit()
+    fresh = so.Ledger()
+    assert fresh.load_state(conn) == '2026-07-20'
+    assert ('2026-07-20', 'SELL', '000001', '动量突破') in fresh.processed, \
+        "v2 快照应恢复 processed 集合"
 
 def test_load_state_legacy_snapshot_without_version(env):
     """旧版部署的 v1 快照无 __v 字段（历史唯一格式）→ 兼容加载，不误判为未知"""
