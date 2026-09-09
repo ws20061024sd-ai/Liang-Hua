@@ -268,3 +268,19 @@ def test_strategy_conditions_html_escaped():
     assert 'MA20&lt;MA60' in html, "卖出条件的 < 未转义"
     assert 'MA20&gt;MA60' in html, "买入条件的 > 未转义"
     assert 'MA20<MA60' not in html, "存在裸的 < 字符"
+
+
+def test_outcome_page_has_criteria_explanation(conn):
+    """效果页必须包含判断依据说明（口径透明，防误读）"""
+    from web.generate import page_outcome
+    # 需要有数据才渲染表格与说明块
+    _row(conn, '2026-08-01', '000001', '平安', '双均线趋势跟踪', 'BUY', 'real',
+         'l1_10d', 2.0, 1.5)
+    _row(conn, '2026-08-01', '000001', '平安', '双均线趋势跟踪', 'SELL', 'real',
+         'l2_close', 3.0, None, 5, 'sell')
+    conn.commit()
+    html = page_outcome(conn)
+    assert html.count('判断依据') == 2, "L1/L2 各一块说明"
+    assert '超额' in html and '命中' in html, "应说明超额与命中口径"
+    # 裸 < 不得出现在正文（同策略页事故教训）
+    assert '&lt;45%' in html and '&lt;30' in html, "< 必须转义"

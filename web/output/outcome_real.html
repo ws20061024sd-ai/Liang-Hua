@@ -150,6 +150,7 @@ tr:hover td{background:var(--bg-hover)}
 <tr><td>双均线趋势跟踪</td><td><span class="tag t-sell">SELL</span><span class="dim" style="font-size:10px">回避跌幅</span></td><td>1</td><td>0.0% ⚠️</td><td class="ta-r dn">-15.9%</td></tr>
 <tr><td>均值回归</td><td><span class="tag t-sell">SELL</span><span class="dim" style="font-size:10px">回避跌幅</span></td><td>7</td><td>71.4% ✅</td><td class="ta-r up">8.38%</td></tr>
 </table>
+<div style="font-size:11px;margin-top:10px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-muted);line-height:1.8"><strong>判断依据</strong><br>· 超额 = 个股 10 日收益 − 同期沪深300 收益（剔除大盘涨跌的影响）<br>· 命中：BUY 超额&gt;0（买入后跑赢大盘）· SELL 超额&lt;0（卖出后跑输=回避下跌）<br>· 标记：✅ ≥55% · ❓ 45~55%（方向不明）· ⚠️ &lt;45%（没跑赢）<br>· SELL 行平均超额已翻转符号（正数 = 回避的跌幅，正=好）<br>· 信号数 &lt;30 时统计不可靠（单笔极端值会拉飞平均）</div>
 </div></div>
 <div class="panel"><div class="panel-hd">L2 等权账本（BUY→平仓完整周期）</div><div class="panel-bd">
 <div class="empty">暂无平仓交易</div>

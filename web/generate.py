@@ -1053,6 +1053,17 @@ def page_outcome(conn, source: str | None = None) -> str:
                         f'<td>{r["total"]}</td><td>{wr}% {flag}</td>'
                         f'<td class="ta-r {cls}">{ex_str}</td></tr>')
         body.append('</table>')
+        body.append(
+            '<div style="font-size:11px;margin-top:10px;padding:8px 10px;'
+            'background:var(--bg-card);border:1px solid var(--border);'
+            'border-radius:6px;color:var(--text-muted);line-height:1.8">'
+            '<strong>判断依据</strong><br>'
+            '· 超额 = 个股 10 日收益 − 同期沪深300 收益（剔除大盘涨跌的影响）<br>'
+            '· 命中：BUY 超额&gt;0（买入后跑赢大盘）· SELL 超额&lt;0（卖出后跑输=回避下跌）<br>'
+            '· 标记：✅ ≥55% · ❓ 45~55%（方向不明）· ⚠️ &lt;45%（没跑赢）<br>'
+            '· SELL 行平均超额已翻转符号（正数 = 回避的跌幅，正=好）<br>'
+            '· 信号数 &lt;30 时统计不可靠（单笔极端值会拉飞平均）'
+            '</div>')
     body.append('</div></div>')
 
     # ── L2 表：等权账本 ──
@@ -1074,6 +1085,17 @@ def page_outcome(conn, source: str | None = None) -> str:
                         f'<td class="ta-r">{r["avg_hold"]}</td>'
                         f'<td class="ta-r {cum_cls}">{r["cum"]}%</td></tr>')
         body.append('</table>')
+        body.append(
+            '<div style="font-size:11px;margin-top:10px;padding:8px 10px;'
+            'background:var(--bg-card);border:1px solid var(--border);'
+            'border-radius:6px;color:var(--text-muted);line-height:1.8">'
+            '<strong>判断依据</strong><br>'
+            '· 每笔 = BUY 次日开盘价买入 → SELL 信号 / 移动止损 / 60 日到期，次日开盘价卖出（等权 1 份）<br>'
+            '· 单笔收益 = (卖出价 ÷ 买入价 − 1) × 100%<br>'
+            '· 胜率 = 收益&gt;0 的笔数占比（止损平仓计入分母，故通常低于 L1）<br>'
+            '· 等权累计 = 各笔收益直接相加（不按资金加权，用于策略间对比）<br>'
+            '· 未计手续费/滑点/一字板买不进 → 收益偏乐观，看相对高低不看绝对值'
+            '</div>')
     body.append('</div></div>')
 
     # ── 最近结算 ──
