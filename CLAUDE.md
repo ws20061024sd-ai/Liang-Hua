@@ -166,6 +166,7 @@ PYTHONPATH=. python backtest/local_factor_backtest.py  # 本地回测（5个TOP_
 | `docs/策略/002_多因子选股_回测分析报告.md` | 002 strategy detailed analysis |
 | `docs/策略/聚宽策略编码须知.md` | JoinQuant API correct usage, common errors |
 | `docs/策略/策略与回测代码审查规范.md` | Code review checklist for strategies/backtests |
+| `docs/策略/策略打磨与新增规范.md` | **策略改动流程** — 打磨五步/新增六步/验证门槛/防过拟合/文案同步 |
 | `docs/参考/Claude Code Skills 完全指南.md` | All 58+ Skills categorized by relevance |
 | `docs/参考/GitHub量化交易开源项目速查.md` | Open-source quant projects on GitHub |
 | `docs/数据/数据审查报告_2026-06-09.md` | Data quality risks and 5-layer defense system |
