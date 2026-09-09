@@ -230,3 +230,28 @@ def test_page_outcome_l1_sell_flipped_display(conn):
     assert '<span class="tag t-sell">SELL</span>' in html
     assert 'tag t-buy">BUY</span>' in html
     assert '方向' in html and html.count('回避跌幅') >= 2
+
+
+# ── 策略页买卖条件结构化（2026-09-09）──────────────────────────────────
+
+def test_page_strategy_shows_buy_sell_conditions():
+    """策略页每个策略必须分别列出买入/卖出条件（原来原理段只讲买入）"""
+    from web.generate import page_strategy, STRATS
+    html = page_strategy([])
+    assert '买入条件' in html and '卖出条件' in html, "应有买卖条件分列"
+    for s in STRATS:
+        assert s.get('buy'), f"{s['n']} 缺 buy 字段"
+        assert s.get('sell'), f"{s['n']} 缺 sell 字段"
+        assert s['buy'] in html and s['sell'] in html, f"{s['n']} 的买卖条件未渲染"
+
+
+def test_strategy_sell_conditions_match_code():
+    """卖出条件文案必须与策略代码一致（防文案漂移）"""
+    from web.generate import STRATS
+    by_key = {s['key']: s for s in STRATS}
+    # 双均线：死叉卖出
+    assert 'MA60' in by_key['ma']['sell'] and '下穿' in by_key['ma']['sell']
+    # 动量突破：跌破过去10日最低收盘
+    assert '10' in by_key['mb']['sell'] and '最低' in by_key['mb']['sell']
+    # 均值回归：站上布林带上轨
+    assert '上轨' in by_key['mr']['sell']

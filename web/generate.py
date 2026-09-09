@@ -616,14 +616,20 @@ def _render_svg_kline(ohlc_df, ma5_series=None, ma10_series=None, ma20_series=No
 STRATS=[
     {'key':'ma','n':'双均线趋势跟踪','p':'MA(20,60)','style':'trend',
      'desc':'快线上穿慢线买入，下穿卖出。慢均线减少假信号。','principle':'MA20(短期趋势)上穿MA60(中期趋势)=金叉买入，下穿=死叉卖出。其余时间不操作。',
+     'buy':'MA20 上穿 MA60（金叉）：昨日 MA20≤MA60 且今日 MA20>MA60',
+     'sell':'MA20 下穿 MA60（死叉）：昨日 MA20≥MA60 且今日 MA20<MA60',
      'good':'强势趋势市场','bad':'震荡市（反复穿越均线，假信号多）',
      'why':'MA(10,30)→MA(20,60)：假信号减少40%，回撤从-62%降到-32%，代价是入场更晚。'},
     {'key':'mb','n':'动量突破','p':'DK(10,2%,10)','style':'trend',
      'desc':'突破10日最高×(1+2%)买入，跌破10日最低卖出。','principle':'股价突破近期高点=买方力量确立。2%缓冲过滤假突破。',
+     'buy':'收盘 > 过去10日最高收盘 × 1.02（2%缓冲过滤假突破）',
+     'sell':'收盘 < 过去10日最低收盘（趋势走弱离场）',
      'good':'强势单边行情','bad':'假突破频繁的震荡市',
      'why':'回看周期20→10天：更及时，年化从2.5%→10.7%。但回撤仍大，必须配合止损。'},
     {'key':'mr','n':'均值回归','p':'BB(10,2.0)','style':'reversion',
      'desc':'布林带下轨超卖+MA60向上时买入，上轨超买卖出。','principle':'价格跌破布林带下轨(超卖)→大概率回归中轨。MA60向上过滤下跌趋势。首次下穿触发，避免重复发信号。',
+     'buy':'收盘跌破布林带下轨（首次下穿才触发，避免重复发信号）且 MA60 向上',
+     'sell':'收盘站上布林带上轨（超买，均值回归已完成）',
      'good':'震荡市','bad':'强趋势市（超卖后还有更超卖）',
      'why':'BB(20,2.0)→BB(10,2.0)：更短周期捕捉短期超卖，反应更快。标准差保持2.0。'},
 ]
@@ -815,6 +821,10 @@ def page_strategy(sigs):
         cards+=f'''<div class="panel" style="border-left:3px solid {colors[i][0]}"><div class="panel-bd">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><span style="font-size:15px;font-weight:700">{s["n"]}</span><span>{_tag("t-trend"if s["style"]=="trend"else"t-rev","趋势"if s["style"]=="trend"else"反转")} <span class="dim">{s["p"]}</span></span></div>
         <div style="font-size:12px;color:var(--text-muted);line-height:1.6"><strong>原理：</strong>{s["principle"]}</div>
+        <div style="font-size:12px;margin-top:8px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;display:grid;gap:5px">
+        <div><strong style="color:var(--up)">买入条件：</strong>{s["buy"]}</div>
+        <div><strong style="color:var(--down)">卖出条件：</strong>{s["sell"]}</div>
+        </div>
         <div style="font-size:12px;margin-top:4px"><strong>适合：</strong><span class="up">{s["good"]}</span> · <strong>不适合：</strong><span class="dn">{s["bad"]}</span></div>
         <div style="font-size:12px;color:var(--text-muted);margin-top:4px"><strong>为什么选这个参数：</strong>{s["why"]}</div>
         <div style="display:flex;gap:24px;align-items:center;margin-top:12px"><span style="font-size:13px;color:var(--text-muted)"> 回测数据为参数优化时快照，非实时。</span></div>
