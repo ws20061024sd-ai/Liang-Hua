@@ -806,7 +806,13 @@ def page_stock(conn, code):
 
 
 def page_strategy(sigs):
-    """策略分析页"""
+    """策略分析页
+
+    文案转义：买卖条件含 < > 符号（如 MA20<MA60），裸 < 会被浏览器当成标签
+    开始符并吞掉后续 </div>，导致卡片 div 延伸到页面底部（2026-09-09 线上事故：
+    色条横跨三个卡片）——所有文案字段必须 HTML 转义。
+    """
+    from html import escape as _esc
     colors=[('#4a9eff','#4a9eff14'),('#059669','#05966914'),('#7c3aed','#7c3aed14')]
     cards=''
     for i,s in enumerate(STRATS):
@@ -820,13 +826,13 @@ def page_strategy(sigs):
 
         cards+=f'''<div class="panel" style="border-left:3px solid {colors[i][0]}"><div class="panel-bd">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><span style="font-size:15px;font-weight:700">{s["n"]}</span><span>{_tag("t-trend"if s["style"]=="trend"else"t-rev","趋势"if s["style"]=="trend"else"反转")} <span class="dim">{s["p"]}</span></span></div>
-        <div style="font-size:12px;color:var(--text-muted);line-height:1.6"><strong>原理：</strong>{s["principle"]}</div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.6"><strong>原理：</strong>{_esc(s["principle"])}</div>
         <div style="font-size:12px;margin-top:8px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;display:grid;gap:5px">
-        <div><strong style="color:var(--up)">买入条件：</strong>{s["buy"]}</div>
-        <div><strong style="color:var(--down)">卖出条件：</strong>{s["sell"]}</div>
+        <div><strong style="color:var(--up)">买入条件：</strong>{_esc(s["buy"])}</div>
+        <div><strong style="color:var(--down)">卖出条件：</strong>{_esc(s["sell"])}</div>
         </div>
-        <div style="font-size:12px;margin-top:4px"><strong>适合：</strong><span class="up">{s["good"]}</span> · <strong>不适合：</strong><span class="dn">{s["bad"]}</span></div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:4px"><strong>为什么选这个参数：</strong>{s["why"]}</div>
+        <div style="font-size:12px;margin-top:4px"><strong>适合：</strong><span class="up">{_esc(s["good"])}</span> · <strong>不适合：</strong><span class="dn">{_esc(s["bad"])}</span></div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px"><strong>为什么选这个参数：</strong>{_esc(s["why"])}</div>
         <div style="display:flex;gap:24px;align-items:center;margin-top:12px"><span style="font-size:13px;color:var(--text-muted)"> 回测数据为参数优化时快照，非实时。</span></div>
         {sig_part}</div></div>'''
 

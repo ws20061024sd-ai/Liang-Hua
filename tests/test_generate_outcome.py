@@ -236,13 +236,15 @@ def test_page_outcome_l1_sell_flipped_display(conn):
 
 def test_page_strategy_shows_buy_sell_conditions():
     """策略页每个策略必须分别列出买入/卖出条件（原来原理段只讲买入）"""
+    from html import escape
     from web.generate import page_strategy, STRATS
     html = page_strategy([])
     assert '买入条件' in html and '卖出条件' in html, "应有买卖条件分列"
     for s in STRATS:
         assert s.get('buy'), f"{s['n']} 缺 buy 字段"
         assert s.get('sell'), f"{s['n']} 缺 sell 字段"
-        assert s['buy'] in html and s['sell'] in html, f"{s['n']} 的买卖条件未渲染"
+        assert escape(s['buy']) in html and escape(s['sell']) in html, \
+            f"{s['n']} 的买卖条件未渲染（按转义后比对）"
 
 
 def test_strategy_sell_conditions_match_code():
@@ -255,3 +257,14 @@ def test_strategy_sell_conditions_match_code():
     assert '10' in by_key['mb']['sell'] and '最低' in by_key['mb']['sell']
     # 均值回归：站上布林带上轨
     assert '上轨' in by_key['mr']['sell']
+
+
+def test_strategy_conditions_html_escaped():
+    """买卖条件含 < > 必须转义——裸 < 会让浏览器把后续 </div> 吞掉，
+    导致卡片 div 延伸到页面底部（色条横跨三个卡片，2026-09-09 线上事故）"""
+    from web.generate import page_strategy
+    html = page_strategy([])
+    # 正文中的 < 必须是 &lt; 实体
+    assert 'MA20&lt;MA60' in html, "卖出条件的 < 未转义"
+    assert 'MA20&gt;MA60' in html, "买入条件的 > 未转义"
+    assert 'MA20<MA60' not in html, "存在裸的 < 字符"
