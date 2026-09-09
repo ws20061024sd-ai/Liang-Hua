@@ -140,23 +140,35 @@ tr:hover td{background:var(--bg-hover)}
 </style>
 </head>
 <body>
-<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links"><a href="index.html">信号</a><a href="market.html">市场</a><a href="history.html">历史</a><a href="strategy.html" class=active>策略</a><a href="factors.html">因子</a><a href="signals.html">日志</a><button onclick="toggleTheme()" class="theme-btn" aria-label="切换主题"><svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button></div></div></nav>
+<nav><div class="inner"><a href="index.html" class="brand">量化交易</a><div class="links"><a href="index.html">信号</a><a href="market.html">市场</a><a href="history.html">历史</a><a href="strategy.html" class=active>策略</a><a href="factors.html">因子</a><a href="signals.html">日志</a><a href="outcome.html">效果</a><button onclick="toggleTheme()" class="theme-btn" aria-label="切换主题"><svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button></div></div></nav>
 <main>
 <div class="hero"><h2> 策略分析</h2><p>三个策略的完整讲解——原理、参数选择、适用环境</p></div><div class="panel" style="border-left:3px solid #4a9eff"><div class="panel-bd">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><span style="font-size:15px;font-weight:700">双均线趋势跟踪</span><span><span class="tag t-trend">趋势</span> <span class="dim">MA(20,60)</span></span></div>
         <div style="font-size:12px;color:var(--text-muted);line-height:1.6"><strong>原理：</strong>MA20(短期趋势)上穿MA60(中期趋势)=金叉买入，下穿=死叉卖出。其余时间不操作。</div>
+        <div style="font-size:12px;margin-top:8px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;display:grid;gap:5px">
+        <div><strong style="color:var(--up)">买入条件：</strong>MA20 上穿 MA60（金叉）：昨日 MA20≤MA60 且今日 MA20&gt;MA60</div>
+        <div><strong style="color:var(--down)">卖出条件：</strong>MA20 下穿 MA60（死叉）：昨日 MA20≥MA60 且今日 MA20&lt;MA60</div>
+        </div>
         <div style="font-size:12px;margin-top:4px"><strong>适合：</strong><span class="up">强势趋势市场</span> · <strong>不适合：</strong><span class="dn">震荡市（反复穿越均线，假信号多）</span></div>
         <div style="font-size:12px;color:var(--text-muted);margin-top:4px"><strong>为什么选这个参数：</strong>MA(10,30)→MA(20,60)：假信号减少40%，回撤从-62%降到-32%，代价是入场更晚。</div>
         <div style="display:flex;gap:24px;align-items:center;margin-top:12px"><span style="font-size:13px;color:var(--text-muted)"> 回测数据为参数优化时快照，非实时。</span></div>
         <div style="font-size:10px;margin-top:6px"><span class="dim">最近信号: </span><span class="tag t-buy">BUY</span> 601788 光大证券 ¥14.98 <span class="dim">(2026-07-10)</span> <span class="tag t-buy">BUY</span> 601878 浙商证券 ¥9.57 <span class="dim">(2026-07-10)</span> <span class="tag t-buy">BUY</span> 301165 锐捷网络 ¥94.89 <span class="dim">(2026-07-03)</span> </div></div></div><div class="panel" style="border-left:3px solid #059669"><div class="panel-bd">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><span style="font-size:15px;font-weight:700">动量突破</span><span><span class="tag t-trend">趋势</span> <span class="dim">DK(10,2%,10)</span></span></div>
         <div style="font-size:12px;color:var(--text-muted);line-height:1.6"><strong>原理：</strong>股价突破近期高点=买方力量确立。2%缓冲过滤假突破。</div>
+        <div style="font-size:12px;margin-top:8px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;display:grid;gap:5px">
+        <div><strong style="color:var(--up)">买入条件：</strong>收盘 &gt; 过去10日最高收盘 × 1.02（2%缓冲过滤假突破）</div>
+        <div><strong style="color:var(--down)">卖出条件：</strong>收盘 &lt; 过去10日最低收盘（趋势走弱离场）</div>
+        </div>
         <div style="font-size:12px;margin-top:4px"><strong>适合：</strong><span class="up">强势单边行情</span> · <strong>不适合：</strong><span class="dn">假突破频繁的震荡市</span></div>
         <div style="font-size:12px;color:var(--text-muted);margin-top:4px"><strong>为什么选这个参数：</strong>回看周期20→10天：更及时，年化从2.5%→10.7%。但回撤仍大，必须配合止损。</div>
         <div style="display:flex;gap:24px;align-items:center;margin-top:12px"><span style="font-size:13px;color:var(--text-muted)"> 回测数据为参数优化时快照，非实时。</span></div>
         <div style="font-size:10px;margin-top:6px"><span class="dim">最近信号: </span><span class="tag t-sell">SELL</span> 002028 思源电气 ¥151.73 <span class="dim">(2026-07-10)</span> <span class="tag t-sell">SELL</span> 002460 赣锋锂业 ¥53.63 <span class="dim">(2026-07-10)</span> <span class="tag t-sell">SELL</span> 300274 阳光电源 ¥114.79 <span class="dim">(2026-07-10)</span> </div></div></div><div class="panel" style="border-left:3px solid #7c3aed"><div class="panel-bd">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><span style="font-size:15px;font-weight:700">均值回归</span><span><span class="tag t-rev">反转</span> <span class="dim">BB(10,2.0)</span></span></div>
         <div style="font-size:12px;color:var(--text-muted);line-height:1.6"><strong>原理：</strong>价格跌破布林带下轨(超卖)→大概率回归中轨。MA60向上过滤下跌趋势。首次下穿触发，避免重复发信号。</div>
+        <div style="font-size:12px;margin-top:8px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;display:grid;gap:5px">
+        <div><strong style="color:var(--up)">买入条件：</strong>收盘跌破布林带下轨（首次下穿才触发，避免重复发信号）且 MA60 向上</div>
+        <div><strong style="color:var(--down)">卖出条件：</strong>收盘站上布林带上轨（超买，均值回归已完成）</div>
+        </div>
         <div style="font-size:12px;margin-top:4px"><strong>适合：</strong><span class="up">震荡市</span> · <strong>不适合：</strong><span class="dn">强趋势市（超卖后还有更超卖）</span></div>
         <div style="font-size:12px;color:var(--text-muted);margin-top:4px"><strong>为什么选这个参数：</strong>BB(20,2.0)→BB(10,2.0)：更短周期捕捉短期超卖，反应更快。标准差保持2.0。</div>
         <div style="display:flex;gap:24px;align-items:center;margin-top:12px"><span style="font-size:13px;color:var(--text-muted)"> 回测数据为参数优化时快照，非实时。</span></div>
