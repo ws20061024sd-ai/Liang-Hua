@@ -22,3 +22,6 @@ config/settings_local.py
 # Logs
 logs/*.log
 data/backups/
+
+# 仪表盘生成产物（由 web/generate.py 生成，各环境自行生成，不跟踪）
+web/output/
